@@ -707,6 +707,9 @@ table {
   padding: 0;
   list-style: none;
 }
+.related li + li {
+  margin-top: 0;
+}
 .related a {
   display: block;
   padding: var(--space-4);

@@ -148,6 +148,56 @@ test.describe('responsive interaction', () => {
   });
 });
 
+test.describe('related pages', () => {
+  test('desktop grid items align and do not overflow', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith('mobile'));
+
+    await page.goto('/learn/tour/');
+    const related = page.getByRole('navigation', { name: 'Related pages' });
+    const items = related.locator('li');
+    await expect(related).toBeVisible();
+    await expect(items).toHaveCount(3);
+
+    const [firstBox, secondBox] = await Promise.all([
+      items.nth(0).boundingBox(),
+      items.nth(1).boundingBox(),
+    ]);
+    expect(firstBox).not.toBeNull();
+    expect(secondBox).not.toBeNull();
+    expect(Math.abs(firstBox!.y - secondBox!.y)).toBeLessThanOrEqual(1);
+
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+  });
+
+  test('mobile related pages collapse to one visible column', async ({
+    page,
+  }, testInfo) => {
+    test.skip(!testInfo.project.name.startsWith('mobile'));
+
+    await page.goto('/learn/tour/');
+    const related = page.getByRole('navigation', { name: 'Related pages' });
+    const list = related.locator('ul');
+    const links = related.getByRole('link');
+    await expect(related).toBeVisible();
+    await expect(links).toHaveCount(3);
+    await expect(links.first()).toBeVisible();
+
+    const columnCount = await list.evaluate(
+      (element) =>
+        getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/)
+          .length,
+    );
+    expect(columnCount).toBe(1);
+  });
+});
+
 test.describe('accessibility', () => {
   for (const route of [
     '/',

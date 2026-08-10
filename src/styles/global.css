@@ -561,11 +561,15 @@ table {
 .breadcrumbs ol {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 0.5rem;
   padding: 0;
   list-style: none;
   color: var(--text-muted);
   font-size: 0.83rem;
+}
+.prose .breadcrumbs > ol > li {
+  margin: 0;
 }
 .breadcrumbs li:not(:last-child)::after {
   margin-left: 0.5rem;

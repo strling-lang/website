@@ -1,0 +1,74 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+
+const docs = (await getCollection('docs')).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const title = 'STRling user documentation';
+const description =
+  'Canonical STRling user documentation for readable regular expressions, composition, character sets, quantifiers, captures, lookarounds, diagnostics, and compatibility.';
+const crumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'Docs', href: '/docs/' },
+];
+---
+
+<BaseLayout
+  {title}
+  {description}
+  pathname="/docs/"
+  {crumbs}
+  keywords={[
+    'STRling documentation',
+    'regular expression documentation',
+    'readable regex',
+  ]}
+>
+  <header class="page-hero">
+    <div class="container reading stack">
+      <Breadcrumbs items={crumbs} />
+      <span class="eyebrow">Canonical user reference</span>
+      <h1>STRling documentation</h1>
+      <p>
+        Build readable regular expressions from verified STRling concepts,
+        understand generated behavior, and plan for target-engine differences.
+      </p>
+      <div class="cluster">
+        <a class="button" href="/docs/core-concepts/"
+          >Start with core concepts</a
+        ><a class="button button--secondary" href="/learn/quickstart/"
+          >Take the quickstart</a
+        >
+      </div>
+    </div>
+  </header>
+  <section class="section">
+    <div class="container">
+      <div class="package-grid">
+        {
+          docs.map((entry, index) => (
+            <article class="package-card">
+              <span class="feature-number">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <h2 style="font-size:1.35rem">
+                <a href={`/docs/${entry.id.replace(/\.(md|mdx)$/i, '')}/`}>
+                  {entry.data.title}
+                </a>
+              </h2>
+              <p>{entry.data.summary}</p>
+              <a
+                class="text-link card-link"
+                href={`/docs/${entry.id.replace(/\.(md|mdx)$/i, '')}/`}
+              >
+                Read {entry.data.title}
+              </a>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</BaseLayout>

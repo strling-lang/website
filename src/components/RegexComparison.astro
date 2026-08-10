@@ -1,0 +1,17 @@
+---
+import CodeBlock from './CodeBlock.astro';
+interface Props {
+  code: string;
+  language: string;
+  label: string;
+  result: string;
+}
+const { code, language, label, result } = Astro.props;
+---
+
+<div class="regex-comparison">
+  <div class="comparison-side"><CodeBlock {code} {language} {label} /></div>
+  <div class="comparison-result" aria-label="Generated regular expression">
+    <span>{result}</span>
+  </div>
+</div>

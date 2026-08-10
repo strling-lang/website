@@ -1,0 +1,258 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import CodeBlock from '@/components/CodeBlock.astro';
+import FeatureCard from '@/components/FeatureCard.astro';
+import PackageCard from '@/components/PackageCard.astro';
+import RegexComparison from '@/components/RegexComparison.astro';
+import SectionHeader from '@/components/SectionHeader.astro';
+import StatusBadge from '@/components/StatusBadge.astro';
+import { bindings } from '@/data/bindings';
+import { fourthEdition } from '@/data/release';
+import { site } from '@/data/site';
+
+const title = 'STRling — Readable, composable regular expressions';
+const description =
+  'STRling is The Universal Regular Expression Compiler: readable, maintainable, composable pattern APIs for Python, TypeScript, and a wider language ecosystem.';
+const phoneCode = `import { simply as s } from "@strling-lang/strling";
+
+const phone = s.merge(
+  s.start(),
+  s.capture(s.digit(3)),
+  s.may(s.anyOf("-", ".", " ")),
+  s.capture(s.digit(3)),
+  s.may(s.anyOf("-", ".", " ")),
+  s.capture(s.digit(4)),
+  s.end()
+);`;
+---
+
+<BaseLayout
+  {title}
+  {description}
+  pathname="/"
+  keywords={[
+    'STRling',
+    'readable regex',
+    'composable regex',
+    'regular expression compiler',
+    'regex builder',
+  ]}
+>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="stack">
+        <div class="cluster">
+          <span class="eyebrow">The Universal Regular Expression Compiler</span
+          ><StatusBadge
+            label="Fourth Edition · Pre-release"
+            tone="prerelease"
+          />
+        </div>
+        <h1 class="display">
+          Readable. <span class="accent">Composable.</span> Universal.
+        </h1>
+        <p class="hero-copy">
+          STRling turns regular-expression intent into discoverable, reusable
+          pattern code—then produces the RegEx your runtime already understands.
+        </p>
+        <div class="cluster">
+          <a class="button" href="/learn/quickstart/">Start the quickstart</a><a
+            class="button button--secondary"
+            href="/why-strling/">Why STRling?</a
+          >
+        </div>
+      </div>
+      <div class="hero-code">
+        <div class="window-bar">
+          <span>pattern.ts</span><span class="window-dots" aria-hidden="true"
+            ><span></span><span></span><span></span></span
+          >
+        </div>
+        <CodeBlock
+          code={phoneCode}
+          language="typescript"
+          label="STRling · TypeScript"
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container">
+      <SectionHeader
+        eyebrow="From intent to RegEx"
+        title="Readable structure. Familiar output."
+        description="This source-confirmed TypeScript example composes anchors, captures, digits, optional separators, and sequence into one value."
+      />
+      <RegexComparison
+        code={phoneCode}
+        language="typescript"
+        label="STRling input"
+        result={String.raw`^(\d{3})[-. ]?(\d{3})[-. ]?(\d{4})$`}
+      />
+      <p class="muted" style="margin-top:1rem">
+        Use the generated expression with <code class="mono">RegExp</code>. The
+        same concepts appear in the Python binding with snake_case method names.
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container">
+      <SectionHeader
+        eyebrow="Why the abstraction helps"
+        title="Patterns become maintainable software"
+        description="STRling keeps regular expressions powerful while moving human intent into names, values, and composition."
+      />
+      <div class="grid-3">
+        <FeatureCard
+          number="01"
+          title="Readability"
+          description="Method names such as merge, may, group, digit, and behind expose intent that symbols alone can hide."
+        />
+        <FeatureCard
+          number="02"
+          title="Composition"
+          description="Build a useful fragment once, give it a domain name, and combine it with other Pattern values."
+        />
+        <FeatureCard
+          number="03"
+          title="Discoverability"
+          description="Typed hosts can expose autocomplete and signatures; other bindings still present a consistent named API."
+        />
+        <FeatureCard
+          number="04"
+          title="Maintainability"
+          description="Change a small building block without manually splicing a dense expression string."
+        />
+        <FeatureCard
+          number="05"
+          title="Shared concepts"
+          description="The canonical repository carries 17 bindings organized around the same pattern-building vocabulary."
+        />
+        <FeatureCard
+          number="06"
+          title="Explicit portability"
+          description="The specification records target-engine differences instead of pretending every RegEx engine behaves identically."
+        />
+      </div>
+      <p style="margin-top:2rem">
+        <a class="text-link" href="/why-strling/"
+          >See the full RegEx vs STRling case</a
+        >
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container">
+      <SectionHeader
+        eyebrow="Language ecosystem"
+        title="Meet STRling where you write software"
+        description="Seventeen bindings are represented in canonical source. Registry state is reported separately from source availability."
+      />
+      <div class="package-grid">
+        {
+          bindings
+            .filter((binding) =>
+              [
+                'typescript',
+                'python',
+                'csharp',
+                'rust',
+                'go',
+                'swift',
+              ].includes(binding.slug),
+            )
+            .map((binding) => <PackageCard {binding} />)
+        }
+      </div>
+      <p style="margin-top:2rem">
+        <a class="button button--secondary" href="/packages/"
+          >Explore all 17 bindings</a
+        >
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container grid-2">
+      <article class="stack">
+        <span class="eyebrow">Learn</span>
+        <h2>Build your first pattern</h2>
+        <p class="kicker">
+          Install a verified package, compose a phone-number pattern, turn it
+          into a native regular expression, and choose your next concept.
+        </p>
+        <div class="cluster">
+          <a class="button" href="/learn/quickstart/">Quickstart</a><a
+            class="text-link"
+            href="/learn/tour/">Take the tour</a
+          >
+        </div>
+      </article>
+      <article class="stack">
+        <span class="eyebrow">Docs</span>
+        <h2>Reference observable behavior</h2>
+        <p class="kicker">
+          Use canonical user documentation for literals, sets, quantifiers,
+          captures, lookarounds, anchors, diagnostics, and portability.
+        </p>
+        <div class="cluster">
+          <a class="button button--secondary" href="/docs/"
+            >Browse documentation</a
+          ><a class="text-link" href="/docs/compatibility/"
+            >Check compatibility</a
+          >
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container grid-2">
+      <div class="stack">
+        <StatusBadge
+          label={`${fourthEdition.name} · ${fourthEdition.status}`}
+          tone="prerelease"
+        />
+        <h2>A coordinated edition, still under certification</h2>
+        <p class="kicker">{fourthEdition.summary}</p>
+        <a class="button" href="/fourth-edition/"
+          >Open the Fourth Edition center</a
+        >
+      </div>
+      <div class="stack">
+        <span class="eyebrow">Verified preparation</span>
+        <ul>
+          {
+            fourthEdition.verifiedWork
+              .slice(0, 3)
+              .map((item) => <li>{item}</li>)
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container grid-2">
+      <div class="stack">
+        <span class="eyebrow">Open source</span><h2>
+          Public code. Evidence-first docs.
+        </h2><p class="kicker">
+          STRling’s canonical compiler and binding work is developed on GitHub
+          under the MIT License. This website is the user surface; GitHub
+          remains the development surface.
+        </p>
+      </div>
+      <div class="cluster">
+        <a class="button" href={site.organizationUrl}
+          >Visit GitHub <span aria-hidden="true">↗</span></a
+        ><a class="button button--secondary" href="/project/"
+          >About the project</a
+        >
+      </div>
+    </div>
+  </section>
+</BaseLayout>

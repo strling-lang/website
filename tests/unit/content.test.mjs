@@ -1,0 +1,97 @@
+import assert from 'node:assert/strict';
+import { readdir, readFile, stat } from 'node:fs/promises';
+import { join } from 'node:path';
+import test from 'node:test';
+
+const root = new URL('../../', import.meta.url);
+const fromRoot = (path) => new URL(path, root);
+
+test('required documentation and learning topics exist', async () => {
+  const docs = (await readdir(fromRoot('src/content/docs/'))).filter((name) =>
+    name.endsWith('.md'),
+  );
+  const learn = (await readdir(fromRoot('src/content/learn/'))).filter((name) =>
+    name.endsWith('.md'),
+  );
+  assert.deepEqual(docs.sort(), [
+    'anchors-and-boundaries.md',
+    'character-sets.md',
+    'compatibility.md',
+    'composition.md',
+    'core-concepts.md',
+    'errors-and-diagnostics.md',
+    'groups-and-captures.md',
+    'literals-and-escaping.md',
+    'lookarounds.md',
+    'predefined-patterns.md',
+    'quantifiers.md',
+  ]);
+  assert.deepEqual(learn.sort(), ['from-regex.md', 'quickstart.md', 'tour.md']);
+});
+
+test('binding data represents exactly the 17 authoritative source directories', async () => {
+  const source = await readFile(fromRoot('src/data/bindings.ts'), 'utf8');
+  const slugs = [...source.matchAll(/slug: '([^']+)'/g)].map(
+    (match) => match[1],
+  );
+  assert.deepEqual(slugs, [
+    'c',
+    'cpp',
+    'csharp',
+    'dart',
+    'fsharp',
+    'go',
+    'java',
+    'kotlin',
+    'lua',
+    'perl',
+    'php',
+    'python',
+    'r',
+    'ruby',
+    'rust',
+    'swift',
+    'typescript',
+  ]);
+});
+
+test('official logo is remote-only and no image asset is committed', async () => {
+  const siteData = await readFile(fromRoot('src/data/site.ts'), 'utf8');
+  assert.match(
+    siteData,
+    /raw\.githubusercontent\.com\/strling-lang\/\.github\/refs\/heads\/main\/strling_silver_bell\.png/,
+  );
+
+  const imageExtensions = /\.(png|jpe?g|gif|webp|svg|avif)$/i;
+  async function findImages(path) {
+    const entries = await readdir(path);
+    const found = [];
+    for (const entry of entries) {
+      const full = join(path.pathname, entry);
+      const info = await stat(full);
+      if (info.isDirectory())
+        found.push(...(await findImages(new URL(`${entry}/`, path))));
+      else if (imageExtensions.test(entry)) found.push(full);
+    }
+    return found;
+  }
+  assert.deepEqual(await findImages(fromRoot('src/')), []);
+  assert.deepEqual(await findImages(fromRoot('public/')).catch(() => []), []);
+});
+
+test('primary navigation contains only real routes', async () => {
+  const navigation = await readFile(fromRoot('src/data/navigation.ts'), 'utf8');
+  const primaryBlock = navigation.slice(
+    navigation.indexOf('primaryNavigation'),
+    navigation.indexOf('docsNavigation'),
+  );
+  assert.equal(primaryBlock.includes("href: '#"), false);
+  for (const route of [
+    '/learn/',
+    '/docs/',
+    '/packages/',
+    '/fourth-edition/',
+    '/why-strling/',
+  ])
+    assert.ok(primaryBlock.includes(route));
+});

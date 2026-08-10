@@ -1,0 +1,28 @@
+---
+interface Props {
+  code: string;
+  language?: string;
+  label?: string;
+  copy?: boolean;
+}
+const { code, language = 'text', label = language, copy = true } = Astro.props;
+---
+
+<div class="code-block" data-code-block>
+  <div class="code-header">
+    <span>{label}</span>
+    {
+      copy && (
+        <button
+          class="copy-button"
+          type="button"
+          data-copy-code
+          aria-label={`Copy ${label} code`}
+        >
+          Copy
+        </button>
+      )
+    }
+  </div>
+  <pre tabindex="0"><code class={`language-${language}`}>{code}</code></pre>
+</div>

@@ -1,0 +1,38 @@
+---
+import { docsNavigation, learnNavigation } from '@/data/navigation';
+interface Props {
+  links: string[];
+}
+const { links } = Astro.props;
+const all = [
+  ...docsNavigation,
+  ...learnNavigation,
+  { href: '/packages/', label: 'Packages' },
+];
+const selected = links.map(
+  (href) =>
+    all.find((item) => item.href === href) ?? {
+      href,
+      label:
+        href.split('/').filter(Boolean).at(-1)?.replaceAll('-', ' ') ?? href,
+    },
+);
+---
+
+{
+  selected.length > 0 && (
+    <nav class="related" aria-label="Related pages">
+      <h2>Related pages</h2>
+      <ul>
+        {selected.map((item) => (
+          <li>
+            <a href={item.href}>
+              {item.label}
+              <span aria-hidden="true"> →</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}

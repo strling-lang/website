@@ -1,0 +1,168 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import FeatureCard from '@/components/FeatureCard.astro';
+import RegexComparison from '@/components/RegexComparison.astro';
+import SectionHeader from '@/components/SectionHeader.astro';
+
+const title = 'Why STRling? A readable RegEx abstraction';
+const description =
+  'Compare RegEx and STRling, then see how named pattern values improve complex regex readability, composition, captures, optionality, and lookarounds.';
+const crumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'Why STRling', href: '/why-strling/' },
+];
+const composition = `const country = s.between(1, 3, s.digit);
+const area = s.between(3, 3, s.digit);
+const subscriber = s.between(4, 4, s.digit);
+const separator = s.may(s.inChars("-. "));
+const phone = s.merge(country, separator, area, separator, subscriber);`;
+---
+
+<BaseLayout
+  {title}
+  {description}
+  pathname="/why-strling/"
+  {crumbs}
+  keywords={[
+    'RegEx vs STRling',
+    'readable regular expressions',
+    'maintainable regex',
+    'regex builder',
+  ]}
+>
+  <header class="page-hero">
+    <div class="container reading stack">
+      <Breadcrumbs items={crumbs} /><span class="eyebrow">RegEx vs STRling</span
+      ><h1>Keep RegEx power. Improve the interface.</h1><p>
+        Regular expressions are compact, fast, and deeply embedded in software.
+        STRling does not replace that engine; it gives people a clearer way to
+        build patterns for it.
+      </p>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container">
+      <SectionHeader
+        eyebrow="The pressure point"
+        title="Symbol density grows faster than understanding"
+        description="Short RegEx is often ideal. As requirements add choices, optional pieces, captures, and assertions, the same compactness can make review and change harder."
+      /><div class="grid-3">
+        <FeatureCard
+          number="01"
+          title="Reading"
+          description="A maintainer must decode punctuation, precedence, and capture structure before understanding domain intent."
+        /><FeatureCard
+          number="02"
+          title="Changing"
+          description="Editing a dense string can accidentally alter grouping, escaping, or quantifier scope."
+        /><FeatureCard
+          number="03"
+          title="Discovering"
+          description="RegEx syntax rarely appears in host-language autocomplete, while named APIs and signatures can."
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container">
+      <SectionHeader
+        eyebrow="Source-documented comparison"
+        title="The pattern says what each part means"
+        description="The established Simply API accepts strings as literals and Pattern values as reusable pieces."
+      /><RegexComparison
+        code={composition}
+        language="typescript"
+        label="Composable STRling"
+        result="[0-9]{1,3}[-. ]?[0-9]{3}[-. ]?[0-9]{4}"
+      /><p class="muted" style="margin-top:1rem">
+        This phone-number form and emitted RegEx are documented by the
+        authoritative compiler repository. Naming <code class="mono"
+          >country</code
+        >,
+        <code class="mono">area</code>, and <code class="mono">subscriber</code>
+        makes their roles available to review and reuse.
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container">
+      <SectionHeader
+        eyebrow="Composition model"
+        title="A regular expression becomes a small program"
+      /><div class="grid-2">
+        <article class="feature stack-sm">
+          <h3>Sequence and alternatives</h3><p>
+            <code class="mono">merge(...)</code> places pieces in order. <code
+              class="mono">anyOf(...)</code
+            > in TypeScript and <code class="mono">any_of(...)</code> in Python express
+            alternatives.
+          </p>
+        </article><article class="feature stack-sm">
+          <h3>Optionality and repetition</h3><p>
+            <code class="mono">may(...)</code> makes a piece optional. Static constructors
+            accept repetition bounds, and Pattern values expose repetition methods.
+          </p>
+        </article><article class="feature stack-sm">
+          <h3>Captures with intent</h3><p>
+            <code class="mono">capture(...)</code> creates a numbered group; <code
+              class="mono">group(name, ...)</code
+            > gives extracted text a stable domain name.
+          </p>
+        </article><article class="feature stack-sm">
+          <h3>Assertions without punctuation recall</h3><p>
+            <code class="mono">ahead</code>, <code class="mono">notAhead</code>, <code
+              class="mono">behind</code
+            >, and <code class="mono">notBehind</code> expose lookaround intent.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container grid-2">
+      <div class="stack">
+        <span class="eyebrow">Cross-language concepts</span><h2>
+          One mental model, idiomatic naming
+        </h2><p class="kicker">
+          Python uses names such as <code class="mono">any_of</code> and <code
+            class="mono">in_chars</code
+          >; TypeScript uses <code class="mono">anyOf</code> and <code
+            class="mono">inChars</code
+          >. The concepts stay recognizable without pretending every language is
+          identical.
+        </p>
+      </div><div class="stack">
+        <span class="eyebrow">A measured claim</span><h2>
+          Safety depends on the binding and target
+        </h2><p>
+          STRling validates API inputs and the public specification defines
+          diagnostics for unsupported features and engine incompatibility.
+          Compile-time guarantees vary by host language, and generated RegEx
+          still inherits target-engine behavior.
+        </p><a class="text-link" href="/docs/compatibility/"
+          >Read the portability model</a
+        >
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container reading stack">
+      <h2>Use STRling when the pattern deserves a name</h2><p class="kicker">
+        For a tiny one-off expression, raw RegEx may be the clearest choice.
+        Reach for STRling when a pattern carries business meaning, will evolve,
+        needs review, or should be shared across a codebase.
+      </p><div class="cluster">
+        <a class="button" href="/learn/from-regex/">Translate familiar RegEx</a
+        ><a class="button button--secondary" href="/docs/core-concepts/"
+          >Read core concepts</a
+        >
+      </div>
+    </div>
+  </section>
+</BaseLayout>

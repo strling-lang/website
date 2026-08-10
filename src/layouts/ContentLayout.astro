@@ -1,0 +1,50 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs, { type Crumb } from '@/components/Breadcrumbs.astro';
+import DocsSidebar from '@/components/DocsSidebar.astro';
+import DocsTOC from '@/components/DocsTOC.astro';
+import RelatedLinks from '@/components/RelatedLinks.astro';
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+interface Props {
+  title: string;
+  description: string;
+  summary: string;
+  pathname: string;
+  crumbs: Crumb[];
+  headings: Heading[];
+  related: string[];
+  keywords: string[];
+}
+const {
+  title,
+  description,
+  summary,
+  pathname,
+  crumbs,
+  headings,
+  related,
+  keywords,
+} = Astro.props;
+---
+
+<BaseLayout {title} {description} {pathname} {crumbs} {keywords} type="article">
+  <div class="container docs-shell">
+    <DocsSidebar currentPath={pathname} />
+    <article class="prose">
+      <header class="doc-header stack">
+        <Breadcrumbs items={crumbs} />
+        <span class="eyebrow">User documentation</span>
+        <h1>{title}</h1>
+        <p class="kicker">{summary}</p>
+      </header>
+      <slot />
+      <RelatedLinks links={related} />
+    </article>
+    <DocsTOC {headings} />
+  </div>
+</BaseLayout>

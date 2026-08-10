@@ -1,0 +1,62 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+
+const lessons = (await getCollection('learn')).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const title = 'Learn STRling';
+const description =
+  'Learn readable regex with STRling through a source-confirmed quickstart, a RegEx translation guide, and a progressive tour.';
+const crumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'Learn', href: '/learn/' },
+];
+---
+
+<BaseLayout
+  {title}
+  {description}
+  pathname="/learn/"
+  {crumbs}
+  keywords={['learn STRling', 'readable regex tutorial', 'regex alternative']}
+>
+  <header class="page-hero">
+    <div class="container reading stack">
+      <Breadcrumbs items={crumbs} />
+      <span class="eyebrow">Guided learning</span>
+      <h1>Learn STRling by building patterns</h1>
+      <p>
+        Choose a short installation path, translate concepts you already know,
+        or take the complete guided tour.
+      </p>
+    </div>
+  </header>
+  <section class="section">
+    <div class="container grid-3">
+      {
+        lessons.map((entry, index) => (
+          <article class="package-card">
+            <div class="cluster">
+              <>
+                <span class="feature-number">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span class="mono muted">{entry.data.time}</span>
+              </>
+            </div>
+            <h2 style="font-size:1.55rem">{entry.data.title}</h2>
+            <p>{entry.data.summary}</p>
+            <a
+              class="text-link card-link"
+              href={`/learn/${entry.id.replace(/\.(md|mdx)$/i, '')}/`}
+            >
+              Begin {entry.data.title}
+            </a>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+</BaseLayout>

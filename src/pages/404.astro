@@ -1,0 +1,23 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+const title = 'Page not found';
+const description = 'The requested STRling page could not be found.';
+---
+
+<BaseLayout {title} {description} pathname="/404/" noindex>
+  <section class="hero">
+    <div class="container reading stack">
+      <span class="eyebrow">Error 404</span><h1>
+        This pattern did not match.
+      </h1><p class="hero-copy">
+        The URL may have moved, or the page may not exist. Return to the
+        documentation, learning hub, or package directory.
+      </p><div class="cluster">
+        <a class="button" href="/">Go to the homepage</a><a
+          class="button button--secondary"
+          href="/docs/">Browse documentation</a
+        >
+      </div>
+    </div>
+  </section>
+</BaseLayout>

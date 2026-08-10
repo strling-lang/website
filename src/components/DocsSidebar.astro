@@ -1,0 +1,27 @@
+---
+import { docsNavigation } from '@/data/navigation';
+interface Props {
+  currentPath: string;
+}
+const { currentPath } = Astro.props;
+---
+
+<aside class="docs-sidebar">
+  <p class="eyebrow">Documentation</p>
+  <nav aria-label="Documentation topics">
+    <a
+      href="/docs/"
+      aria-current={currentPath === '/docs/' ? 'page' : undefined}>Overview</a
+    >
+    {
+      docsNavigation.map((item) => (
+        <a
+          href={item.href}
+          aria-current={currentPath === item.href ? 'page' : undefined}
+        >
+          {item.label}
+        </a>
+      ))
+    }
+  </nav>
+</aside>

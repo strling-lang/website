@@ -1,0 +1,138 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import CodeBlock from '@/components/CodeBlock.astro';
+import StatusBadge from '@/components/StatusBadge.astro';
+import { bindings } from '@/data/bindings';
+
+export function getStaticPaths() {
+  return bindings.map((binding) => ({
+    params: { binding: binding.slug },
+    props: { binding },
+  }));
+}
+const { binding } = Astro.props;
+const title = `STRling for ${binding.language}`;
+const description = `${binding.summary} Distribution status: ${binding.status}. Fourth Edition information remains provisional.`;
+const pathname = `/packages/${binding.slug}/`;
+const crumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'Packages', href: '/packages/' },
+  { label: binding.language, href: pathname },
+];
+const tone =
+  binding.status === 'Published'
+    ? 'published'
+    : binding.status === 'Publication prepared'
+      ? 'prepared'
+      : 'source';
+---
+
+<BaseLayout
+  {title}
+  {description}
+  {pathname}
+  {crumbs}
+  type="article"
+  keywords={[
+    `STRling ${binding.language}`,
+    `${binding.language} regex library`,
+    'readable regex',
+  ]}
+>
+  <header class="page-hero">
+    <div class="container reading stack">
+      <Breadcrumbs items={crumbs} /><div class="cluster">
+        <span class="eyebrow">Language binding</span><StatusBadge
+          label={binding.status}
+          {tone}
+        />
+      </div><h1>STRling for {binding.language}</h1><p>{binding.summary}</p><div
+        class="cluster"
+      >
+        {
+          binding.registry && (
+            <a class="button" href={binding.registry.url}>
+              Open {binding.registry.name} <span aria-hidden="true">↗</span>
+            </a>
+          )
+        }<a class="button button--secondary" href={binding.sourcePath}
+          >View source <span aria-hidden="true">↗</span></a
+        >
+      </div>
+    </div>
+  </header>
+  <section class="section">
+    <div class="container reading stack">
+      <h2>Availability</h2><dl
+        class="facts"
+        style="grid-template-columns:repeat(2,minmax(0,1fr))"
+      >
+        <div class="fact">
+          <dt>Distribution</dt><dd>{binding.distribution}</dd>
+        </div><div class="fact"><dt>Status</dt><dd>{binding.status}</dd></div>{
+          binding.registry?.version && (
+            <div class="fact">
+              <>
+                <dt>Verified registry version</dt>
+                <dd>{binding.registry.version}</dd>
+              </>
+            </div>
+          )
+        }{
+          binding.requirements && (
+            <div class="fact">
+              <>
+                <dt>Source requirement</dt>
+                <dd>{binding.requirements}</dd>
+              </>
+            </div>
+          )
+        }
+      </dl>{
+        binding.install ? (
+          <>
+            <>
+              <h2>Install the verified public package</h2>
+              <CodeBlock
+                code={binding.install}
+                language="bash"
+                label={`${binding.language} package command`}
+              />
+              <p class="muted">
+                This is the only installation command shown because it is
+                supported by public STRling source and registry evidence.
+              </p>
+            </>
+          </>
+        ) : (
+          <div class="callout">
+            <>
+              <strong>No registry install command asserted</strong>
+              <p>
+                Use the canonical binding source and its README for the current
+                integration path. This website does not infer an install command
+                from a manifest alone.
+              </p>
+            </>
+          </div>
+        )
+      }
+    </div>
+  </section>
+  <section class="section section--bordered">
+    <div class="container reading stack">
+      <h2>Fourth Edition state</h2><p class="kicker">{binding.editionNote}</p><p
+      >
+        Package names, versions, and compatibility guarantees for the certified
+        Fourth Edition will be updated from centralized release data when the
+        edition is finalized.
+      </p><div class="cluster">
+        <a class="button" href="/fourth-edition/">Fourth Edition center</a><a
+          class="button button--secondary"
+          href="/docs/compatibility/">Compatibility guidance</a
+        >
+      </div>
+    </div>
+  </section>
+</BaseLayout>

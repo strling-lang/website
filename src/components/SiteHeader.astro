@@ -1,0 +1,58 @@
+---
+import { primaryNavigation } from '@/data/navigation';
+import { site } from '@/data/site';
+
+const currentPath = Astro.url.pathname;
+const isActive = (href: string) => currentPath.startsWith(href);
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="/" aria-label="STRling home">
+      <span class="brand-mark">
+        <img
+          src={site.logoUrl}
+          alt="STRling silver bell mark"
+          width="42"
+          height="42"
+        />
+      </span>
+      <span class="brand-word">STRling</span>
+    </a>
+
+    <nav class="desktop-nav" aria-label="Primary" data-primary-nav>
+      {
+        primaryNavigation.map((item) => (
+          <a
+            href={item.href}
+            aria-current={isActive(item.href) ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+      <a class="github-link" href={site.organizationUrl}
+        >GitHub <span aria-hidden="true">↗</span></a
+      >
+    </nav>
+
+    <details class="mobile-nav">
+      <summary aria-label="Open site navigation">Menu</summary>
+      <nav class="mobile-nav-panel" aria-label="Mobile" data-primary-nav>
+        {
+          primaryNavigation.map((item) => (
+            <a
+              href={item.href}
+              aria-current={isActive(item.href) ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          ))
+        }
+        <a href={site.organizationUrl}
+          >GitHub <span aria-hidden="true">↗</span></a
+        >
+      </nav>
+    </details>
+  </div>
+</header>

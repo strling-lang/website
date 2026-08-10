@@ -1,0 +1,30 @@
+---
+import type { Binding } from '@/data/bindings';
+import StatusBadge from './StatusBadge.astro';
+interface Props {
+  binding: Binding;
+}
+const { binding } = Astro.props;
+const tone =
+  binding.status === 'Published'
+    ? 'published'
+    : binding.status === 'Publication prepared'
+      ? 'prepared'
+      : 'source';
+---
+
+<article class="package-card">
+  <div class="cluster">
+    <h3>{binding.language}</h3>
+    <StatusBadge label={binding.status} {tone} />
+  </div>
+  <p>{binding.summary}</p>
+  <div class="package-meta">
+    {binding.distribution}{
+      binding.registry?.version ? ` · ${binding.registry.version}` : ''
+    }
+  </div>
+  <a class="text-link card-link" href={`/packages/${binding.slug}/`}
+    >View {binding.language} binding</a
+  >
+</article>

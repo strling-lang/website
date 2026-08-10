@@ -1,0 +1,154 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import { contentSources } from '@/data/content-sources';
+import { site } from '@/data/site';
+const title = 'The STRling open-source project';
+const description =
+  'STRling project identity, MIT license, GitHub organization, contribution sources, public philosophy, Fourth Edition context, and website source policy.';
+const crumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'Project', href: '/project/' },
+];
+---
+
+<BaseLayout
+  {title}
+  {description}
+  pathname="/project/"
+  {crumbs}
+  keywords={['STRling open source', 'STRling GitHub', 'MIT regex compiler']}
+>
+  <header class="page-hero">
+    <div class="container reading stack">
+      <Breadcrumbs items={crumbs} /><span class="eyebrow"
+        >Open-source project</span
+      ><h1>STRling is built in public</h1><p>
+        The website is the canonical user surface. GitHub is the development
+        surface for source, specifications, tests, issues, and contribution
+        work.
+      </p><div class="cluster">
+        <a class="button" href={site.organizationUrl}
+          >STRling on GitHub <span aria-hidden="true">↗</span></a
+        ><a class="button button--secondary" href={site.sourceUrl}
+          >Website source <span aria-hidden="true">↗</span></a
+        >
+      </div>
+    </div>
+  </header>
+  <section class="section">
+    <div class="container grid-2">
+      <div class="stack">
+        <span class="eyebrow">Identity</span><h2>
+          The Universal Regular Expression Compiler
+        </h2><p class="kicker">Readable. Composable. Universal.</p><p>
+          STRling presents regular-expression capabilities through named,
+          reusable pattern-building concepts. Generated expressions remain
+          usable with target runtimes, while the human-facing layer is organized
+          for reading and change.
+        </p>
+      </div><div class="stack">
+        <span class="eyebrow">Shared mark</span><div
+          class="brand-mark"
+          style="width:140px;height:140px"
+        >
+          <img
+            src={site.logoUrl}
+            alt="STRling silver bell mark"
+            width="140"
+            height="140"
+          />
+        </div><p>
+          The silver bell is loaded directly from the organization-owned <code
+            class="mono">.github</code
+          > repository. The website does not mirror or re-host it.
+        </p>
+      </div>
+    </div>
+  </section>
+  <section class="section section--bordered">
+    <div class="container grid-2">
+      <div class="stack">
+        <span class="eyebrow">User surface</span><h2>This website</h2><ul>
+          <li>Explains why STRling exists</li><li>
+            Teaches verified public APIs
+          </li><li>Documents observable behavior and portability</li><li>
+            Reports package and Fourth Edition status
+          </li>
+        </ul>
+      </div><div class="stack">
+        <span class="eyebrow">Development surface</span><h2>
+          GitHub repositories
+        </h2><ul>
+          <li>Compiler and binding implementations</li><li>
+            Formal specification and conformance fixtures
+          </li><li>Issues, review, governance, and contributor workflow</li><li>
+            Release engineering and internal architecture
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  <section class="section section--bordered">
+    <div class="container">
+      <div class="section-heading">
+        <span class="eyebrow">Public sources</span><h2>
+          Claims trace back to inspectable evidence
+        </h2>
+      </div><div class="grid-2">
+        {
+          contentSources.map((source) => (
+            <article class="feature stack-sm">
+              <>
+                <h3>
+                  <a href={source.url}>{source.label}</a>
+                </h3>
+                <p>{source.use}</p>
+              </>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+  <section class="section section--bordered">
+    <div class="container grid-2">
+      <div class="stack">
+        <span class="eyebrow">License</span><h2>MIT licensed</h2><p>
+          The canonical compiler repository and this website include the MIT
+          License. Individual organization infrastructure can have separate
+          repository-level terms, so consult the license in the source you use.
+        </p><a class="text-link" href={site.licenseUrl}
+          >Read the website license</a
+        >
+      </div><div class="stack">
+        <span class="eyebrow">Contribute</span><h2>
+          Start with the right repository
+        </h2><p>
+          Website copy and user documentation belong here. Binding code,
+          compiler behavior, specification changes, and release mechanics belong
+          in the canonical compiler repository.
+        </p><div class="cluster">
+          <a class="button" href={`${site.sourceUrl}/issues`}>Website issues</a
+          ><a
+            class="button button--secondary"
+            href={`${site.compilerSourceUrl}/issues`}>Compiler issues</a
+          >
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section section--bordered">
+    <div class="container reading stack">
+      <span class="eyebrow">Fourth Edition context</span><h2>
+        Public facts move together
+      </h2><p class="kicker">
+        The final edition version, date, package matrix, compatibility claims,
+        and migration guidance will be updated from shared release data after
+        certification—not guessed independently across pages.
+      </p><a class="button" href="/fourth-edition/"
+        >Read the pre-release center</a
+      >
+    </div>
+  </section>
+</BaseLayout>

@@ -156,16 +156,22 @@ test.describe('related pages', () => {
 
     await page.goto('/learn/tour/');
     const related = page.getByRole('navigation', { name: 'Related pages' });
+    const heading = related.getByRole('heading', { level: 2 });
     const items = related.locator('li');
     await expect(related).toBeVisible();
     await expect(items).toHaveCount(3);
 
-    const [firstBox, secondBox] = await Promise.all([
+    const [headingBox, firstBox, secondBox] = await Promise.all([
+      heading.boundingBox(),
       items.nth(0).boundingBox(),
       items.nth(1).boundingBox(),
     ]);
+    expect(headingBox).not.toBeNull();
     expect(firstBox).not.toBeNull();
     expect(secondBox).not.toBeNull();
+    expect(firstBox!.y - (headingBox!.y + headingBox!.height)).toBeGreaterThan(
+      0,
+    );
     expect(Math.abs(firstBox!.y - secondBox!.y)).toBeLessThanOrEqual(1);
 
     const overflow = await page.evaluate(
@@ -183,11 +189,21 @@ test.describe('related pages', () => {
 
     await page.goto('/learn/tour/');
     const related = page.getByRole('navigation', { name: 'Related pages' });
+    const heading = related.getByRole('heading', { level: 2 });
     const list = related.locator('ul');
     const links = related.getByRole('link');
     await expect(related).toBeVisible();
     await expect(links).toHaveCount(3);
     await expect(links.first()).toBeVisible();
+    const [headingBox, firstBox] = await Promise.all([
+      heading.boundingBox(),
+      links.first().boundingBox(),
+    ]);
+    expect(headingBox).not.toBeNull();
+    expect(firstBox).not.toBeNull();
+    expect(firstBox!.y - (headingBox!.y + headingBox!.height)).toBeGreaterThan(
+      0,
+    );
 
     const columnCount = await list.evaluate(
       (element) =>

@@ -16,18 +16,18 @@ The website repository itself is not a source for compiler behavior merely becau
 
 ## Sources reviewed
 
-| Source                    | Public evidence used                                                                                                                                                           |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `strling-lang/strling`    | 17 binding directories; Simply APIs; TypeScript and Python examples; manifests; feature registry; grammar; semantics; conformance fixtures; MIT license; distribution workflow |
-| `strling-lang/STRling.py` | Established Python API/package history and PyPI identity                                                                                                                       |
-| `strling-lang/STRling.js` | Established JavaScript API/package history                                                                                                                                     |
-| `strling-lang/.github`    | Organization identity and the remotely referenced silver bell mark                                                                                                             |
-| PyPI                      | `STRling` public package, version 2.5.9 at review time                                                                                                                         |
-| npm                       | `@strling-lang/strling` public package, version 3.0.0 at review time                                                                                                           |
-| NuGet                     | `STRling` and `STRling.FSharp`, version 3.0.0 at review time                                                                                                                   |
-| Pub.dev                   | `strling`, version 3.0.0 at review time                                                                                                                                        |
-| RubyGems                  | `strling`, version 3.0.0 at review time                                                                                                                                        |
-| Packagist and MetaCPAN    | No matching verified release at review time                                                                                                                                    |
+| Source                    | Public evidence used                                                                                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `strling-lang/strling`    | 17 binding directories; Simply APIs; TypeScript and Python examples; manifests; feature registry; grammar; semantics; conformance fixtures; Apache License 2.0; distribution workflow |
+| `strling-lang/STRling.py` | Established Python API/package history and PyPI identity                                                                                                                              |
+| `strling-lang/STRling.js` | Established JavaScript API/package history                                                                                                                                            |
+| `strling-lang/.github`    | Organization identity and the remotely referenced silver bell mark                                                                                                                    |
+| PyPI                      | `STRling` public package, version 2.5.9 at review time                                                                                                                                |
+| npm                       | `@strling-lang/strling` public package, version 3.0.0 at review time                                                                                                                  |
+| NuGet                     | `STRling` and `STRling.FSharp`, version 3.0.0 at review time                                                                                                                          |
+| Pub.dev                   | `strling`, version 3.0.0 at review time                                                                                                                                               |
+| RubyGems                  | `strling`, version 3.0.0 at review time                                                                                                                                               |
+| Packagist and MetaCPAN    | No matching verified release at review time                                                                                                                                           |
 
 Registry versions are time-sensitive evidence, not promises. Update `src/data/bindings.ts` only after rechecking the live record and repository ownership.
 

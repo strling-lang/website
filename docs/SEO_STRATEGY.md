@@ -26,7 +26,7 @@ The site targets useful search intent with substantial pages rather than phrase-
 | `/learn/from-regex/`            | Map known syntax                     | RegEx to STRling            | regex alternative, readable regular expressions              | Composition, groups                               |
 | `/learn/tour/`                  | Learn progressively                  | STRling tutorial            | composable regex, maintainable regex                         | Docs, Packages                                    |
 | `/fourth-edition/`              | Check release status                 | STRling Fourth Edition      | STRling pre-release, package rollout                         | Packages, Docs, Learn                             |
-| `/project/`                     | Verify ownership/license             | STRling open source         | STRling GitHub, MIT regex compiler                           | GitHub, source, Fourth Edition                    |
+| `/project/`                     | Verify ownership/license             | STRling open source         | STRling GitHub, Apache-2.0 regex compiler                    | GitHub, source, Fourth Edition                    |
 
 ## Implementation notes
 

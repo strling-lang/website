@@ -5,7 +5,7 @@ import { contentSources } from '@/data/content-sources';
 import { site } from '@/data/site';
 const title = 'The STRling open-source project';
 const description =
-  'STRling project identity, MIT license, GitHub organization, contribution sources, public philosophy, Fourth Edition context, and website source policy.';
+  'STRling project identity, Apache License 2.0, GitHub organization, contribution sources, public philosophy, Fourth Edition context, and website source policy.';
 const crumbs = [
   { label: 'Home', href: '/' },
   { label: 'Project', href: '/project/' },
@@ -17,7 +17,11 @@ const crumbs = [
   {description}
   pathname="/project/"
   {crumbs}
-  keywords={['STRling open source', 'STRling GitHub', 'MIT regex compiler']}
+  keywords={[
+    'STRling open source',
+    'STRling GitHub',
+    'Apache-2.0 regex compiler',
+  ]}
 >
   <header class="page-hero">
     <div class="container reading stack">
@@ -114,10 +118,10 @@ const crumbs = [
   <section class="section section--bordered">
     <div class="container grid-2">
       <div class="stack">
-        <span class="eyebrow">License</span><h2>MIT licensed</h2><p>
-          The canonical compiler repository and this website include the MIT
-          License. Individual organization infrastructure can have separate
-          repository-level terms, so consult the license in the source you use.
+        <span class="eyebrow">License</span><h2>Apache-2.0 licensed</h2><p>
+          Active STRling organization repositories use the Apache License 2.0.
+          Each repository includes its own license, so consult the source you
+          use for its complete terms.
         </p><a class="text-link" href={site.licenseUrl}
           >Read the website license</a
         >

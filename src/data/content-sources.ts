@@ -2,7 +2,7 @@ export const contentSources = [
   {
     label: 'Canonical compiler and bindings',
     url: 'https://github.com/strling-lang/strling',
-    use: 'Public identity, 17 binding directories, Simply APIs, manifests, formal grammar, semantics, conformance fixtures, and MIT license.',
+    use: 'Public identity, 17 binding directories, Simply APIs, manifests, formal grammar, semantics, conformance fixtures, and Apache License 2.0.',
   },
   {
     label: 'Python binding history',

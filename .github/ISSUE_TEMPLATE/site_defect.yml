@@ -1,0 +1,41 @@
+name: Website defect
+description: Report a reproducible route, browser, layout, navigation, or user-functionality defect
+title: '[Site]: '
+body:
+  - type: input
+    id: route
+    attributes:
+      label: Affected URL or route
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, device, and viewport
+      description: Include browser/version, operating system, device type, viewport, and assistive technology when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: expected_actual
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or diagnostics
+      description: Add redacted screenshots, console output, or network details when useful.
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Public-reporting check
+      options:
+        - label: I have not included credentials, private deployment details, personal data, or a suspected undisclosed vulnerability.
+          required: true

@@ -1,0 +1,43 @@
+name: Content, accessibility, or discoverability correction
+description: Report inaccurate content, inaccessible behavior, broken metadata, SEO, or AI-discoverability output
+title: '[Content]: '
+body:
+  - type: dropdown
+    id: concern
+    attributes:
+      label: Concern type
+      options:
+        - Inaccurate or unsupported product claim
+        - Documentation or learning-content correction
+        - Accessibility
+        - SEO, canonical URL, or social metadata
+        - Structured data, sitemap, llms.txt, or AI discoverability
+        - Broken internal or external link
+        - Package or release status
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Affected URL, route, or source path
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Correcting source or accessibility evidence
+      description: Link the controlling public source, live record, standard, test result, or reproduction.
+    validations:
+      required: true
+  - type: textarea
+    id: treatment
+    attributes:
+      label: Expected correction
+    validations:
+      required: true

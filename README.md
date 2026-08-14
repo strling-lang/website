@@ -2,11 +2,22 @@
 
 The canonical public website, user documentation, learning hub, package directory, and pre-release center for [STRling](https://github.com/strling-lang)—The Universal Regular Expression Compiler.
 
-This repository is the **user surface**. Compiler implementation, binding development, formal specifications, engineering governance, issues, and contributor mechanics belong in the appropriate STRling GitHub repositories, primarily [`strling-lang/strling`](https://github.com/strling-lang/strling).
+This repository is the **user surface**. Website implementation, content,
+accessibility, SEO/discoverability, browser behavior, deployment, and
+user-facing site defects belong here. Compiler implementation, binding
+development, formal specifications, and engineering governance belong in
+[`strling-lang/strling`](https://github.com/strling-lang/strling).
+
+The site is actively developed and may describe pre-release STRling work only
+with the explicit status and evidence boundaries defined below.
 
 ## Branch and deployment policy
 
-This website uses one continuously deployable branch: `main`. Do not create phase, release, architecture, or temporary branches for website work. Netlify builds and deploys pushes to `main`.
+`main` is the only long-lived and deployable website branch. Short-lived
+contributor branches and forks are welcome for review; they must not be treated
+as deployment or release authority. Do not create long-lived phase, release, or
+architecture branches for website work. Netlify builds and deploys pushes to
+`main`.
 
 ## Prerequisites
 
@@ -55,8 +66,7 @@ tests/              Node content gates and Playwright browser tests
 
 User-facing claims must be supported by public STRling source or live package records. Start with:
 
-- [`strling-lang/strling`](https://github.com/strling-lang/strling) for current binding source, Simply APIs, manifests, grammar, semantics, fixtures, and the MIT license;
-- [`strling-lang/STRling.py`](https://github.com/strling-lang/STRling.py) and [`strling-lang/STRling.js`](https://github.com/strling-lang/STRling.js) for established package history;
+- [`strling-lang/strling`](https://github.com/strling-lang/strling) for current binding source, Simply APIs, manifests, grammar, semantics, fixtures, and the Apache License 2.0;
 - [`strling-lang/.github`](https://github.com/strling-lang/.github) for organization identity and the shared remote logo;
 - package registries for current public availability.
 
@@ -79,3 +89,17 @@ Do not commit or re-host the silver bell logo. `src/data/site.ts` references the
 ## Netlify
 
 `netlify.toml` runs `npm run build`, publishes `dist`, applies security headers, and caches hashed Astro assets. There are no SPA rewrites, functions, authentication, analytics, or backend services. Pre-launch visitor access is controlled in Netlify, outside the application.
+
+## Contributing, security, and support
+
+- Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for website development, content,
+  accessibility, browser, SEO, and review requirements.
+- Report suspected vulnerabilities privately according to
+  [`SECURITY.md`](SECURITY.md).
+- Follow the organization
+  [Code of Conduct](https://github.com/strling-lang/.github/blob/main/CODE_OF_CONDUCT.md).
+- Use the organization [support and issue-routing guide](https://github.com/strling-lang/.github/blob/main/SUPPORT.md)
+  for compiler, conformance, research, and general organization questions.
+
+Website source and content are licensed under the
+[Apache License 2.0](LICENSE). Copyright 2026 STRling Team.

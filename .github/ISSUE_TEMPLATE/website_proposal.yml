@@ -1,0 +1,32 @@
+name: Website feature or content proposal
+description: Propose a scoped public-site, learning, documentation, accessibility, or discoverability improvement
+title: '[Proposal]: '
+body:
+  - type: textarea
+    id: user_need
+    attributes:
+      label: User need
+      description: Identify the audience, task, and evidence that the need belongs on the public website.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Proposed outcome
+      description: Describe the route, content, interaction, or data change without implying unsupported product capability.
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Content authority and dependencies
+      description: Identify controlling source material, centralized data, package records, design constraints, and downstream dependencies.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Acceptance and validation
+      description: Include accessibility, browser, responsive, content, metadata, SEO, structured-data, link, and build expectations.
+    validations:
+      required: true

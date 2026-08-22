@@ -84,7 +84,7 @@ Fourth Edition status is centralized in `src/data/release.ts`. Until certificati
 
 ## Logo policy
 
-Do not commit or re-host the silver bell logo. `src/data/site.ts` references the organization-owned image directly from `strling-lang/.github` with explicit dimensions and meaningful alt text at each use.
+Do not commit or re-host the full-resolution silver bell logo. `src/data/site.ts` references the organization-owned image directly from `strling-lang/.github` with explicit dimensions and meaningful alt text at each use. The optimized `public/favicon.ico` and `public/favicon-32x32.png` browser icons are the only local derivatives.
 
 ## Netlify
 

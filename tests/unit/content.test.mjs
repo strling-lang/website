@@ -54,14 +54,14 @@ test('binding data represents exactly the 17 authoritative source directories', 
   ]);
 });
 
-test('official logo is remote-only and no image asset is committed', async () => {
+test('official logo stays remote with only favicon derivatives local', async () => {
   const siteData = await readFile(fromRoot('src/data/site.ts'), 'utf8');
   assert.match(
     siteData,
     /raw\.githubusercontent\.com\/strling-lang\/\.github\/refs\/heads\/main\/strling_silver_bell\.png/,
   );
 
-  const imageExtensions = /\.(png|jpe?g|gif|webp|svg|avif)$/i;
+  const imageExtensions = /\.(png|jpe?g|gif|webp|svg|avif|ico)$/i;
   async function findImages(path) {
     const entries = await readdir(path);
     const found = [];
@@ -75,7 +75,11 @@ test('official logo is remote-only and no image asset is committed', async () =>
     return found;
   }
   assert.deepEqual(await findImages(fromRoot('src/')), []);
-  assert.deepEqual(await findImages(fromRoot('public/')).catch(() => []), []);
+  const publicImages = await findImages(fromRoot('public/'));
+  assert.deepEqual(publicImages.map((path) => path.split('/').at(-1)).sort(), [
+    'favicon-32x32.png',
+    'favicon.ico',
+  ]);
 });
 
 test('primary navigation contains only real routes', async () => {

@@ -109,6 +109,13 @@ test.describe('metadata and discoverability', () => {
         'href',
         /^https:\/\/strling-lang\.netlify\.app\//,
       );
+      await expect(page.locator('link[rel="icon"]')).toHaveCount(2);
+      await expect(
+        page.locator('link[rel="icon"][href="/favicon.ico"]'),
+      ).toHaveAttribute('sizes', '16x16 32x32 48x48');
+      await expect(
+        page.locator('link[rel="icon"][href="/favicon-32x32.png"]'),
+      ).toHaveAttribute('type', 'image/png');
       await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
         'content',
         /STRling/,
@@ -139,6 +146,22 @@ test.describe('metadata and discoverability', () => {
     expect(sitemap).not.toContain('/regex/docs/');
     expect(sitemap).not.toContain('/regex/lab/');
     expect(sitemap).not.toContain('/regex/compatibility/');
+  });
+
+  test('favicon assets are emitted with image content types', async ({
+    request,
+  }) => {
+    const ico = await request.get('/favicon.ico');
+    expect(ico.status()).toBe(200);
+    expect(ico.headers()['content-type']).toMatch(
+      /^image\/(vnd\.microsoft\.icon|x-icon)/,
+    );
+    expect((await ico.body()).length).toBeGreaterThan(1000);
+
+    const png = await request.get('/favicon-32x32.png');
+    expect(png.status()).toBe(200);
+    expect(png.headers()['content-type']).toContain('image/png');
+    expect((await png.body()).length).toBeGreaterThan(1000);
   });
 });
 

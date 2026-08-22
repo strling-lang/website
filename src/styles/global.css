@@ -341,22 +341,6 @@ table {
   border-left: 2px solid var(--text-primary);
 }
 
-.edition-banner {
-  border-bottom: 1px solid var(--border-subtle);
-  background: #11101a;
-}
-.edition-banner .container {
-  display: flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  text-align: center;
-  font-size: 0.88rem;
-}
-.edition-banner a {
-  font-weight: 600;
-}
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -996,9 +980,6 @@ table {
     flex-direction: column;
     align-items: flex-start;
     padding-block: var(--space-4);
-  }
-  .edition-banner .container {
-    padding-block: 0.4rem;
   }
 }
 

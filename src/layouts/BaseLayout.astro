@@ -5,7 +5,6 @@ import '@fontsource/ibm-plex-sans/600.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/600.css';
 import '@/styles/global.css';
-import EditionBanner from '@/components/EditionBanner.astro';
 import SiteFooter from '@/components/SiteFooter.astro';
 import SiteHeader from '@/components/SiteHeader.astro';
 import type { Crumb } from '@/components/Breadcrumbs.astro';
@@ -120,7 +119,6 @@ const structuredData = { '@context': 'https://schema.org', '@graph': graph };
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
-    <EditionBanner />
     <SiteHeader />
     <main id="main-content" tabindex="-1"><slot /></main>
     <SiteFooter />

@@ -11,6 +11,7 @@ export const GET: APIRoute = () =>
 - Canonical website: ${site.origin}/
 - Learn: ${site.origin}/learn/
 - User documentation: ${site.origin}/docs/
+- RegEx resources hub: ${site.origin}/regex/ — planned documentation, lab, and evidence-backed compatibility destinations are not yet available
 - Packages and bindings: ${site.origin}/packages/
 - Fourth Edition: ${site.origin}/fourth-edition/ — ${fourthEdition.status}; final version and date are not certified
 - Why STRling: ${site.origin}/why-strling/

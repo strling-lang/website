@@ -1,0 +1,65 @@
+---
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import StatusBadge from '@/components/StatusBadge.astro';
+import { regexSurfaces, surfaceStatusLabel } from '@/data/surfaces';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+const title = 'RegEx resources';
+const description =
+  'Explore the permanent home for independent RegEx documentation, testing, and evidence-backed compatibility resources from STRling.';
+const crumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'RegEx', href: '/regex/' },
+];
+---
+
+<BaseLayout {title} {description} pathname="/regex/" {crumbs}>
+  <header class="page-hero">
+    <div class="container reading stack">
+      <Breadcrumbs items={crumbs} />
+      <span class="eyebrow">RegEx domain</span>
+      <h1>RegEx resources</h1>
+      <p>
+        STRling is built around the broader regular-expression ecosystem. This
+        domain will provide independent resources for understanding, testing,
+        and comparing RegEx behavior without presenting any one engine as
+        universal.
+      </p>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-heading">
+        <span class="eyebrow">Three focused surfaces</span>
+        <h2>Understand, test, and compare RegEx</h2>
+        <p>
+          These permanent destinations establish the public architecture. Each
+          feature remains clearly marked until its evidence and implementation
+          are ready.
+        </p>
+      </div>
+      <div class="surface-grid">
+        {
+          regexSurfaces.map((surface) => (
+            <article class="surface-card stack-sm">
+              <StatusBadge
+                label={surfaceStatusLabel(surface.status)}
+                tone={
+                  surface.status === 'coming-soon' ? 'coming-soon' : 'published'
+                }
+              />
+              <h3>
+                <a href={surface.route}>{surface.label}</a>
+              </h3>
+              <p>{surface.description}</p>
+              <a class="text-link surface-card-link" href={surface.route}>
+                View destination
+              </a>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</BaseLayout>

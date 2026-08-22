@@ -1,7 +1,7 @@
 ---
-import { docsNavigation, learnNavigation } from '@/data/navigation';
 import { fourthEdition } from '@/data/release';
 import { site } from '@/data/site';
+import { regexSurfaces, surfaces } from '@/data/surfaces';
 import StatusBadge from './StatusBadge.astro';
 ---
 
@@ -31,29 +31,30 @@ import StatusBadge from './StatusBadge.astro';
     </div>
 
     <div class="footer-column stack-sm">
-      <h2>Learn</h2>
+      <h2>STRling</h2>
+      <ul>
+        <li><a href="/learn/">Learn</a></li>
+        <li><a href={surfaces.strlingDocs.route}>Docs</a></li>
+        <li><a href={surfaces.strlingLab.route}>Lab</a></li>
+        <li><a href="/packages/">Packages</a></li>
+      </ul>
+    </div>
+    <div class="footer-column stack-sm">
+      <h2>RegEx</h2>
       <ul>
         {
-          learnNavigation.map((item) => (
+          regexSurfaces.map((surface) => (
             <li>
-              <a href={item.href}>{item.label}</a>
+              <a href={surface.route}>{surface.navigationLabel}</a>
             </li>
           ))
         }
       </ul>
     </div>
     <div class="footer-column stack-sm">
-      <h2>Reference</h2>
-      <ul>
-        <li><a href="/docs/">Documentation</a></li>
-        <li><a href={docsNavigation[1].href}>Composition</a></li>
-        <li><a href="/packages/">Packages</a></li>
-        <li><a href="/fourth-edition/">Fourth Edition</a></li>
-      </ul>
-    </div>
-    <div class="footer-column stack-sm">
       <h2>Project</h2>
       <ul>
+        <li><a href="/fourth-edition/">Fourth Edition</a></li>
         <li><a href="/why-strling/">Why STRling</a></li>
         <li><a href="/project/">Open-source project</a></li>
         <li><a href={site.organizationUrl}>GitHub organization</a></li>

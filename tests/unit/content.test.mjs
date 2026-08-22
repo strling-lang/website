@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { readdir, readFile, stat } from 'node:fs/promises';
-import { join } from 'node:path';
 import test from 'node:test';
 
 const root = new URL('../../', import.meta.url);
@@ -67,11 +66,11 @@ test('official logo is remote-only and no image asset is committed', async () =>
     const entries = await readdir(path);
     const found = [];
     for (const entry of entries) {
-      const full = join(path.pathname, entry);
+      const full = new URL(entry, path);
       const info = await stat(full);
       if (info.isDirectory())
         found.push(...(await findImages(new URL(`${entry}/`, path))));
-      else if (imageExtensions.test(entry)) found.push(full);
+      else if (imageExtensions.test(entry)) found.push(full.pathname);
     }
     return found;
   }
@@ -88,10 +87,28 @@ test('primary navigation contains only real routes', async () => {
   assert.equal(primaryBlock.includes("href: '#"), false);
   for (const route of [
     '/learn/',
-    '/docs/',
     '/packages/',
     '/fourth-edition/',
     '/why-strling/',
   ])
     assert.ok(primaryBlock.includes(route));
+  assert.ok(primaryBlock.includes('surfaces.strlingDocs'));
+  assert.ok(primaryBlock.includes('surfaces.strlingLab'));
+
+  assert.ok(navigation.includes('regexSurfaces.map'));
+});
+
+test('major product surfaces have centralized routes and availability', async () => {
+  const source = await readFile(fromRoot('src/data/surfaces.ts'), 'utf8');
+  for (const route of [
+    '/docs/',
+    '/lab/',
+    '/regex/docs/',
+    '/regex/lab/',
+    '/regex/compatibility/',
+  ])
+    assert.ok(source.includes(`route: '${route}'`));
+
+  assert.match(source, /strlingDocs:[\s\S]*status: 'available'/);
+  assert.equal([...source.matchAll(/status: 'coming-soon'/g)].length, 4);
 });

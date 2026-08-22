@@ -1,9 +1,12 @@
 ---
-import { primaryNavigation } from '@/data/navigation';
+import { primaryNavigation, regexNavigation } from '@/data/navigation';
 import { site } from '@/data/site';
 
 const currentPath = Astro.url.pathname;
-const isActive = (href: string) => currentPath.startsWith(href);
+const normalizePath = (path: string) =>
+  path === '/' ? path : `/${path.replace(/^\/+|\/+$/g, '')}/`;
+const isCurrent = (href: string) => normalizePath(currentPath) === href;
+const isRegexDomain = currentPath.startsWith('/regex/');
 ---
 
 <header class="site-header">
@@ -22,10 +25,44 @@ const isActive = (href: string) => currentPath.startsWith(href);
 
     <nav class="desktop-nav" aria-label="Primary" data-primary-nav>
       {
-        primaryNavigation.map((item) => (
+        primaryNavigation.slice(0, 3).map((item) => (
           <a
             href={item.href}
-            aria-current={isActive(item.href) ? 'page' : undefined}
+            aria-current={isCurrent(item.href) ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+      <details
+        class="regex-nav"
+        data-domain-active={isRegexDomain || undefined}
+      >
+        <summary>RegEx <span aria-hidden="true">▾</span></summary>
+        <div class="regex-nav-panel">
+          <a
+            href="/regex/"
+            aria-current={isCurrent('/regex/') ? 'page' : undefined}
+          >
+            RegEx overview
+          </a>
+          {
+            regexNavigation.map((item) => (
+              <a
+                href={item.href}
+                aria-current={isCurrent(item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            ))
+          }
+        </div>
+      </details>
+      {
+        primaryNavigation.slice(3).map((item) => (
+          <a
+            href={item.href}
+            aria-current={isCurrent(item.href) ? 'page' : undefined}
           >
             {item.label}
           </a>
@@ -40,10 +77,40 @@ const isActive = (href: string) => currentPath.startsWith(href);
       <summary aria-label="Open site navigation">Menu</summary>
       <nav class="mobile-nav-panel" aria-label="Mobile" data-primary-nav>
         {
-          primaryNavigation.map((item) => (
+          primaryNavigation.slice(0, 3).map((item) => (
             <a
               href={item.href}
-              aria-current={isActive(item.href) ? 'page' : undefined}
+              aria-current={isCurrent(item.href) ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          ))
+        }
+        <div
+          class="mobile-nav-group"
+          data-domain-active={isRegexDomain || undefined}
+        >
+          <a
+            class="mobile-nav-heading"
+            href="/regex/"
+            aria-current={isCurrent('/regex/') ? 'page' : undefined}>RegEx</a
+          >
+          {
+            regexNavigation.map((item) => (
+              <a
+                href={item.href}
+                aria-current={isCurrent(item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            ))
+          }
+        </div>
+        {
+          primaryNavigation.slice(3).map((item) => (
+            <a
+              href={item.href}
+              aria-current={isCurrent(item.href) ? 'page' : undefined}
             >
               {item.label}
             </a>

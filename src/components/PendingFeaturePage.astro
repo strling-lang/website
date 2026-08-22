@@ -1,0 +1,68 @@
+---
+import Breadcrumbs, { type Crumb } from '@/components/Breadcrumbs.astro';
+import StatusBadge from '@/components/StatusBadge.astro';
+import type { ProductSurface } from '@/data/surfaces';
+import { surfaceStatusLabel } from '@/data/surfaces';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+interface Props {
+  surface: ProductSurface;
+  crumbs: Crumb[];
+  backHref: string;
+  backLabel: string;
+}
+
+const { surface, crumbs, backHref, backLabel } = Astro.props;
+const noindex = surface.status === 'coming-soon';
+---
+
+<BaseLayout
+  title={surface.label}
+  description={surface.description}
+  pathname={surface.route}
+  {crumbs}
+  {noindex}
+>
+  <header class="page-hero">
+    <div class="container reading stack">
+      <Breadcrumbs items={crumbs} />
+      <span class="eyebrow"
+        >{surface.domain === 'regex' ? 'RegEx' : 'STRling'}</span
+      >
+      <h1>{surface.label}</h1>
+      <StatusBadge
+        label={surfaceStatusLabel(surface.status)}
+        tone={surface.status === 'coming-soon' ? 'coming-soon' : 'published'}
+      />
+      <p>{surface.description}</p>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container pending-feature-grid">
+      <div class="stack">
+        <span class="eyebrow">What to expect</span>
+        <h2>What the finished surface will provide</h2>
+        <ul class="pending-feature-list">
+          {surface.capabilities.map((capability) => <li>{capability}</li>)}
+        </ul>
+      </div>
+      <aside class="pending-feature-note stack-sm" aria-label="Release scope">
+        <span class="eyebrow">Release scope</span>
+        <p>{surface.scopeNote}</p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container reading stack">
+      <h2>Explore what is available now</h2>
+      <p class="kicker">
+        This permanent route is reserved for the finished surface. Until it is
+        ready, the surrounding documentation and project pages remain the
+        authoritative public resources.
+      </p>
+      <a class="button button--secondary" href={backHref}>{backLabel}</a>
+    </div>
+  </section>
+</BaseLayout>

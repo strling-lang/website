@@ -13,6 +13,11 @@ const requiredRoutes = [
   '/docs/composition/',
   '/docs/lookarounds/',
   '/docs/compatibility/',
+  '/lab/',
+  '/regex/',
+  '/regex/docs/',
+  '/regex/lab/',
+  '/regex/compatibility/',
   '/learn/',
   '/learn/quickstart/',
   '/learn/from-regex/',
@@ -38,6 +43,50 @@ test.describe('routes', () => {
     await expect(page.getByRole('heading', { level: 1 })).toContainText(
       'pattern did not match',
     );
+  });
+
+  test('STRling Docs remains available documentation', async ({ page }) => {
+    await page.goto('/docs/');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'STRling documentation',
+    );
+    await expect(
+      page.locator('main a[href="/docs/core-concepts/"]').first(),
+    ).toBeVisible();
+    await expect(page.getByText('Coming soon', { exact: true })).toHaveCount(0);
+    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+  });
+
+  for (const [route, heading] of [
+    ['/lab/', 'STRling Lab'],
+    ['/regex/docs/', 'RegEx Docs'],
+    ['/regex/lab/', 'RegEx Lab'],
+    ['/regex/compatibility/', 'RegEx Compatibility Check'],
+  ] as const) {
+    test(`${route} is an honest coming-soon destination`, async ({ page }) => {
+      await page.goto(route);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
+      await expect(
+        page.getByText('Coming soon', { exact: true }),
+      ).toBeVisible();
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+        'content',
+        'noindex,follow',
+      );
+    });
+  }
+
+  test('RegEx hub links all three feature destinations', async ({ page }) => {
+    await page.goto('/regex/');
+    for (const route of [
+      '/regex/docs/',
+      '/regex/lab/',
+      '/regex/compatibility/',
+    ]) {
+      await expect(
+        page.locator(`main a[href="${route}"]`).first(),
+      ).toBeVisible();
+    }
   });
 });
 
@@ -84,6 +133,12 @@ test.describe('metadata and discoverability', () => {
     expect(await (await request.get('/llms.txt')).text()).toContain(
       'Pre-release',
     );
+    const sitemap = await (await request.get('/sitemap.xml')).text();
+    expect(sitemap).toContain('/regex/');
+    expect(sitemap).not.toContain('/lab/');
+    expect(sitemap).not.toContain('/regex/docs/');
+    expect(sitemap).not.toContain('/regex/lab/');
+    expect(sitemap).not.toContain('/regex/compatibility/');
   });
 });
 
@@ -98,7 +153,38 @@ test.describe('responsive interaction', () => {
       .evaluateAll((links) => links.map((link) => link.getAttribute('href')));
     expect(hrefs).toContain('/learn/');
     expect(hrefs).toContain('/docs/');
+    expect(hrefs).toContain('/lab/');
+    expect(hrefs).toContain('/packages/');
+    expect(hrefs).toContain('/fourth-edition/');
+    expect(hrefs).toContain('/why-strling/');
     expect(hrefs.some((href) => href?.startsWith('#'))).toBe(false);
+
+    const regexMenu = page.locator('.desktop-nav .regex-nav');
+    await expect(regexMenu.locator('summary')).toHaveText(/RegEx/);
+    await regexMenu.locator('summary').click();
+    for (const label of ['RegEx Docs', 'RegEx Lab', 'Compatibility Check']) {
+      await expect(regexMenu.getByRole('link', { name: label })).toBeVisible();
+    }
+  });
+
+  test('RegEx desktop navigation is keyboard accessible and marks only the current page', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith('mobile'));
+    await page.goto('/regex/lab/');
+    const regexMenu = page.locator('.desktop-nav .regex-nav');
+    const summary = regexMenu.locator('summary');
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(regexMenu).toHaveAttribute('open', '');
+    await page.keyboard.press('Tab');
+    await expect(
+      regexMenu.getByRole('link', { name: 'RegEx overview' }),
+    ).toBeFocused();
+    await expect(summary).not.toHaveAttribute('aria-current', 'page');
+    await expect(
+      regexMenu.getByRole('link', { name: 'RegEx Lab' }),
+    ).toHaveAttribute('aria-current', 'page');
   });
 
   test('mobile navigation opens and remains keyboard reachable', async ({
@@ -113,6 +199,13 @@ test.describe('responsive interaction', () => {
     await expect(
       menu.getByRole('link', { name: 'Docs', exact: true }),
     ).toBeVisible();
+    const regexGroup = menu.locator('.mobile-nav-group');
+    await expect(
+      regexGroup.getByRole('link', { name: 'RegEx', exact: true }),
+    ).toBeVisible();
+    for (const label of ['RegEx Docs', 'RegEx Lab', 'Compatibility Check']) {
+      await expect(regexGroup.getByRole('link', { name: label })).toBeVisible();
+    }
   });
 
   for (const route of [
@@ -121,6 +214,9 @@ test.describe('responsive interaction', () => {
     '/docs/composition/',
     '/learn/tour/',
     '/fourth-edition/',
+    '/lab/',
+    '/regex/',
+    '/regex/compatibility/',
   ]) {
     test(`${route} has no horizontal page overflow`, async ({ page }) => {
       await page.goto(route);
@@ -221,6 +317,8 @@ test.describe('accessibility', () => {
     '/docs/core-concepts/',
     '/learn/quickstart/',
     '/fourth-edition/',
+    '/regex/',
+    '/lab/',
   ]) {
     test(`${route} has no serious or critical axe violations`, async ({
       page,

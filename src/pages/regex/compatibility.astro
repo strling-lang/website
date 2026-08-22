@@ -1,0 +1,20 @@
+---
+import PendingFeaturePage from '@/components/PendingFeaturePage.astro';
+import { surfaces } from '@/data/surfaces';
+
+const crumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'RegEx', href: '/regex/' },
+  {
+    label: 'Compatibility Check',
+    href: surfaces.regexCompatibility.route,
+  },
+];
+---
+
+<PendingFeaturePage
+  surface={surfaces.regexCompatibility}
+  {crumbs}
+  backHref="/regex/"
+  backLabel="Back to RegEx resources"
+/>

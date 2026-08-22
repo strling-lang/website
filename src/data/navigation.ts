@@ -1,10 +1,24 @@
+import { regexSurfaces, surfaces } from './surfaces';
+
 export const primaryNavigation = [
   { href: '/learn/', label: 'Learn' },
-  { href: '/docs/', label: 'Docs' },
+  {
+    href: surfaces.strlingDocs.route,
+    label: surfaces.strlingDocs.navigationLabel,
+  },
+  {
+    href: surfaces.strlingLab.route,
+    label: surfaces.strlingLab.navigationLabel,
+  },
   { href: '/packages/', label: 'Packages' },
   { href: '/fourth-edition/', label: 'Fourth Edition' },
   { href: '/why-strling/', label: 'Why STRling' },
 ] as const;
+
+export const regexNavigation = regexSurfaces.map((surface) => ({
+  href: surface.route,
+  label: surface.navigationLabel,
+}));
 
 export const docsNavigation = [
   { href: '/docs/core-concepts/', label: 'Core concepts' },

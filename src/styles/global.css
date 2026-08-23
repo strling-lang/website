@@ -378,7 +378,7 @@ table {
 .hero {
   position: relative;
   overflow: clip;
-  padding-block: clamp(5rem, 11vw, 9rem);
+  padding-block: var(--space-6);
 }
 .hero::after {
   position: absolute;

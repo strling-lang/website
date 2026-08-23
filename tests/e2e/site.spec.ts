@@ -295,6 +295,20 @@ test.describe('responsive interaction', () => {
     ).toHaveAttribute('aria-current', 'page');
   });
 
+  test('RegEx desktop navigation dismisses when clicking outside it', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith('mobile'));
+    await page.goto('/regex/');
+
+    const regexMenu = page.locator('.desktop-nav .regex-nav');
+    await regexMenu.locator('summary').click();
+    await expect(regexMenu).toHaveAttribute('open', '');
+
+    await page.locator('main').click({ position: { x: 10, y: 10 } });
+    await expect(regexMenu).not.toHaveAttribute('open', '');
+  });
+
   test('mobile navigation opens and remains keyboard reachable', async ({
     page,
   }, testInfo) => {

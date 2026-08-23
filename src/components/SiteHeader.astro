@@ -123,3 +123,17 @@ const isRegexDomain = currentPath.startsWith('/regex/');
     </details>
   </div>
 </header>
+
+<script>
+  const regexMenus = document.querySelectorAll(
+    '.desktop-nav details.regex-nav',
+  );
+
+  document.addEventListener('click', (event) => {
+    if (!(event.target instanceof Node)) return;
+
+    regexMenus.forEach((menu) => {
+      if (menu.open && !menu.contains(event.target as Node)) menu.open = false;
+    });
+  });
+</script>

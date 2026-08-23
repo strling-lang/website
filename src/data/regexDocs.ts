@@ -129,6 +129,29 @@ export function sourceUrl(source: RegexSource): string {
 
 export const regexSnapshotUrl = `https://github.com/${regexDocs.source.repository}/blob/${regexDocs.source.revision}/${regexDocs.source.snapshotPath}`;
 
+const regexCategorySidebarLabels: Record<string, string> = {
+  'character-classes': 'Character classes',
+  'approximate-partial-and-multipattern': 'Approximate & multi-pattern',
+  'quantification-and-match-selection': 'Quantification & selection',
+  'unicode-and-text-model': 'Unicode & text model',
+  'diagnostics-resources-and-safety': 'Diagnostics & safety',
+  'anchors-and-boundaries': 'Anchors & boundaries',
+  'backreferences-recursion-and-conditionals': 'Backreferences & recursion',
+  'backtracking-control-and-code': 'Backtracking control',
+  'groups-and-captures': 'Groups & captures',
+  'replacement-language': 'Replacement',
+  'lookaround-assertions': 'Lookaround',
+  'grammar-and-composition': 'Grammar & composition',
+  'host-operations-and-results': 'Operations & results',
+  'editor-cli-and-product-surfaces': 'Editor, CLI & product',
+};
+
+export function regexCategorySidebarLabel(category: RegexCategory): string {
+  return (
+    regexCategorySidebarLabels[category.semanticCategoryId] ?? category.name
+  );
+}
+
 export function humanizeIdentifier(value: string): string {
   return value
     .replace(/^(feature|modifier|operation)\./, '')

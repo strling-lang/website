@@ -1,10 +1,12 @@
 ---
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
-import RegexDocsSidebar from '@/components/RegexDocsSidebar.astro';
+import DocsSidebar from '@/components/DocsSidebar.astro';
+import DocsTOC from '@/components/DocsTOC.astro';
 import {
   featuresForCategory,
   humanizeIdentifier,
   regexCategories,
+  regexCategorySidebarLabel,
   regexCategoryById,
   regexDocs,
   regexSnapshotUrl,
@@ -46,6 +48,20 @@ for (const feature of features) {
 const relatedCategories = category.relatedCategoryIds
   .map((id) => regexCategoryById.get(id))
   .filter((item): item is RegexCategory => Boolean(item));
+const categoryNavigation = regexCategories.map((item) => ({
+  href: item.route,
+  label: `${regexCategorySidebarLabel(item)} (${item.featureCount})`,
+}));
+const headings = [
+  { depth: 2, slug: 'category-organization', text: 'Conceptual organization' },
+  ...[...featuresByClass.entries()].map(([featureClass, classFeatures]) => ({
+    depth: 3,
+    slug: `class-${featureClass}`,
+    text: `${humanizeIdentifier(featureClass)} ${classFeatures.length}`,
+  })),
+  { depth: 2, slug: 'category-provenance', text: 'Category provenance' },
+  { depth: 2, slug: 'related-categories-heading', text: 'Related categories' },
+];
 ---
 
 <BaseLayout
@@ -56,8 +72,15 @@ const relatedCategories = category.relatedCategoryIds
   {crumbs}
   keywords={[category.name, 'regex features', 'regular expression semantics']}
 >
-  <div class="container regex-docs-shell">
-    <RegexDocsSidebar currentCategoryId={category.semanticCategoryId} />
+  <div class="container docs-shell">
+    <DocsSidebar
+      currentPath={category.route}
+      heading="Feature categories"
+      navigationLabel="Regex feature categories"
+      overviewHref="/regex/docs/"
+      overviewLabel="Catalog overview"
+      items={categoryNavigation}
+    />
     <article
       class="prose regex-category-page"
       data-semantic-category-id={category.semanticCategoryId}
@@ -144,5 +167,6 @@ const relatedCategories = category.relatedCategoryIds
         </ul>
       </nav>
     </article>
+    <DocsTOC {headings} />
   </div>
 </BaseLayout>

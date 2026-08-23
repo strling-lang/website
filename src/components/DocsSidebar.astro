@@ -1,20 +1,38 @@
 ---
 import { docsNavigation } from '@/data/navigation';
+
+interface NavigationItem {
+  href: string;
+  label: string;
+}
 interface Props {
   currentPath: string;
+  heading?: string;
+  navigationLabel?: string;
+  overviewHref?: string;
+  overviewLabel?: string;
+  items?: NavigationItem[];
 }
-const { currentPath } = Astro.props;
+const {
+  currentPath,
+  heading = 'Documentation',
+  navigationLabel = 'Documentation topics',
+  overviewHref = '/docs/',
+  overviewLabel = 'Overview',
+  items = docsNavigation,
+} = Astro.props;
 ---
 
 <aside class="docs-sidebar">
-  <p class="eyebrow">Documentation</p>
-  <nav aria-label="Documentation topics">
+  <p class="eyebrow">{heading}</p>
+  <nav aria-label={navigationLabel}>
     <a
-      href="/docs/"
-      aria-current={currentPath === '/docs/' ? 'page' : undefined}>Overview</a
+      href={overviewHref}
+      aria-current={currentPath === overviewHref ? 'page' : undefined}
+      >{overviewLabel}</a
     >
     {
-      docsNavigation.map((item) => (
+      items.map((item) => (
         <a
           href={item.href}
           aria-current={currentPath === item.href ? 'page' : undefined}

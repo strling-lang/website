@@ -133,6 +133,7 @@ const isRegexDomain = currentPath.startsWith('/regex/');
     if (!(event.target instanceof Node)) return;
 
     regexMenus.forEach((menu) => {
+      if (!(menu instanceof HTMLDetailsElement)) return;
       if (menu.open && !menu.contains(event.target as Node)) menu.open = false;
     });
   });

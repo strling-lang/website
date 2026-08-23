@@ -1,9 +1,12 @@
 ---
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
-import RegexDocsSidebar from '@/components/RegexDocsSidebar.astro';
+import DocsSidebar from '@/components/DocsSidebar.astro';
+import DocsTOC from '@/components/DocsTOC.astro';
 import {
   featuresForCategory,
   humanizeIdentifier,
+  regexCategories,
+  regexCategorySidebarLabel,
   regexCategoryById,
   regexDocs,
   regexFeatureById,
@@ -81,6 +84,54 @@ const structuredFeature = {
     .filter(Boolean)
     .map((route) => canonicalUrl(route!)),
 };
+const categoryNavigation = regexCategories.map((item) => ({
+  href: item.route,
+  label: `${regexCategorySidebarLabel(item)} (${item.featureCount})`,
+}));
+const headings = [
+  { depth: 2, slug: 'compatibility-status', text: 'Compatibility status' },
+  { depth: 2, slug: 'meaning-and-scope', text: 'Meaning and scope' },
+  {
+    depth: 2,
+    slug: 'names-and-variants',
+    text: 'Names and semantic variants',
+  },
+  {
+    depth: 2,
+    slug: 'manifestations',
+    text: 'Syntax and API manifestations',
+  },
+  {
+    depth: 2,
+    slug: 'relationships',
+    text: 'Prerequisites, modifiers, and interactions',
+  },
+  {
+    depth: 2,
+    slug: 'operations-results',
+    text: 'Operations, captures, and replacement',
+  },
+  {
+    depth: 2,
+    slug: 'text-errors-resources',
+    text: 'Text model, diagnostics, and resources',
+  },
+  {
+    depth: 2,
+    slug: 'test-concepts',
+    text: 'Examples and edge-case concepts',
+  },
+  {
+    depth: 2,
+    slug: 'sources',
+    text: 'Authoritative source references',
+  },
+  {
+    depth: 2,
+    slug: 'continue-heading',
+    text: 'Continue in the catalog',
+  },
+];
 ---
 
 <BaseLayout
@@ -97,8 +148,15 @@ const structuredFeature = {
   ]}
   additionalStructuredData={[structuredFeature]}
 >
-  <div class="container regex-docs-shell">
-    <RegexDocsSidebar currentCategoryId={feature.semanticCategoryId} />
+  <div class="container docs-shell">
+    <DocsSidebar
+      currentPath={category.route}
+      heading="Feature categories"
+      navigationLabel="Regex feature categories"
+      overviewHref="/regex/docs/"
+      overviewLabel="Catalog overview"
+      items={categoryNavigation}
+    />
     <article
       class="prose regex-feature-page"
       data-semantic-feature-id={feature.semanticFeatureId}
@@ -436,5 +494,6 @@ const structuredFeature = {
         </ul>
       </nav>
     </article>
+    <DocsTOC {headings} />
   </div>
 </BaseLayout>

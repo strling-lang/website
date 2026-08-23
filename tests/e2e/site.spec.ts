@@ -16,6 +16,16 @@ const regexFeatureRoutes = regexProjection.features.map(
 );
 const sampleRegexCategory = '/regex/docs/character-classes/';
 const sampleRegexFeature = '/regex/docs/character-classes/word-class/';
+const knownMojibakeSequences = [
+  '\u00e2\u2020\u2019',
+  '\u00e2\u20ac\u201d',
+  '\u00e2\u20ac\u201c',
+  '\u00e2\u20ac\u2122',
+  '\u00c2',
+  '\u00c3',
+  '\u00f0\u0178',
+  '\ufffd',
+];
 
 const requiredRoutes = [
   '/',
@@ -117,6 +127,7 @@ test.describe('routes', () => {
     request,
   }, testInfo) => {
     test.skip(testInfo.project.name.startsWith('mobile'));
+    testInfo.setTimeout(90_000);
     const routes = [...regexCategoryRoutes, ...regexFeatureRoutes];
     expect(new Set(routes).size).toBe(routes.length);
     expect(regexCategoryRoutes).toHaveLength(14);
@@ -129,14 +140,20 @@ test.describe('routes', () => {
           response: await request.get(route),
         })),
       );
-      for (const { route, response } of responses)
+      for (const { route, response } of responses) {
         expect(response.status(), route).toBe(200);
+        const html = await response.text();
+        expect(
+          knownMojibakeSequences.filter((sequence) => html.includes(sequence)),
+          route,
+        ).toEqual([]);
+      }
     }
   });
 
   test('category and feature pages expose canonical metadata and breadcrumbs', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.goto(sampleRegexCategory);
     await expect(page.locator('[data-semantic-category-id]')).toHaveAttribute(
       'data-semantic-category-id',
@@ -145,6 +162,39 @@ test.describe('routes', () => {
     await expect(page.locator('.regex-category-features')).toContainText(
       'Word-character shorthand class',
     );
+    await expect(page.locator('.docs-shell')).toBeVisible();
+    await expect(page.locator('.docs-sidebar')).toBeVisible();
+    await expect(page.locator('.regex-category-page')).toBeVisible();
+    if (testInfo.project.name.startsWith('mobile')) {
+      await expect(page.locator('.docs-toc')).toBeHidden();
+    } else {
+      await expect(page.locator('.docs-toc')).toBeVisible();
+    }
+    await expect(page.locator('.regex-docs-sidebar')).toHaveCount(0);
+    await expect(page.locator('.docs-sidebar details')).toHaveCount(0);
+
+    const categoryNavigation = page.getByRole('navigation', {
+      name: 'Regex feature categories',
+    });
+    await expect(categoryNavigation.getByRole('link')).toHaveCount(15);
+    await expect(
+      categoryNavigation.getByRole('link', {
+        name: 'Character classes (27)',
+      }),
+    ).toHaveAttribute('aria-current', 'page');
+    await expect(
+      categoryNavigation.getByRole('link', {
+        name: 'Approximate & multi-pattern (24)',
+      }),
+    ).toBeAttached();
+    await expect(
+      categoryNavigation.getByText(
+        'Approximate, partial, streaming and multi-pattern',
+      ),
+    ).toHaveCount(0);
+    await expect(
+      page.locator('.docs-toc a[href="#category-organization"]'),
+    ).toHaveAttribute('href', '#category-organization');
 
     await page.goto(sampleRegexFeature);
     await expect(page.locator('[data-semantic-feature-id]')).toHaveAttribute(
@@ -330,86 +380,148 @@ test.describe('responsive interaction', () => {
     }
   });
 
-  test('RegEx category selector stays sticky while only its category list scrolls', async ({
+  test('shared documentation asides remain stationary and scroll only their navigation', async ({
     page,
   }, testInfo) => {
     test.skip(testInfo.project.name.startsWith('mobile'));
-    await page.goto(sampleRegexCategory);
+    await page.setViewportSize({ width: 1440, height: 400 });
+
+    for (const route of ['/docs/anchors-and-boundaries/', '/learn/tour/']) {
+      await page.goto(route);
+      const asides = page.locator('.docs-sidebar, .docs-toc:visible');
+      const count = await asides.count();
+      expect(count, route).toBeGreaterThan(0);
+
+      for (let index = 0; index < count; index += 1) {
+        const aside = asides.nth(index);
+        const persistentHeading = aside.locator(':scope > .eyebrow');
+        const scroller = aside.locator(':scope > nav, :scope > ul');
+        await expect(aside).toHaveCSS('position', 'sticky');
+        await expect(scroller).toHaveCSS('overflow-y', 'auto');
+
+        const initialAside = await aside.boundingBox();
+        const initialHeading = await persistentHeading.boundingBox();
+        expect(initialAside).not.toBeNull();
+        expect(initialHeading).not.toBeNull();
+
+        await page.evaluate(() => {
+          document.documentElement.style.scrollBehavior = 'auto';
+          window.scrollTo(0, 400);
+        });
+        await expect
+          .poll(() => page.evaluate(() => window.scrollY))
+          .toBeGreaterThan(0);
+        const stickyAside = await aside.boundingBox();
+        expect(stickyAside).not.toBeNull();
+        expect(Math.abs(stickyAside!.y - initialAside!.y)).toBeLessThanOrEqual(
+          1,
+        );
+        expect(Math.abs(stickyAside!.x - initialAside!.x)).toBeLessThanOrEqual(
+          1,
+        );
+
+        const scrollState = await scroller.evaluate((element) => ({
+          clientHeight: element.clientHeight,
+          scrollHeight: element.scrollHeight,
+        }));
+        if (scrollState.scrollHeight > scrollState.clientHeight) {
+          await scroller.evaluate((element) => {
+            element.scrollTop = element.scrollHeight;
+          });
+          await expect
+            .poll(() => scroller.evaluate((element) => element.scrollTop))
+            .toBeGreaterThan(0);
+        }
+        expect(
+          Math.abs(
+            (await persistentHeading.boundingBox())!.y - initialHeading!.y,
+          ),
+        ).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  test('RegEx category page keeps the standard docs grid while its sidebar stays fixed in place', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith('mobile'));
+    await page.setViewportSize({ width: 1440, height: 700 });
+    const captureHorizontalLayout = async () => {
+      const shell = page.locator('.docs-shell');
+      const sidebar = page.locator('.docs-sidebar');
+      const article = shell.locator('article');
+      const toc = page.locator('.docs-toc');
+      const sidebarBox = await sidebar.boundingBox();
+      const articleBox = await article.boundingBox();
+      const tocBox = await toc.boundingBox();
+      expect(sidebarBox).not.toBeNull();
+      expect(articleBox).not.toBeNull();
+      expect(tocBox).not.toBeNull();
+      return {
+        articleWidth: articleBox!.width,
+        columns: await shell.evaluate(
+          (element) => getComputedStyle(element).gridTemplateColumns,
+        ),
+        sidebarLeft: sidebarBox!.x,
+        sidebarWidth: sidebarBox!.width,
+        tocLeft: tocBox!.x,
+      };
+    };
+
+    await page.goto('/docs/anchors-and-boundaries/');
+    const standardDocsLayout = await captureHorizontalLayout();
+
+    await page.goto('/regex/docs/grammar-and-composition/');
+    const regexDocsLayout = await captureHorizontalLayout();
+    expect(regexDocsLayout).toEqual(standardDocsLayout);
 
     const header = page.locator('.site-header');
-    const sidebar = page.locator('.regex-docs-sidebar');
-    const catalogOverview = sidebar.getByRole('link', {
-      name: 'Catalog overview',
-    });
-    const categoryControl = sidebar.locator('summary');
+    const sidebar = page.locator('.docs-sidebar');
     const categoryList = sidebar.getByRole('navigation', {
       name: 'Regex feature categories',
     });
-    const categoryLinks = categoryList.getByRole('link');
-
-    await expect(categoryLinks).toHaveCount(14);
+    const catalogOverview = categoryList.getByRole('link', {
+      name: 'Catalog overview',
+    });
+    await expect(sidebar).toHaveCSS('position', 'sticky');
+    await expect(categoryList).toHaveCSS('overflow-y', 'auto');
     await expect(
-      categoryList.getByRole('link', { name: /Character classes/ }),
+      categoryList.getByRole('link', { name: 'Grammar & composition (13)' }),
     ).toHaveAttribute('aria-current', 'page');
 
-    const initialSidebarBox = await sidebar.boundingBox();
-    expect(initialSidebarBox).not.toBeNull();
+    const initialSidebar = await sidebar.boundingBox();
+    const initialOverview = await catalogOverview.boundingBox();
+    expect(initialSidebar).not.toBeNull();
+    expect(initialOverview).not.toBeNull();
 
     await page.evaluate(() => {
       document.documentElement.style.scrollBehavior = 'auto';
-      window.scrollTo(0, 600);
+      window.scrollTo(0, 900);
     });
     await expect
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeGreaterThan(0);
-
+    const stickySidebar = await sidebar.boundingBox();
+    const stickyOverview = await catalogOverview.boundingBox();
     const headerBox = await header.boundingBox();
-    const stickyBox = await sidebar.boundingBox();
-    const stickyTop = await sidebar.evaluate((element) =>
-      Number.parseFloat(getComputedStyle(element).top),
-    );
+    expect(stickySidebar).not.toBeNull();
+    expect(stickyOverview).not.toBeNull();
     expect(headerBox).not.toBeNull();
-    expect(stickyBox).not.toBeNull();
-    expect(Math.abs(stickyBox!.x - initialSidebarBox!.x)).toBeLessThanOrEqual(
+    expect(Math.abs(stickySidebar!.x - initialSidebar!.x)).toBeLessThanOrEqual(
       1,
     );
     expect(
-      Math.abs(stickyBox!.width - initialSidebarBox!.width),
+      Math.abs(stickySidebar!.width - initialSidebar!.width),
     ).toBeLessThanOrEqual(1);
-    expect(Math.abs(stickyBox!.y - initialSidebarBox!.y)).toBeLessThanOrEqual(
+    expect(Math.abs(stickySidebar!.y - initialSidebar!.y)).toBeLessThanOrEqual(
       1,
     );
-    expect(Math.abs(stickyBox!.y - stickyTop)).toBeLessThanOrEqual(1);
-    expect(stickyBox!.y).toBeGreaterThanOrEqual(
+    expect(stickySidebar!.y).toBeGreaterThanOrEqual(
       headerBox!.y + headerBox!.height,
     );
 
-    const overviewBox = await catalogOverview.boundingBox();
-    const controlBox = await categoryControl.boundingBox();
-    expect(overviewBox).not.toBeNull();
-    expect(controlBox).not.toBeNull();
-
-    await page.evaluate(() => window.scrollBy(0, 600));
-    await expect
-      .poll(async () =>
-        Math.abs((await sidebar.boundingBox())!.y - stickyBox!.y),
-      )
-      .toBeLessThanOrEqual(2);
-    expect(
-      Math.abs((await catalogOverview.boundingBox())!.y - overviewBox!.y),
-    ).toBeLessThanOrEqual(2);
-    expect(
-      Math.abs((await categoryControl.boundingBox())!.y - controlBox!.y),
-    ).toBeLessThanOrEqual(2);
-
-    const documentScrollTop = await page.evaluate(() => window.scrollY);
     const listBox = await categoryList.boundingBox();
-    const firstLink = categoryLinks.first();
-    const lastLink = categoryLinks.last();
-    const firstLinkBox = await firstLink.boundingBox();
     expect(listBox).not.toBeNull();
-    expect(firstLinkBox).not.toBeNull();
-
     await page.mouse.move(
       listBox!.x + listBox!.width / 2,
       listBox!.y + listBox!.height / 2,
@@ -418,74 +530,46 @@ test.describe('responsive interaction', () => {
     await expect
       .poll(() => categoryList.evaluate((element) => element.scrollTop))
       .toBeGreaterThan(0);
-
-    const bottomScrollState = await categoryList.evaluate((element) => ({
-      clientHeight: element.clientHeight,
-      scrollHeight: element.scrollHeight,
-      scrollTop: element.scrollTop,
-    }));
-    const lastLinkBox = await lastLink.boundingBox();
+    await expect(categoryList.getByRole('link').last()).toBeInViewport();
     expect(
-      bottomScrollState.scrollTop + bottomScrollState.clientHeight,
-    ).toBeGreaterThanOrEqual(bottomScrollState.scrollHeight - 2);
-    expect(lastLinkBox).not.toBeNull();
-    expect(lastLinkBox!.y + lastLinkBox!.height).toBeLessThanOrEqual(
-      listBox!.y + listBox!.height + 2,
-    );
-    expect((await firstLink.boundingBox())!.y).toBeLessThan(firstLinkBox!.y);
-    expect(
-      Math.abs((await catalogOverview.boundingBox())!.y - overviewBox!.y),
-    ).toBeLessThanOrEqual(2);
-    expect(
-      Math.abs((await categoryControl.boundingBox())!.y - controlBox!.y),
-    ).toBeLessThanOrEqual(2);
-    expect(
-      Math.abs((await page.evaluate(() => window.scrollY)) - documentScrollTop),
-    ).toBeLessThanOrEqual(2);
+      Math.abs((await catalogOverview.boundingBox())!.y - stickyOverview!.y),
+    ).toBeLessThanOrEqual(1);
 
     await page.mouse.wheel(0, -10_000);
     await expect
       .poll(() => categoryList.evaluate((element) => element.scrollTop))
       .toBeLessThanOrEqual(1);
-    const restoredFirstLinkBox = await firstLink.boundingBox();
-    expect(restoredFirstLinkBox).not.toBeNull();
-    expect(restoredFirstLinkBox!.y).toBeGreaterThanOrEqual(listBox!.y - 2);
+    expect(
+      Math.abs((await catalogOverview.boundingBox())!.y - initialOverview!.y),
+    ).toBeLessThanOrEqual(1);
   });
 
-  test('RegEx category selector returns to normal flow on mobile', async ({
+  test('RegEx category navigation uses standard docs responsive flow', async ({
     page,
   }, testInfo) => {
     test.skip(!testInfo.project.name.startsWith('mobile'));
     await page.goto(sampleRegexCategory);
 
-    const sidebar = page.locator('.regex-docs-sidebar');
-    const disclosure = sidebar.locator('details');
+    const sidebar = page.locator('.docs-sidebar');
+    const toc = page.locator('.docs-toc');
     const categoryList = sidebar.getByRole('navigation', {
       name: 'Regex feature categories',
     });
 
     await expect(sidebar).toHaveCSS('position', 'static');
-    await expect(disclosure).not.toHaveAttribute('open', '');
-    await disclosure.locator('summary').focus();
-    await page.keyboard.press('Enter');
-    await expect(disclosure).toHaveAttribute('open', '');
-    await expect(categoryList).toHaveCSS('overflow-y', 'visible');
+    await expect(toc).toBeHidden();
+    await expect(sidebar.locator('details')).toHaveCount(0);
+    await expect(categoryList.getByRole('link')).toHaveCount(15);
 
-    const listOverflow = await categoryList.evaluate(
-      (element) => element.scrollWidth - element.clientWidth,
-    );
     const pageOverflow = await page.evaluate(
       () =>
         document.documentElement.scrollWidth -
         document.documentElement.clientWidth,
     );
-    expect(listOverflow).toBeLessThanOrEqual(1);
     expect(pageOverflow).toBeLessThanOrEqual(1);
 
     await categoryList.getByRole('link').last().scrollIntoViewIfNeeded();
     await expect(categoryList.getByRole('link').last()).toBeInViewport();
-    await disclosure.locator('summary').click();
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
   for (const route of [

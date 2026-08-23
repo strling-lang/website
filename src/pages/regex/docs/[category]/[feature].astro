@@ -1,0 +1,440 @@
+---
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import RegexDocsSidebar from '@/components/RegexDocsSidebar.astro';
+import {
+  featuresForCategory,
+  humanizeIdentifier,
+  regexCategoryById,
+  regexDocs,
+  regexFeatureById,
+  regexFeatures,
+  regexSnapshotUrl,
+  relationLabel,
+  sourceUrl,
+  type RegexFeature,
+} from '@/data/regexDocs';
+import { canonicalUrl } from '@/data/site';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+export function getStaticPaths() {
+  return regexFeatures.map((feature) => ({
+    params: {
+      category: feature.semanticCategoryId,
+      feature: feature.slug,
+    },
+    props: { feature },
+  }));
+}
+
+interface Props {
+  feature: RegexFeature;
+}
+
+const { feature } = Astro.props;
+const category = regexCategoryById.get(feature.semanticCategoryId);
+if (!category)
+  throw new Error(`Missing category ${feature.semanticCategoryId}`);
+const title = `${feature.canonicalName} regex feature`;
+const description = `${feature.semanticDefinition} Canonical semantic ID: ${feature.semanticFeatureId}.`;
+const crumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'RegEx', href: '/regex/' },
+  { label: 'Feature Catalog', href: '/regex/docs/' },
+  { label: category.name, href: category.route },
+  { label: feature.canonicalName, href: feature.route },
+];
+const related = feature.featureRelations
+  .map((relation) => ({
+    relation,
+    feature: regexFeatureById.get(relation.targetFeatureId),
+  }))
+  .filter(
+    (
+      item,
+    ): item is {
+      relation: (typeof feature.featureRelations)[number];
+      feature: RegexFeature;
+    } => Boolean(item.feature),
+  );
+const categoryFeatures = featuresForCategory(feature.semanticCategoryId);
+const featureIndex = categoryFeatures.findIndex(
+  (item) => item.semanticFeatureId === feature.semanticFeatureId,
+);
+const categoryNeighbors = [
+  categoryFeatures[featureIndex - 1],
+  categoryFeatures[featureIndex + 1],
+].filter((item): item is RegexFeature => Boolean(item));
+const sourceById = new Map(
+  feature.authoritativeSources.map((source) => [source.sourceId, source]),
+);
+const structuredFeature = {
+  '@type': 'DefinedTerm',
+  '@id': `${canonicalUrl(feature.route)}#semantic-feature`,
+  identifier: feature.semanticFeatureId,
+  name: feature.canonicalName,
+  description: feature.semanticDefinition,
+  alternateName: feature.aliases,
+  inDefinedTermSet: canonicalUrl('/regex/docs/'),
+  isPartOf: canonicalUrl(category.route),
+  relatedLink: feature.relatedFeatures
+    .map((id) => regexFeatureById.get(id)?.route)
+    .filter(Boolean)
+    .map((route) => canonicalUrl(route!)),
+};
+---
+
+<BaseLayout
+  {title}
+  {description}
+  pathname={feature.route}
+  type="article"
+  {crumbs}
+  keywords={[
+    feature.canonicalName,
+    ...feature.aliases,
+    category.name,
+    'regex semantics',
+  ]}
+  additionalStructuredData={[structuredFeature]}
+>
+  <div class="container regex-docs-shell">
+    <RegexDocsSidebar currentCategoryId={feature.semanticCategoryId} />
+    <article
+      class="prose regex-feature-page"
+      data-semantic-feature-id={feature.semanticFeatureId}
+      data-semantic-category-id={feature.semanticCategoryId}
+      data-source-semantic-digest={feature.sourceSemanticDigest}
+    >
+      <header class="doc-header stack">
+        <Breadcrumbs items={crumbs} />
+        <span class="eyebrow">Canonical regex semantic feature</span>
+        <h1>{feature.canonicalName}</h1>
+        <p class="kicker">{feature.semanticDefinition}</p>
+        <dl class="regex-inline-facts">
+          <div>
+            <dt>Semantic feature ID</dt>
+            <dd><code>{feature.semanticFeatureId}</code></dd>
+          </div>
+          <div>
+            <dt>Category</dt>
+            <dd><a href={category.route}>{category.name}</a></dd>
+          </div>
+          <div>
+            <dt>Feature class</dt>
+            <dd>{humanizeIdentifier(feature.featureClass)}</dd>
+          </div>
+        </dl>
+      </header>
+
+      <aside class="callout stack-sm" aria-labelledby="compatibility-status">
+        <h2 id="compatibility-status">Compatibility status</h2>
+        <p>Compatibility evidence is not yet available for this profile.</p>
+        <p>
+          This page defines semantics only. It does not infer support in any
+          engine or language from source documentation or syntax resemblance.
+        </p>
+      </aside>
+
+      <section aria-labelledby="meaning-and-scope">
+        <h2 id="meaning-and-scope">Meaning and scope</h2>
+        <p>{feature.semanticDefinition}</p>
+        <p>
+          Corpus class: <strong
+            >{humanizeIdentifier(feature.featureClass)}</strong
+          >. The claim scope is {feature.provenance.claim_scope}.
+        </p>
+        {
+          feature.abstractGrammarForm && (
+            <div class="regex-corpus-form stack-sm">
+              <h3>Corpus shorthand</h3>
+              <code>{feature.abstractGrammarForm}</code>
+              <p>
+                This is an abstract corpus form for discussing the semantic
+                shape. It is not universal regex syntax.
+              </p>
+            </div>
+          )
+        }
+      </section>
+
+      <section aria-labelledby="names-and-variants">
+        <h2 id="names-and-variants">Names and semantic variants</h2>
+        {
+          feature.aliases.length || feature.historicalNames.length ? (
+            <dl class="regex-detail-list">
+              {feature.aliases.length > 0 && (
+                <div>
+                  <dt>Aliases</dt>
+                  <dd>{feature.aliases.join(', ')}</dd>
+                </div>
+              )}
+              {feature.historicalNames.length > 0 && (
+                <div>
+                  <dt>Historical names</dt>
+                  <dd>{feature.historicalNames.join(', ')}</dd>
+                </div>
+              )}
+            </dl>
+          ) : (
+            <p>The corpus records no separate aliases or historical names.</p>
+          )
+        }
+        {
+          feature.semanticVariants.length > 0 ? (
+            <ul class="regex-definition-list">
+              {feature.semanticVariants.map((variant) => (
+                <li>
+                  <strong>{humanizeIdentifier(variant.name)}</strong>
+                  <code>{variant.variant_id}</code>
+                  <span>{variant.distinguishing_rule}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No separate semantic variants are declared for this feature.</p>
+          )
+        }
+      </section>
+
+      <section aria-labelledby="manifestations">
+        <h2 id="manifestations">Syntax and API manifestations</h2>
+        <p>
+          Manifestations are source-specific ways this semantic feature becomes
+          visible. They demonstrate provenance and vocabulary; they are not a
+          universal spelling or a compatibility claim.
+        </p>
+        {
+          feature.manifestations.length > 0 ? (
+            <div class="regex-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <>
+                      <th>Source</th>
+                      <th>Kind</th>
+                      <th>Form</th>
+                    </>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feature.manifestations.map((manifestation) => {
+                    const source = sourceById.get(manifestation.sourceId);
+                    return (
+                      <tr>
+                        <td>
+                          {source ? (
+                            <a href={sourceUrl(source)}>{source.title}</a>
+                          ) : (
+                            manifestation.sourceId
+                          )}
+                        </td>
+                        <td>{relationLabel(manifestation.kind)}</td>
+                        <td>
+                          <code>{manifestation.form}</code>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p>
+              The corpus establishes this semantic identity without a separate
+              syntax or API manifestation record.
+            </p>
+          )
+        }
+      </section>
+
+      <section aria-labelledby="relationships">
+        <h2 id="relationships">Prerequisites, modifiers, and interactions</h2>
+        {
+          feature.prerequisiteFeatureIds.length > 0 && (
+            <div>
+              <h3>Prerequisites</h3>
+              <ul>
+                {feature.prerequisiteFeatureIds.map((id) => {
+                  const prerequisite = regexFeatureById.get(id);
+                  return (
+                    <li>
+                      {prerequisite ? (
+                        <a href={prerequisite.route}>
+                          {prerequisite.canonicalName}
+                        </a>
+                      ) : (
+                        id
+                      )}{' '}
+                      <code>{id}</code>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )
+        }
+        {
+          feature.modifiers.length > 0 && (
+            <div>
+              <h3>Modifiers and option dependencies</h3>
+              <ul class="regex-definition-list">
+                {feature.modifiers.map((modifier) => (
+                  <li>
+                    <strong>{humanizeIdentifier(modifier.name)}</strong>
+                    <code>{modifier.modifierId}</code>
+                    <span>{modifier.semanticEffect}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+        {
+          related.length > 0 ? (
+            <div>
+              <h3>Typed feature interactions</h3>
+              <ul>
+                {related.map(({ relation, feature: relatedFeature }) => (
+                  <li>
+                    <a href={relatedFeature.route}>
+                      {relatedFeature.canonicalName}
+                    </a>
+                    {' — '}
+                    {relationLabel(relation.relationType)} ({relation.direction}
+                    )
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p>
+              The corpus records no separate typed feature interaction for this
+              identity.
+            </p>
+          )
+        }
+      </section>
+
+      <section aria-labelledby="operations-results">
+        <h2 id="operations-results">Operations, captures, and replacement</h2>
+        <h3>Relevant operations</h3>
+        <ul class="regex-definition-list">
+          {
+            feature.operations.map((operation) => (
+              <li>
+                <strong>{humanizeIdentifier(operation.name)}</strong>
+                <code>{operation.operationId}</code>
+                <span>{operation.semanticContract}</span>
+              </li>
+            ))
+          }
+        </ul>
+        <h3>Capture and result behavior</h3>
+        <p>{feature.captureResultSemantics}</p>
+        <h3>Replacement implications</h3>
+        <p>{feature.replacementImplications}</p>
+      </section>
+
+      <section aria-labelledby="text-errors-resources">
+        <h2 id="text-errors-resources">
+          Text model, diagnostics, and resources
+        </h2>
+        <h3>Unicode and text model</h3>
+        <p>{feature.unicodeEncodingImplications}</p>
+        <h3>Errors and diagnostics</h3>
+        <p>{feature.diagnosticErrorSemantics}</p>
+        <h3>Resource and termination behavior</h3>
+        <p>{feature.resourceTerminationImplications}</p>
+      </section>
+
+      <section aria-labelledby="test-concepts">
+        <h2 id="test-concepts">Examples and edge-case concepts</h2>
+        <p>
+          These are semantic test concepts, not claims about the syntax or
+          support of a particular implementation.
+        </p>
+        <dl class="regex-detail-list">
+          <div><dt>Positive</dt><dd>{feature.testConcepts.positive}</dd></div>
+          <div><dt>Negative</dt><dd>{feature.testConcepts.negative}</dd></div>
+          <div><dt>Edge</dt><dd>{feature.testConcepts.edge}</dd></div>
+        </dl>
+        {
+          feature.unresolvedSemanticQuestions.length > 0 && (
+            <>
+              <h3>Open semantic questions</h3>
+              <ul>
+                {feature.unresolvedSemanticQuestions.map((question) => (
+                  <li>{question}</li>
+                ))}
+              </ul>
+            </>
+          )
+        }
+      </section>
+
+      <section aria-labelledby="sources">
+        <h2 id="sources">Authoritative source references</h2>
+        <p>
+          The semantic identity and documented behavior are bound to the
+          following exact corpus source records. Normative publishers remain
+          authoritative for their own standards; the Regex Conformance corpus
+          owns the reviewed cross-source semantic model.
+        </p>
+        <ul class="regex-source-list">
+          {
+            feature.authoritativeSources.map((source) => (
+              <li>
+                <a href={sourceUrl(source)}>{source.title}</a>
+                <span>
+                  {source.authority} · {source.versionOrRevision} ·{' '}
+                  {source.normative
+                    ? 'normative standard'
+                    : relationLabel(source.sourceClass)}
+                </span>
+                <span>{source.scope}</span>
+                <code>{source.sourceId}</code>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="regex-source-binding stack-sm">
+          <h3>Corpus binding</h3>
+          <p>
+            Semantic ID <code>{feature.semanticFeatureId}</code>, feature
+            revision {feature.revision}, corpus status {
+              relationLabel(regexDocs.source.status)
+            }, discovery cutoff {feature.provenance.discovery_cutoff}.
+          </p>
+          <p>
+            Snapshot: <a href={regexSnapshotUrl}
+              >{regexDocs.source.snapshotPath}</a
+            ><br />
+            Revision: <code>{regexDocs.source.revision}</code><br />
+            Semantic digest: <code>{feature.sourceSemanticDigest}</code>
+          </p>
+        </div>
+      </section>
+
+      <nav class="related" aria-labelledby="continue-heading">
+        <h2 id="continue-heading">Continue in the catalog</h2>
+        <ul>
+          <li>
+            <a href={category.route}
+              >All {category.featureCount} {category.name} features</a
+            >
+          </li>
+          {
+            (related.length > 0
+              ? related.slice(0, 3).map((item) => item.feature)
+              : categoryNeighbors
+            ).map((item) => (
+              <li>
+                <a href={item.route}>{item.canonicalName}</a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </article>
+  </div>
+</BaseLayout>

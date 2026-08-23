@@ -9,10 +9,12 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
+    "check:regex-docs": "node scripts/check-regex-docs-coverage.mjs",
+    "generate:regex-docs": "node scripts/generate-regex-docs-projection.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "npm run build && node --test tests/unit/*.test.mjs && node scripts/check-links.mjs",
+    "test": "npm run build && npm run check:regex-docs -- --dist dist && node --test tests/unit/*.test.mjs && node scripts/check-links.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

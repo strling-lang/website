@@ -1,0 +1,46 @@
+name: Regex documentation coverage
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out website
+        uses: actions/checkout@v4
+        with:
+          path: website
+
+      - name: Check out current Regex Conformance default branch
+        uses: actions/checkout@v4
+        with:
+          repository: strling-lang/regex-conformance
+          path: regex-conformance
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: website/.nvmrc
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install website dependencies
+        run: npm ci
+        working-directory: website
+
+      - name: Check reviewed documentation against canonical semantics
+        run: npm run check:regex-docs -- --canonical-root ../regex-conformance
+        working-directory: website
+
+      - name: Run the ordinary website validation pipeline
+        run: npm test
+        working-directory: website

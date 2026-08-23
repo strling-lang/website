@@ -1,0 +1,1614 @@
+{
+  "generation": {
+    "format": "strling-regex-docs-projection",
+    "version": 1
+  },
+  "source": {
+    "repository": "strling-lang/regex-conformance",
+    "snapshotPath": "semantic-corpus/snapshots/regex-semantic-features-2026-08-22.v1.json",
+    "revision": "5e4ebd58dc4c567cfb20f6d8c04caa79ae3b0001",
+    "semanticDigest": "350bfea4c3da07b3426d885aa8ff645ac55539bbb1294a2ea35dd5319541d6c7",
+    "snapshotId": "regex-semantic-features-2026-08-22.sha256-350bfea4c3da07b3426d885aa8ff645ac55539bbb1294a2ea35dd5319541d6c7",
+    "schemaVersion": "regex-semantic-corpus-v1",
+    "cutoffDate": "2026-08-22",
+    "status": "frozen-declared-cutoff-baseline"
+  },
+  "canonicalFeatureCount": 251,
+  "canonicalCategoryCount": 14,
+  "categoryCounts": {
+    "character-classes": 27,
+    "approximate-partial-and-multipattern": 24,
+    "quantification-and-match-selection": 20,
+    "unicode-and-text-model": 20,
+    "diagnostics-resources-and-safety": 20,
+    "anchors-and-boundaries": 19,
+    "backreferences-recursion-and-conditionals": 18,
+    "backtracking-control-and-code": 17,
+    "groups-and-captures": 17,
+    "replacement-language": 16,
+    "lookaround-assertions": 15,
+    "grammar-and-composition": 13,
+    "host-operations-and-results": 13,
+    "editor-cli-and-product-surfaces": 12
+  },
+  "reviewedCategories": [
+    {
+      "semanticCategoryId": "character-classes",
+      "canonicalName": "Character classes",
+      "featureCount": 27
+    },
+    {
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "canonicalName": "Approximate, partial, streaming and multi-pattern",
+      "featureCount": 24
+    },
+    {
+      "semanticCategoryId": "quantification-and-match-selection",
+      "canonicalName": "Quantification and match selection",
+      "featureCount": 20
+    },
+    {
+      "semanticCategoryId": "unicode-and-text-model",
+      "canonicalName": "Unicode and text model",
+      "featureCount": 20
+    },
+    {
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "canonicalName": "Diagnostics, resources and safety",
+      "featureCount": 20
+    },
+    {
+      "semanticCategoryId": "anchors-and-boundaries",
+      "canonicalName": "Anchors and boundaries",
+      "featureCount": 19
+    },
+    {
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "canonicalName": "Backreferences, recursion and conditionals",
+      "featureCount": 18
+    },
+    {
+      "semanticCategoryId": "backtracking-control-and-code",
+      "canonicalName": "Backtracking control and embedded code",
+      "featureCount": 17
+    },
+    {
+      "semanticCategoryId": "groups-and-captures",
+      "canonicalName": "Groups and captures",
+      "featureCount": 17
+    },
+    {
+      "semanticCategoryId": "replacement-language",
+      "canonicalName": "Replacement language",
+      "featureCount": 16
+    },
+    {
+      "semanticCategoryId": "lookaround-assertions",
+      "canonicalName": "Lookaround assertions",
+      "featureCount": 15
+    },
+    {
+      "semanticCategoryId": "grammar-and-composition",
+      "canonicalName": "Grammar and composition",
+      "featureCount": 13
+    },
+    {
+      "semanticCategoryId": "host-operations-and-results",
+      "canonicalName": "Host-operation and result semantics",
+      "featureCount": 13
+    },
+    {
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "canonicalName": "Editor, CLI and product surfaces",
+      "featureCount": 12
+    }
+  ],
+  "reviewedFeatures": [
+    {
+      "semanticFeatureId": "feature.absent-expression",
+      "canonicalName": "Absent expression",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "absent-expression"
+    },
+    {
+      "semanticFeatureId": "feature.all-match-lengths-at-start",
+      "canonicalName": "All match lengths at one start",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "all-match-lengths-at-start"
+    },
+    {
+      "semanticFeatureId": "feature.alternation",
+      "canonicalName": "Alternation",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "alternation"
+    },
+    {
+      "semanticFeatureId": "feature.anchoring-region-bounds",
+      "canonicalName": "Anchoring region bounds",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "anchoring-region-bounds"
+    },
+    {
+      "semanticFeatureId": "feature.append-replacement-state",
+      "canonicalName": "Append-replacement state",
+      "semanticCategoryId": "replacement-language",
+      "slug": "append-replacement-state"
+    },
+    {
+      "semanticFeatureId": "feature.approximate-cost-model",
+      "canonicalName": "Approximate cost model",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "approximate-cost-model"
+    },
+    {
+      "semanticFeatureId": "feature.approximate-deletion",
+      "canonicalName": "Approximate deletion",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "approximate-deletion"
+    },
+    {
+      "semanticFeatureId": "feature.approximate-edit-distance",
+      "canonicalName": "Approximate regex matching",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "approximate-edit-distance"
+    },
+    {
+      "semanticFeatureId": "feature.approximate-insertion",
+      "canonicalName": "Approximate insertion",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "approximate-insertion"
+    },
+    {
+      "semanticFeatureId": "feature.approximate-substitution",
+      "canonicalName": "Approximate substitution",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "approximate-substitution"
+    },
+    {
+      "semanticFeatureId": "feature.ascii-restricted-unicode-classes",
+      "canonicalName": "ASCII-restricted Unicode classes",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "ascii-restricted-unicode-classes"
+    },
+    {
+      "semanticFeatureId": "feature.assertion-conditional",
+      "canonicalName": "Assertion conditional",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "assertion-conditional"
+    },
+    {
+      "semanticFeatureId": "feature.atomic-group",
+      "canonicalName": "Atomic grouping",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "atomic-group"
+    },
+    {
+      "semanticFeatureId": "feature.atomic-lookahead",
+      "canonicalName": "Atomic lookahead",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "atomic-lookahead"
+    },
+    {
+      "semanticFeatureId": "feature.atomic-recursion",
+      "canonicalName": "Atomic recursion",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "atomic-recursion"
+    },
+    {
+      "semanticFeatureId": "feature.automatic-possessification",
+      "canonicalName": "Automatic possessification",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "automatic-possessification"
+    },
+    {
+      "semanticFeatureId": "feature.backtracking-depth-limit",
+      "canonicalName": "Backtracking depth limit",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "backtracking-depth-limit"
+    },
+    {
+      "semanticFeatureId": "feature.backtracking-mark",
+      "canonicalName": "Backtracking mark",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "backtracking-mark"
+    },
+    {
+      "semanticFeatureId": "feature.balancing-group",
+      "canonicalName": "Balancing group",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "balancing-group"
+    },
+    {
+      "semanticFeatureId": "feature.best-approximate-match",
+      "canonicalName": "Best approximate match",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "best-approximate-match"
+    },
+    {
+      "semanticFeatureId": "feature.binary-file-policy",
+      "canonicalName": "Binary-input matching policy",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "binary-file-policy"
+    },
+    {
+      "semanticFeatureId": "feature.block-match",
+      "canonicalName": "Block matching",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "block-match"
+    },
+    {
+      "semanticFeatureId": "feature.bounded-memory-guarantee",
+      "canonicalName": "Bounded matcher memory",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "bounded-memory-guarantee"
+    },
+    {
+      "semanticFeatureId": "feature.bounded-quantifier",
+      "canonicalName": "Bounded interval quantifier",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "bounded-quantifier"
+    },
+    {
+      "semanticFeatureId": "feature.bounded-variable-negative-lookbehind",
+      "canonicalName": "Bounded variable-length negative lookbehind",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "bounded-variable-negative-lookbehind"
+    },
+    {
+      "semanticFeatureId": "feature.bounded-variable-positive-lookbehind",
+      "canonicalName": "Bounded variable-length positive lookbehind",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "bounded-variable-positive-lookbehind"
+    },
+    {
+      "semanticFeatureId": "feature.branch-reset-group",
+      "canonicalName": "Branch-reset grouping",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "branch-reset-group"
+    },
+    {
+      "semanticFeatureId": "feature.byte-domain",
+      "canonicalName": "Arbitrary byte domain",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "byte-domain"
+    },
+    {
+      "semanticFeatureId": "feature.callback-replacement",
+      "canonicalName": "Callback replacement",
+      "semanticCategoryId": "replacement-language",
+      "slug": "callback-replacement"
+    },
+    {
+      "semanticFeatureId": "feature.callback-scan-termination",
+      "canonicalName": "Callback scan termination",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "callback-scan-termination"
+    },
+    {
+      "semanticFeatureId": "feature.callout-backtracking",
+      "canonicalName": "Callout during backtracking",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "callout-backtracking"
+    },
+    {
+      "semanticFeatureId": "feature.canonical-equivalence",
+      "canonicalName": "Canonical-equivalence matching",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "canonical-equivalence"
+    },
+    {
+      "semanticFeatureId": "feature.capture-conditional",
+      "canonicalName": "Capture-participation conditional",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "capture-conditional"
+    },
+    {
+      "semanticFeatureId": "feature.capture-history",
+      "canonicalName": "Capture history",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "capture-history"
+    },
+    {
+      "semanticFeatureId": "feature.capture-name-table",
+      "canonicalName": "Capture name table",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "capture-name-table"
+    },
+    {
+      "semanticFeatureId": "feature.capture-participation",
+      "canonicalName": "Capture participation",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "capture-participation"
+    },
+    {
+      "semanticFeatureId": "feature.capture-span",
+      "canonicalName": "Capture span",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "capture-span"
+    },
+    {
+      "semanticFeatureId": "feature.capture-stack",
+      "canonicalName": "Capture stack",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "capture-stack"
+    },
+    {
+      "semanticFeatureId": "feature.capture-suppression",
+      "canonicalName": "Capture suppression",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "capture-suppression"
+    },
+    {
+      "semanticFeatureId": "feature.capture-value",
+      "canonicalName": "Capture value",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "capture-value"
+    },
+    {
+      "semanticFeatureId": "feature.character-category-class",
+      "canonicalName": "Editor character-category class",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "character-category-class"
+    },
+    {
+      "semanticFeatureId": "feature.class-intersection",
+      "canonicalName": "Character-class intersection",
+      "semanticCategoryId": "character-classes",
+      "slug": "class-intersection"
+    },
+    {
+      "semanticFeatureId": "feature.class-negation",
+      "canonicalName": "Character-class complement",
+      "semanticCategoryId": "character-classes",
+      "slug": "class-negation"
+    },
+    {
+      "semanticFeatureId": "feature.class-range",
+      "canonicalName": "Character range",
+      "semanticCategoryId": "character-classes",
+      "slug": "class-range"
+    },
+    {
+      "semanticFeatureId": "feature.class-string-disjunction",
+      "canonicalName": "Class string disjunction",
+      "semanticCategoryId": "character-classes",
+      "slug": "class-string-disjunction"
+    },
+    {
+      "semanticFeatureId": "feature.class-string-member",
+      "canonicalName": "String-valued class member",
+      "semanticCategoryId": "character-classes",
+      "slug": "class-string-member"
+    },
+    {
+      "semanticFeatureId": "feature.class-subtraction",
+      "canonicalName": "Character-class subtraction",
+      "semanticCategoryId": "character-classes",
+      "slug": "class-subtraction"
+    },
+    {
+      "semanticFeatureId": "feature.class-symmetric-difference",
+      "canonicalName": "Character-class symmetric difference",
+      "semanticCategoryId": "character-classes",
+      "slug": "class-symmetric-difference"
+    },
+    {
+      "semanticFeatureId": "feature.class-union",
+      "canonicalName": "Character-class union",
+      "semanticCategoryId": "character-classes",
+      "slug": "class-union"
+    },
+    {
+      "semanticFeatureId": "feature.code-conditional",
+      "canonicalName": "Code-evaluated conditional",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "code-conditional"
+    },
+    {
+      "semanticFeatureId": "feature.code-unit-domain",
+      "canonicalName": "Encoding code-unit domain",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "code-unit-domain"
+    },
+    {
+      "semanticFeatureId": "feature.column-position",
+      "canonicalName": "Column position",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "column-position"
+    },
+    {
+      "semanticFeatureId": "feature.commit-start-position",
+      "canonicalName": "Commit start position",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "commit-start-position"
+    },
+    {
+      "semanticFeatureId": "feature.compile-syntax-error",
+      "canonicalName": "Pattern syntax error",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "compile-syntax-error"
+    },
+    {
+      "semanticFeatureId": "feature.concatenation",
+      "canonicalName": "Concatenation",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "concatenation"
+    },
+    {
+      "semanticFeatureId": "feature.cursor-position",
+      "canonicalName": "Editor cursor position",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "cursor-position"
+    },
+    {
+      "semanticFeatureId": "feature.define-conditional",
+      "canonicalName": "Definition-only conditional",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "define-conditional"
+    },
+    {
+      "semanticFeatureId": "feature.dfa-greediness-insensitivity",
+      "canonicalName": "DFA greediness insensitivity",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "dfa-greediness-insensitivity"
+    },
+    {
+      "semanticFeatureId": "feature.diagnostic-code-and-class",
+      "canonicalName": "Diagnostic code and class",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "diagnostic-code-and-class"
+    },
+    {
+      "semanticFeatureId": "feature.diagnostic-offset",
+      "canonicalName": "Diagnostic source offset",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "diagnostic-offset"
+    },
+    {
+      "semanticFeatureId": "feature.different-length-lookbehind-alternatives",
+      "canonicalName": "Different-length fixed lookbehind alternatives",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "different-length-lookbehind-alternatives"
+    },
+    {
+      "semanticFeatureId": "feature.digit-class",
+      "canonicalName": "Digit shorthand class",
+      "semanticCategoryId": "character-classes",
+      "slug": "digit-class"
+    },
+    {
+      "semanticFeatureId": "feature.duplicate-group-name",
+      "canonicalName": "Duplicate group names",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "duplicate-group-name"
+    },
+    {
+      "semanticFeatureId": "feature.duplicate-group-number",
+      "canonicalName": "Duplicate group numbers",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "duplicate-group-number"
+    },
+    {
+      "semanticFeatureId": "feature.dynamic-regex-code",
+      "canonicalName": "Dynamic regex generation",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "dynamic-regex-code"
+    },
+    {
+      "semanticFeatureId": "feature.embedded-code",
+      "canonicalName": "Embedded match-time code",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "embedded-code"
+    },
+    {
+      "semanticFeatureId": "feature.empty-alternative",
+      "canonicalName": "Empty alternative",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "empty-alternative"
+    },
+    {
+      "semanticFeatureId": "feature.empty-pattern",
+      "canonicalName": "Empty pattern",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "empty-pattern"
+    },
+    {
+      "semanticFeatureId": "feature.enhanced-approximate-match",
+      "canonicalName": "Enhanced next approximate match",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "enhanced-approximate-match"
+    },
+    {
+      "semanticFeatureId": "feature.escaped-literal",
+      "canonicalName": "Escaped literal",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "escaped-literal"
+    },
+    {
+      "semanticFeatureId": "feature.exact-quantifier",
+      "canonicalName": "Exact-count quantifier",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "exact-quantifier"
+    },
+    {
+      "semanticFeatureId": "feature.explicit-capture-number",
+      "canonicalName": "Explicit capture number",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "explicit-capture-number"
+    },
+    {
+      "semanticFeatureId": "feature.extended-grapheme-cluster",
+      "canonicalName": "Extended grapheme cluster",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "extended-grapheme-cluster"
+    },
+    {
+      "semanticFeatureId": "feature.file-name-character-class",
+      "canonicalName": "File-name character class",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "file-name-character-class"
+    },
+    {
+      "semanticFeatureId": "feature.fixed-negative-lookbehind",
+      "canonicalName": "Fixed-length negative lookbehind",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "fixed-negative-lookbehind"
+    },
+    {
+      "semanticFeatureId": "feature.fixed-positive-lookbehind",
+      "canonicalName": "Fixed-length positive lookbehind",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "fixed-positive-lookbehind"
+    },
+    {
+      "semanticFeatureId": "feature.force-accept",
+      "canonicalName": "Forced acceptance",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "force-accept"
+    },
+    {
+      "semanticFeatureId": "feature.force-failure",
+      "canonicalName": "Forced failure",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "force-failure"
+    },
+    {
+      "semanticFeatureId": "feature.forward-backreference",
+      "canonicalName": "Forward backreference",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "forward-backreference"
+    },
+    {
+      "semanticFeatureId": "feature.full-case-folding",
+      "canonicalName": "Unicode full case folding",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "full-case-folding"
+    },
+    {
+      "semanticFeatureId": "feature.generic-newline-sequence",
+      "canonicalName": "Generic newline sequence",
+      "semanticCategoryId": "character-classes",
+      "slug": "generic-newline-sequence"
+    },
+    {
+      "semanticFeatureId": "feature.grammar-mode-director",
+      "canonicalName": "Grammar mode director",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "grammar-mode-director"
+    },
+    {
+      "semanticFeatureId": "feature.greedy-preference",
+      "canonicalName": "Greedy quantifier preference",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "greedy-preference"
+    },
+    {
+      "semanticFeatureId": "feature.group-numbering-policy",
+      "canonicalName": "Group numbering policy",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "group-numbering-policy"
+    },
+    {
+      "semanticFeatureId": "feature.group-recursion",
+      "canonicalName": "Group recursion",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "group-recursion"
+    },
+    {
+      "semanticFeatureId": "feature.hard-partial-match",
+      "canonicalName": "Hard partial match",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "hard-partial-match"
+    },
+    {
+      "semanticFeatureId": "feature.horizontal-whitespace",
+      "canonicalName": "Horizontal whitespace",
+      "semanticCategoryId": "character-classes",
+      "slug": "horizontal-whitespace"
+    },
+    {
+      "semanticFeatureId": "feature.ignore-combining-differences",
+      "canonicalName": "Ignore combining-character differences",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "ignore-combining-differences"
+    },
+    {
+      "semanticFeatureId": "feature.invalid-escape-error",
+      "canonicalName": "Invalid escape error",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "invalid-escape-error"
+    },
+    {
+      "semanticFeatureId": "feature.invalid-group-reference",
+      "canonicalName": "Invalid group reference",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "invalid-group-reference"
+    },
+    {
+      "semanticFeatureId": "feature.invalid-quantifier-error",
+      "canonicalName": "Invalid quantifier error",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "invalid-quantifier-error"
+    },
+    {
+      "semanticFeatureId": "feature.invalid-unicode-property",
+      "canonicalName": "Invalid Unicode property error",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "invalid-unicode-property"
+    },
+    {
+      "semanticFeatureId": "feature.keyword-character-class",
+      "canonicalName": "Keyword-character class",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "keyword-character-class"
+    },
+    {
+      "semanticFeatureId": "feature.last-capture-of-repetition",
+      "canonicalName": "Last capture of a repetition",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "last-capture-of-repetition"
+    },
+    {
+      "semanticFeatureId": "feature.lazy-preference",
+      "canonicalName": "Lazy quantifier preference",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "lazy-preference"
+    },
+    {
+      "semanticFeatureId": "feature.leftmost-first-match",
+      "canonicalName": "Leftmost-first match selection",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "leftmost-first-match"
+    },
+    {
+      "semanticFeatureId": "feature.leftmost-longest-match",
+      "canonicalName": "POSIX leftmost-longest selection",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "leftmost-longest-match"
+    },
+    {
+      "semanticFeatureId": "feature.legacy-grapheme-cluster",
+      "canonicalName": "Legacy grapheme cluster",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "legacy-grapheme-cluster"
+    },
+    {
+      "semanticFeatureId": "feature.line-end",
+      "canonicalName": "Line end",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "line-end"
+    },
+    {
+      "semanticFeatureId": "feature.line-number-position",
+      "canonicalName": "Line-number position",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "line-number-position"
+    },
+    {
+      "semanticFeatureId": "feature.line-record-domain",
+      "canonicalName": "Line-record matching domain",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "line-record-domain"
+    },
+    {
+      "semanticFeatureId": "feature.line-start",
+      "canonicalName": "Line start",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "line-start"
+    },
+    {
+      "semanticFeatureId": "feature.linear-time-guarantee",
+      "canonicalName": "Linear-time match guarantee",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "linear-time-guarantee"
+    },
+    {
+      "semanticFeatureId": "feature.literal-grammar-director",
+      "canonicalName": "Literal grammar director",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "literal-grammar-director"
+    },
+    {
+      "semanticFeatureId": "feature.literal-string",
+      "canonicalName": "Literal string",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "literal-string"
+    },
+    {
+      "semanticFeatureId": "feature.literal-unit",
+      "canonicalName": "Literal text unit",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "literal-unit"
+    },
+    {
+      "semanticFeatureId": "feature.locale-case-folding",
+      "canonicalName": "Locale-sensitive case matching",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "locale-case-folding"
+    },
+    {
+      "semanticFeatureId": "feature.logical-pattern-combination",
+      "canonicalName": "Logical combination of pattern results",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "logical-pattern-combination"
+    },
+    {
+      "semanticFeatureId": "feature.lookaround-capture-visibility",
+      "canonicalName": "Lookaround capture visibility",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "lookaround-capture-visibility"
+    },
+    {
+      "semanticFeatureId": "feature.lookbehind-backreference",
+      "canonicalName": "Backreference in lookbehind",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "lookbehind-backreference"
+    },
+    {
+      "semanticFeatureId": "feature.lookbehind-reverse-capture-selection",
+      "canonicalName": "Reverse lookbehind capture selection",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "lookbehind-reverse-capture-selection"
+    },
+    {
+      "semanticFeatureId": "feature.lookbehind-subroutine",
+      "canonicalName": "Subroutine call in lookbehind",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "lookbehind-subroutine"
+    },
+    {
+      "semanticFeatureId": "feature.lower-bounded-quantifier",
+      "canonicalName": "Lower-bounded quantifier",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "lower-bounded-quantifier"
+    },
+    {
+      "semanticFeatureId": "feature.magic-syntax-mode",
+      "canonicalName": "Magic syntax mode",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "magic-syntax-mode"
+    },
+    {
+      "semanticFeatureId": "feature.malformed-text-raw-units",
+      "canonicalName": "Malformed text as raw units",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "malformed-text-raw-units"
+    },
+    {
+      "semanticFeatureId": "feature.malformed-text-rejection",
+      "canonicalName": "Malformed encoded-text rejection",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "malformed-text-rejection"
+    },
+    {
+      "semanticFeatureId": "feature.malformed-text-replacement",
+      "canonicalName": "Malformed text replacement decoding",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "malformed-text-replacement"
+    },
+    {
+      "semanticFeatureId": "feature.mark-position",
+      "canonicalName": "Editor mark position",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "mark-position"
+    },
+    {
+      "semanticFeatureId": "feature.match-end-state",
+      "canonicalName": "Match end-state indicators",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "match-end-state"
+    },
+    {
+      "semanticFeatureId": "feature.match-event-callback",
+      "canonicalName": "Match-event callback",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "match-event-callback"
+    },
+    {
+      "semanticFeatureId": "feature.match-heap-limit",
+      "canonicalName": "Match heap limit",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "match-heap-limit"
+    },
+    {
+      "semanticFeatureId": "feature.match-offset-constraints",
+      "canonicalName": "Match offset constraints",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "match-offset-constraints"
+    },
+    {
+      "semanticFeatureId": "feature.match-step-limit",
+      "canonicalName": "Match step limit",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "match-step-limit"
+    },
+    {
+      "semanticFeatureId": "feature.matcher-region",
+      "canonicalName": "Matcher region",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "matcher-region"
+    },
+    {
+      "semanticFeatureId": "feature.multi-pattern-database",
+      "canonicalName": "Multi-pattern compilation",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "multi-pattern-database"
+    },
+    {
+      "semanticFeatureId": "feature.multi-pattern-overlap",
+      "canonicalName": "Overlapping multi-pattern results",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "multi-pattern-overlap"
+    },
+    {
+      "semanticFeatureId": "feature.multiple-pattern-input",
+      "canonicalName": "Multiple independent input patterns",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "multiple-pattern-input"
+    },
+    {
+      "semanticFeatureId": "feature.mutable-match-cursor",
+      "canonicalName": "Mutable match cursor",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "mutable-match-cursor"
+    },
+    {
+      "semanticFeatureId": "feature.named-backreference",
+      "canonicalName": "Named backreference",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "named-backreference"
+    },
+    {
+      "semanticFeatureId": "feature.named-callout",
+      "canonicalName": "Named match callout",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "named-callout"
+    },
+    {
+      "semanticFeatureId": "feature.named-capture",
+      "canonicalName": "Named capture",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "named-capture"
+    },
+    {
+      "semanticFeatureId": "feature.named-subroutine-call",
+      "canonicalName": "Named subroutine call",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "named-subroutine-call"
+    },
+    {
+      "semanticFeatureId": "feature.native-index-unit",
+      "canonicalName": "Native result index unit",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "native-index-unit"
+    },
+    {
+      "semanticFeatureId": "feature.negative-lookahead",
+      "canonicalName": "Negative lookahead",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "negative-lookahead"
+    },
+    {
+      "semanticFeatureId": "feature.nested-character-class",
+      "canonicalName": "Nested character class",
+      "semanticCategoryId": "character-classes",
+      "slug": "nested-character-class"
+    },
+    {
+      "semanticFeatureId": "feature.nested-quantifier-validity",
+      "canonicalName": "Nested quantifier validity",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "nested-quantifier-validity"
+    },
+    {
+      "semanticFeatureId": "feature.nesting-depth-limit",
+      "canonicalName": "Pattern nesting-depth limit",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "nesting-depth-limit"
+    },
+    {
+      "semanticFeatureId": "feature.non-atomic-lookahead",
+      "canonicalName": "Non-atomic positive lookahead",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "non-atomic-lookahead"
+    },
+    {
+      "semanticFeatureId": "feature.non-word-boundary",
+      "canonicalName": "Non-word boundary",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "non-word-boundary"
+    },
+    {
+      "semanticFeatureId": "feature.noncapturing-group",
+      "canonicalName": "Noncapturing group",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "noncapturing-group"
+    },
+    {
+      "semanticFeatureId": "feature.normalization-aware-matching",
+      "canonicalName": "Normalization-aware matching",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "normalization-aware-matching"
+    },
+    {
+      "semanticFeatureId": "feature.nul-record-domain",
+      "canonicalName": "NUL-delimited record domain",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "nul-record-domain"
+    },
+    {
+      "semanticFeatureId": "feature.numbered-backreference",
+      "canonicalName": "Numbered backreference",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "numbered-backreference"
+    },
+    {
+      "semanticFeatureId": "feature.numbered-capture",
+      "canonicalName": "Numbered capture",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "numbered-capture"
+    },
+    {
+      "semanticFeatureId": "feature.numeric-callout",
+      "canonicalName": "Numeric match callout",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "numeric-callout"
+    },
+    {
+      "semanticFeatureId": "feature.numeric-subroutine-call",
+      "canonicalName": "Numeric subroutine call",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "numeric-subroutine-call"
+    },
+    {
+      "semanticFeatureId": "feature.occurrence-selection",
+      "canonicalName": "Occurrence selection",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "occurrence-selection"
+    },
+    {
+      "semanticFeatureId": "feature.one-or-more-quantifier",
+      "canonicalName": "One-or-more quantifier",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "one-or-more-quantifier"
+    },
+    {
+      "semanticFeatureId": "feature.operation-timeout",
+      "canonicalName": "Operation timeout",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "operation-timeout"
+    },
+    {
+      "semanticFeatureId": "feature.optional-quantifier",
+      "canonicalName": "Optional quantifier",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "optional-quantifier"
+    },
+    {
+      "semanticFeatureId": "feature.ordered-alternation",
+      "canonicalName": "Ordered alternation",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "ordered-alternation"
+    },
+    {
+      "semanticFeatureId": "feature.partial-match-restart",
+      "canonicalName": "Restartable partial match",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "partial-match-restart"
+    },
+    {
+      "semanticFeatureId": "feature.pattern-comment",
+      "canonicalName": "Pattern comment",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "pattern-comment"
+    },
+    {
+      "semanticFeatureId": "feature.pattern-set-results",
+      "canonicalName": "Pattern-set result identity",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "pattern-set-results"
+    },
+    {
+      "semanticFeatureId": "feature.pattern-size-limit",
+      "canonicalName": "Pattern size limit",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "pattern-size-limit"
+    },
+    {
+      "semanticFeatureId": "feature.positive-lookahead",
+      "canonicalName": "Positive lookahead",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "positive-lookahead"
+    },
+    {
+      "semanticFeatureId": "feature.posix-collating-element",
+      "canonicalName": "POSIX collating element",
+      "semanticCategoryId": "character-classes",
+      "slug": "posix-collating-element"
+    },
+    {
+      "semanticFeatureId": "feature.posix-equivalence-class",
+      "canonicalName": "POSIX equivalence class",
+      "semanticCategoryId": "character-classes",
+      "slug": "posix-equivalence-class"
+    },
+    {
+      "semanticFeatureId": "feature.posix-named-class",
+      "canonicalName": "POSIX named character class",
+      "semanticCategoryId": "character-classes",
+      "slug": "posix-named-class"
+    },
+    {
+      "semanticFeatureId": "feature.possessive-quantifier",
+      "canonicalName": "Possessive quantifier",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "possessive-quantifier"
+    },
+    {
+      "semanticFeatureId": "feature.prefilter-superset",
+      "canonicalName": "Prefilter superset matching",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "prefilter-superset"
+    },
+    {
+      "semanticFeatureId": "feature.previous-match-end",
+      "canonicalName": "Previous-match end",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "previous-match-end"
+    },
+    {
+      "semanticFeatureId": "feature.prune-backtracking",
+      "canonicalName": "Prune backtracking",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "prune-backtracking"
+    },
+    {
+      "semanticFeatureId": "feature.quantified-empty-operand",
+      "canonicalName": "Quantified empty operand",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "quantified-empty-operand"
+    },
+    {
+      "semanticFeatureId": "feature.quoted-literal-region",
+      "canonicalName": "Quoted literal region",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "quoted-literal-region"
+    },
+    {
+      "semanticFeatureId": "feature.recursion-backtracking",
+      "canonicalName": "Backtracking into recursion",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "recursion-backtracking"
+    },
+    {
+      "semanticFeatureId": "feature.recursion-conditional",
+      "canonicalName": "Recursion-state conditional",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "recursion-conditional"
+    },
+    {
+      "semanticFeatureId": "feature.recursion-returned-captures",
+      "canonicalName": "Returned captures from recursion",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "recursion-returned-captures"
+    },
+    {
+      "semanticFeatureId": "feature.relative-backreference",
+      "canonicalName": "Relative backreference",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "relative-backreference"
+    },
+    {
+      "semanticFeatureId": "feature.relative-subroutine-call",
+      "canonicalName": "Relative subroutine call",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "relative-subroutine-call"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-buffer-overflow",
+      "canonicalName": "Replacement output overflow sizing",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "replacement-buffer-overflow"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-case-conversion",
+      "canonicalName": "Replacement case conversion",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-case-conversion"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-conditional",
+      "canonicalName": "Conditional replacement expansion",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-conditional"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-escape",
+      "canonicalName": "Replacement metacharacter escaping",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-escape"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-last-capture",
+      "canonicalName": "Last participating capture replacement",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-last-capture"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-literal",
+      "canonicalName": "Literal replacement text",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-literal"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-named-group",
+      "canonicalName": "Named capture replacement",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-named-group"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-numbered-group",
+      "canonicalName": "Numbered capture replacement",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-numbered-group"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-only-output",
+      "canonicalName": "Replacement-only output",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-only-output"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-prefix",
+      "canonicalName": "Pre-match prefix replacement token",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-prefix"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-suffix",
+      "canonicalName": "Post-match suffix replacement token",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-suffix"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-unknown-group",
+      "canonicalName": "Unknown replacement group behavior",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-unknown-group"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-unset-group",
+      "canonicalName": "Unset replacement group behavior",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-unset-group"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-whole-input",
+      "canonicalName": "Whole-input replacement token",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-whole-input"
+    },
+    {
+      "semanticFeatureId": "feature.replacement-whole-match",
+      "canonicalName": "Whole-match replacement token",
+      "semanticCategoryId": "replacement-language",
+      "slug": "replacement-whole-match"
+    },
+    {
+      "semanticFeatureId": "feature.reset-reported-match-end",
+      "canonicalName": "Reset reported match end",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "reset-reported-match-end"
+    },
+    {
+      "semanticFeatureId": "feature.reset-reported-match-start",
+      "canonicalName": "Reset reported match start",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "reset-reported-match-start"
+    },
+    {
+      "semanticFeatureId": "feature.script-run",
+      "canonicalName": "Unicode script run",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "script-run"
+    },
+    {
+      "semanticFeatureId": "feature.search-region-end",
+      "canonicalName": "Search-region end",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "search-region-end"
+    },
+    {
+      "semanticFeatureId": "feature.search-region-start",
+      "canonicalName": "Search-region start",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "search-region-start"
+    },
+    {
+      "semanticFeatureId": "feature.shortest-match-at-start",
+      "canonicalName": "Shortest match at one start",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "shortest-match-at-start"
+    },
+    {
+      "semanticFeatureId": "feature.simple-case-folding",
+      "canonicalName": "Unicode simple case folding",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "simple-case-folding"
+    },
+    {
+      "semanticFeatureId": "feature.single-code-unit-escape",
+      "canonicalName": "Single code-unit escape",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "single-code-unit-escape"
+    },
+    {
+      "semanticFeatureId": "feature.single-match-pattern",
+      "canonicalName": "Single match per pattern",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "single-match-pattern"
+    },
+    {
+      "semanticFeatureId": "feature.skip-start-positions",
+      "canonicalName": "Skip start positions",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "skip-start-positions"
+    },
+    {
+      "semanticFeatureId": "feature.soft-partial-match",
+      "canonicalName": "Soft partial match",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "soft-partial-match"
+    },
+    {
+      "semanticFeatureId": "feature.split-capture-inclusion",
+      "canonicalName": "Split capture inclusion",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "split-capture-inclusion"
+    },
+    {
+      "semanticFeatureId": "feature.split-empty-match",
+      "canonicalName": "Split by empty match",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "split-empty-match"
+    },
+    {
+      "semanticFeatureId": "feature.split-limit",
+      "canonicalName": "Split limit and trailing-empty policy",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "split-limit"
+    },
+    {
+      "semanticFeatureId": "feature.sql-collation-selection",
+      "canonicalName": "SQL collation selection",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "sql-collation-selection"
+    },
+    {
+      "semanticFeatureId": "feature.sql-null-propagation",
+      "canonicalName": "SQL NULL propagation",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "sql-null-propagation"
+    },
+    {
+      "semanticFeatureId": "feature.stack-exhaustion",
+      "canonicalName": "Stack exhaustion outcome",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "stack-exhaustion"
+    },
+    {
+      "semanticFeatureId": "feature.start-of-match-horizon",
+      "canonicalName": "Start-of-match horizon",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "start-of-match-horizon"
+    },
+    {
+      "semanticFeatureId": "feature.start-of-match-tracking",
+      "canonicalName": "Start-of-match tracking",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "start-of-match-tracking"
+    },
+    {
+      "semanticFeatureId": "feature.sticky-cursor-match",
+      "canonicalName": "Sticky cursor match",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "sticky-cursor-match"
+    },
+    {
+      "semanticFeatureId": "feature.streaming-match",
+      "canonicalName": "Streaming matching",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "streaming-match"
+    },
+    {
+      "semanticFeatureId": "feature.string-callout",
+      "canonicalName": "String match callout",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "string-callout"
+    },
+    {
+      "semanticFeatureId": "feature.structured-analyze-string",
+      "canonicalName": "Structured analyze-string result",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "structured-analyze-string"
+    },
+    {
+      "semanticFeatureId": "feature.subject-end-before-final-newline",
+      "canonicalName": "Subject end before final newline",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "subject-end-before-final-newline"
+    },
+    {
+      "semanticFeatureId": "feature.subject-end-strict",
+      "canonicalName": "Strict absolute subject end",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "subject-end-strict"
+    },
+    {
+      "semanticFeatureId": "feature.subject-start",
+      "canonicalName": "Absolute subject start",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "subject-start"
+    },
+    {
+      "semanticFeatureId": "feature.substitution-callout",
+      "canonicalName": "Substitution callout",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "substitution-callout"
+    },
+    {
+      "semanticFeatureId": "feature.syntax-table-class",
+      "canonicalName": "Editor syntax-table class",
+      "semanticCategoryId": "editor-cli-and-product-surfaces",
+      "slug": "syntax-table-class"
+    },
+    {
+      "semanticFeatureId": "feature.target-crash-or-signal",
+      "canonicalName": "Target crash or signal outcome",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "target-crash-or-signal"
+    },
+    {
+      "semanticFeatureId": "feature.then-alternative",
+      "canonicalName": "Advance to next alternative",
+      "semanticCategoryId": "backtracking-control-and-code",
+      "slug": "then-alternative"
+    },
+    {
+      "semanticFeatureId": "feature.tokenize-zero-length-prohibition",
+      "canonicalName": "Zero-length tokenizer prohibition",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "tokenize-zero-length-prohibition"
+    },
+    {
+      "semanticFeatureId": "feature.transparent-region-bounds",
+      "canonicalName": "Transparent region bounds",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "transparent-region-bounds"
+    },
+    {
+      "semanticFeatureId": "feature.unbounded-negative-lookbehind",
+      "canonicalName": "Unbounded negative lookbehind",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "unbounded-negative-lookbehind"
+    },
+    {
+      "semanticFeatureId": "feature.unbounded-positive-lookbehind",
+      "canonicalName": "Unbounded positive lookbehind",
+      "semanticCategoryId": "lookaround-assertions",
+      "slug": "unbounded-positive-lookbehind"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-binary-property",
+      "canonicalName": "Unicode binary property",
+      "semanticCategoryId": "character-classes",
+      "slug": "unicode-binary-property"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-block",
+      "canonicalName": "Unicode block property",
+      "semanticCategoryId": "character-classes",
+      "slug": "unicode-block"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-character-name",
+      "canonicalName": "Unicode character-name escape",
+      "semanticCategoryId": "character-classes",
+      "slug": "unicode-character-name"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-code-point-domain",
+      "canonicalName": "Unicode code-point domain",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "unicode-code-point-domain"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-general-category",
+      "canonicalName": "Unicode General_Category property",
+      "semanticCategoryId": "character-classes",
+      "slug": "unicode-general-category"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-grapheme-boundary",
+      "canonicalName": "Unicode grapheme boundary",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "unicode-grapheme-boundary"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-property-alias",
+      "canonicalName": "Unicode property alias resolution",
+      "semanticCategoryId": "character-classes",
+      "slug": "unicode-property-alias"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-property-value-wildcard",
+      "canonicalName": "Unicode property-value wildcard",
+      "semanticCategoryId": "character-classes",
+      "slug": "unicode-property-value-wildcard"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-scalar-domain",
+      "canonicalName": "Unicode scalar-value domain",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "unicode-scalar-domain"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-script",
+      "canonicalName": "Unicode Script property",
+      "semanticCategoryId": "character-classes",
+      "slug": "unicode-script"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-script-extensions",
+      "canonicalName": "Unicode Script_Extensions property",
+      "semanticCategoryId": "character-classes",
+      "slug": "unicode-script-extensions"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-sentence-boundary",
+      "canonicalName": "Unicode sentence boundary",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "unicode-sentence-boundary"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-string-property",
+      "canonicalName": "Unicode property of strings",
+      "semanticCategoryId": "character-classes",
+      "slug": "unicode-string-property"
+    },
+    {
+      "semanticFeatureId": "feature.unicode-word-boundary",
+      "canonicalName": "Default Unicode word boundary",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "unicode-word-boundary"
+    },
+    {
+      "semanticFeatureId": "feature.unset-backreference-behavior",
+      "canonicalName": "Unset backreference behavior",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "unset-backreference-behavior"
+    },
+    {
+      "semanticFeatureId": "feature.unset-versus-empty-capture",
+      "canonicalName": "Unset versus empty capture",
+      "semanticCategoryId": "groups-and-captures",
+      "slug": "unset-versus-empty-capture"
+    },
+    {
+      "semanticFeatureId": "feature.unsupported-construct",
+      "canonicalName": "Unsupported construct rejection",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "unsupported-construct"
+    },
+    {
+      "semanticFeatureId": "feature.upper-bounded-quantifier",
+      "canonicalName": "Upper-bounded quantifier",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "upper-bounded-quantifier"
+    },
+    {
+      "semanticFeatureId": "feature.vectored-match",
+      "canonicalName": "Vectored matching",
+      "semanticCategoryId": "approximate-partial-and-multipattern",
+      "slug": "vectored-match"
+    },
+    {
+      "semanticFeatureId": "feature.version-conditional",
+      "canonicalName": "Engine-version conditional",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "version-conditional"
+    },
+    {
+      "semanticFeatureId": "feature.vertical-whitespace",
+      "canonicalName": "Vertical whitespace",
+      "semanticCategoryId": "character-classes",
+      "slug": "vertical-whitespace"
+    },
+    {
+      "semanticFeatureId": "feature.visual-selection-position",
+      "canonicalName": "Visual-selection position",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "visual-selection-position"
+    },
+    {
+      "semanticFeatureId": "feature.whitespace-class",
+      "canonicalName": "Whitespace shorthand class",
+      "semanticCategoryId": "character-classes",
+      "slug": "whitespace-class"
+    },
+    {
+      "semanticFeatureId": "feature.whole-pattern-recursion",
+      "canonicalName": "Whole-pattern recursion",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "whole-pattern-recursion"
+    },
+    {
+      "semanticFeatureId": "feature.wildcard",
+      "canonicalName": "Wildcard atom",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "wildcard"
+    },
+    {
+      "semanticFeatureId": "feature.word-boundary",
+      "canonicalName": "Word boundary",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "word-boundary"
+    },
+    {
+      "semanticFeatureId": "feature.word-class",
+      "canonicalName": "Word-character shorthand class",
+      "semanticCategoryId": "character-classes",
+      "slug": "word-class"
+    },
+    {
+      "semanticFeatureId": "feature.word-end",
+      "canonicalName": "Word end",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "word-end"
+    },
+    {
+      "semanticFeatureId": "feature.word-start",
+      "canonicalName": "Word start",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "word-start"
+    },
+    {
+      "semanticFeatureId": "feature.workspace-exhaustion",
+      "canonicalName": "Matcher workspace exhaustion",
+      "semanticCategoryId": "diagnostics-resources-and-safety",
+      "slug": "workspace-exhaustion"
+    },
+    {
+      "semanticFeatureId": "feature.zero-length-advancement",
+      "canonicalName": "Zero-length match advancement",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "zero-length-advancement"
+    },
+    {
+      "semanticFeatureId": "feature.zero-or-more-quantifier",
+      "canonicalName": "Zero-or-more quantifier",
+      "semanticCategoryId": "quantification-and-match-selection",
+      "slug": "zero-or-more-quantifier"
+    }
+  ]
+}

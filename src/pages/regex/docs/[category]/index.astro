@@ -1,0 +1,148 @@
+---
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import RegexDocsSidebar from '@/components/RegexDocsSidebar.astro';
+import {
+  featuresForCategory,
+  humanizeIdentifier,
+  regexCategories,
+  regexCategoryById,
+  regexDocs,
+  regexSnapshotUrl,
+  type RegexCategory,
+  type RegexFeature,
+} from '@/data/regexDocs';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+export function getStaticPaths() {
+  return regexCategories.map((category) => ({
+    params: { category: category.slug },
+    props: {
+      category,
+      features: featuresForCategory(category.semanticCategoryId),
+    },
+  }));
+}
+
+interface Props {
+  category: RegexCategory;
+  features: RegexFeature[];
+}
+
+const { category, features } = Astro.props;
+const title = `${category.name} regex features`;
+const description = `${category.description} Explore all ${category.featureCount} canonical features with definitions and exact source provenance.`;
+const crumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'RegEx', href: '/regex/' },
+  { label: 'Feature Catalog', href: '/regex/docs/' },
+  { label: category.name, href: category.route },
+];
+const featuresByClass = new Map<string, RegexFeature[]>();
+for (const feature of features) {
+  const group = featuresByClass.get(feature.featureClass) ?? [];
+  group.push(feature);
+  featuresByClass.set(feature.featureClass, group);
+}
+const relatedCategories = category.relatedCategoryIds
+  .map((id) => regexCategoryById.get(id))
+  .filter((item): item is RegexCategory => Boolean(item));
+---
+
+<BaseLayout
+  {title}
+  {description}
+  pathname={category.route}
+  type="article"
+  {crumbs}
+  keywords={[category.name, 'regex features', 'regular expression semantics']}
+>
+  <div class="container regex-docs-shell">
+    <RegexDocsSidebar currentCategoryId={category.semanticCategoryId} />
+    <article
+      class="prose regex-category-page"
+      data-semantic-category-id={category.semanticCategoryId}
+    >
+      <header class="doc-header stack">
+        <Breadcrumbs items={crumbs} />
+        <span class="eyebrow">Regex semantic category</span>
+        <h1>{category.name}</h1>
+        <p class="kicker">{category.description}</p>
+        <dl class="regex-inline-facts">
+          <div>
+            <dt>Canonical category ID</dt>
+            <dd><code>{category.semanticCategoryId}</code></dd>
+          </div>
+          <div>
+            <dt>Exact feature count</dt>
+            <dd>{category.featureCount}</dd>
+          </div>
+        </dl>
+      </header>
+
+      <section aria-labelledby="category-organization">
+        <h2 id="category-organization">Conceptual organization</h2>
+        <p>
+          The groupings below use the corpus’s feature-class field to make the
+          category easier to scan. They do not change canonical category
+          membership.
+        </p>
+        {
+          [...featuresByClass.entries()].map(
+            ([featureClass, classFeatures]) => (
+              <section
+                class="regex-feature-class"
+                aria-labelledby={`class-${featureClass}`}
+              >
+                <h3 id={`class-${featureClass}`}>
+                  {humanizeIdentifier(featureClass)}
+                  <span class="regex-heading-count">
+                    {classFeatures.length}
+                  </span>
+                </h3>
+                <ul class="regex-category-features">
+                  {classFeatures.map((feature) => (
+                    <li>
+                      <a href={feature.route}>
+                        <strong>{feature.canonicalName}</strong>
+                        <span>{feature.semanticDefinition}</span>
+                        <code>{feature.semanticFeatureId}</code>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ),
+          )
+        }
+      </section>
+
+      <section aria-labelledby="category-provenance">
+        <h2 id="category-provenance">Category provenance</h2>
+        <p>
+          All {features.length} entries above derive from the <a
+            href={regexSnapshotUrl}>canonical Regex Conformance snapshot</a
+          > at reviewed revision <code>{regexDocs.source.revision}</code>. The
+          bound semantic digest is <code>{regexDocs.source.semanticDigest}</code
+          >.
+        </p>
+      </section>
+
+      <nav class="related" aria-labelledby="related-categories-heading">
+        <h2 id="related-categories-heading">Related categories</h2>
+        <p>
+          Derived from canonical feature relations that cross category
+          boundaries.
+        </p>
+        <ul>
+          {
+            relatedCategories.map((related) => (
+              <li>
+                <a href={related.route}>{related.name}</a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </article>
+  </div>
+</BaseLayout>

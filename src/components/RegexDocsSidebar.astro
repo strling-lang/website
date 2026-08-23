@@ -1,0 +1,53 @@
+---
+import { regexCategories } from '@/data/regexDocs';
+
+interface Props {
+  currentCategoryId?: string;
+}
+
+const { currentCategoryId } = Astro.props;
+---
+
+<aside class="regex-docs-sidebar" aria-label="Regex Feature Catalog">
+  <a class="regex-catalog-home" href="/regex/docs/">Catalog overview</a>
+  <details open>
+    <summary aria-controls="regex-feature-categories"
+      >Feature categories</summary
+    >
+  </details>
+  <nav id="regex-feature-categories" aria-label="Regex feature categories">
+    {
+      regexCategories.map((category) => (
+        <a
+          href={category.route}
+          aria-current={
+            currentCategoryId === category.semanticCategoryId
+              ? 'page'
+              : undefined
+          }
+        >
+          <span>{category.name}</span>
+          <span class="regex-nav-count">{category.featureCount}</span>
+        </a>
+      ))
+    }
+  </nav>
+</aside>
+
+<script>
+  const mobileCatalog = window.matchMedia('(max-width: 700px)');
+  const categoryDisclosures = document.querySelectorAll<HTMLDetailsElement>(
+    '.regex-docs-sidebar details',
+  );
+
+  const syncCategoryDisclosures = (
+    query: MediaQueryList | MediaQueryListEvent,
+  ) => {
+    categoryDisclosures.forEach((disclosure) => {
+      disclosure.open = !query.matches;
+    });
+  };
+
+  syncCategoryDisclosures(mobileCatalog);
+  mobileCatalog.addEventListener('change', syncCategoryDisclosures);
+</script>

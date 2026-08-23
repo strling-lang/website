@@ -67,6 +67,7 @@ tests/              Node content gates and Playwright browser tests
 User-facing claims must be supported by public STRling source or live package records. Start with:
 
 - [`strling-lang/strling`](https://github.com/strling-lang/strling) for current binding source, Simply APIs, manifests, grammar, semantics, fixtures, and the Apache License 2.0;
+- [`strling-lang/regex-conformance/semantic-corpus`](https://github.com/strling-lang/regex-conformance/tree/main/semantic-corpus) for canonical generic regex feature semantics;
 - [`strling-lang/.github`](https://github.com/strling-lang/.github) for organization identity and the shared remote logo;
 - package registries for current public availability.
 

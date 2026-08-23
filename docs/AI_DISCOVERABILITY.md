@@ -12,6 +12,9 @@
 - `src/data/bindings.ts` package state;
 - `src/data/release.ts` Fourth Edition state;
 - `src/data/site.ts` canonical URLs and repositories.
+- the reviewed Regex Conformance documentation projection in
+  `src/data/regex-docs/`, including all canonical categories, feature IDs,
+  definitions, routes, and semantic digest.
 
 It summarizes public user material rather than dumping source Markdown or internal engineering documents. Updating collection frontmatter or centralized data updates the machine-readable index in the same build.
 
@@ -49,6 +52,19 @@ Future public content should:
 9. omit internal task IDs, architecture plans, and contributor-only mechanics;
 10. remain meaningful in static HTML without client JavaScript.
 
+## Regex semantic discovery
+
+`/regex/docs/` exposes the complete canonical semantic universe in static HTML.
+Category and feature routes participate in `sitemap.xml`; `llms-full.txt` lists
+every canonical feature with its semantic ID and definition. Feature pages emit
+`DefinedTerm` structured data and bind visibly to the reviewed semantic digest.
+Syntax manifestations remain source-specific, and missing compatibility
+evidence is never converted to an unsupported claim.
+
 ## Source-of-truth policy
 
-Public implementation, formal specification, tests, and live registries support facts. Plans support only provisional statements. If evidence conflicts, narrow the claim or omit it. See `docs/CONTENT_SOURCES.md` for the full authority order.
+Public implementation, the Regex Conformance semantic corpus, certified
+empirical evidence, formal specifications, tests, and live registries each
+support claims in their own authority domain. Plans support only provisional
+statements. If evidence conflicts, narrow the claim or omit it. See
+`docs/CONTENT_SOURCES.md` for the full authority map.

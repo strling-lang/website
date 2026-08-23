@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 import { bindings } from '@/data/bindings';
 import { fourthEdition } from '@/data/release';
+import { regexCategories, regexDocs, regexFeatures } from '@/data/regexDocs';
 import { site } from '@/data/site';
 
 export const GET: APIRoute = async () => {
@@ -29,6 +30,18 @@ export const GET: APIRoute = async () => {
         `- ${binding.language}: ${binding.status}; ${binding.distribution}. ${binding.editionNote}`,
     )
     .join('\n');
+  const regexCategoryIndex = regexCategories
+    .map(
+      (category) =>
+        `- [${category.name}](${site.origin}${category.route.slice(1)}): ${category.featureCount} features. ${category.description}`,
+    )
+    .join('\n');
+  const regexFeatureIndex = regexFeatures
+    .map(
+      (feature) =>
+        `- [${feature.canonicalName}](${site.origin}${feature.route.slice(1)}) — ${feature.semanticFeatureId}: ${feature.semanticDefinition}`,
+    )
+    .join('\n');
 
   return new Response(
     `# STRling public user-content index
@@ -44,6 +57,18 @@ ${learnIndex}
 ## User documentation
 
 ${docIndex}
+
+## Regex Feature Catalog
+
+This is the website projection of the canonical Regex Conformance semantic corpus at declared cutoff ${regexDocs.source.cutoffDate}. It defines feature meaning, not empirical implementation support. Semantic digest: ${regexDocs.source.semanticDigest}.
+
+### Categories
+
+${regexCategoryIndex}
+
+### Canonical semantic features
+
+${regexFeatureIndex}
 
 ## Binding and package state
 
@@ -66,6 +91,7 @@ ${fourthEdition.provisional.map((item) => `- ${item}`).join('\n')}
 - Website: ${site.origin}/
 - GitHub organization: ${site.organizationUrl}
 - Compiler, specification, and bindings: ${site.compilerSourceUrl}
+- Generic regex semantic corpus: ${site.regexConformanceSourceUrl}/tree/main/semantic-corpus
 - Website source: ${site.sourceUrl}
 
 This index includes public user content only. Internal engineering governance and implementation planning are intentionally excluded.

@@ -13,6 +13,8 @@ export const site = {
   organizationUrl: 'https://github.com/strling-lang',
   sourceUrl: 'https://github.com/strling-lang/website',
   compilerSourceUrl: 'https://github.com/strling-lang/strling',
+  regexConformanceSourceUrl:
+    'https://github.com/strling-lang/regex-conformance',
   logoUrl:
     'https://raw.githubusercontent.com/strling-lang/.github/refs/heads/main/strling_silver_bell.png',
   licenseUrl: 'https://github.com/strling-lang/website/blob/main/LICENSE',

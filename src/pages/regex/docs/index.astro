@@ -1,0 +1,261 @@
+---
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import {
+  regexCategories,
+  regexDocs,
+  regexFeatures,
+  regexSnapshotUrl,
+} from '@/data/regexDocs';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+const title = 'Regex Feature Catalog';
+const description = `Explore ${regexFeatures.length} canonical regular-expression semantic features across ${regexCategories.length} categories, with definitions, variants, manifestations, relationships, and exact sources.`;
+const crumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'RegEx', href: '/regex/' },
+  { label: 'Feature Catalog', href: '/regex/docs/' },
+];
+---
+
+<BaseLayout
+  {title}
+  {description}
+  pathname="/regex/docs/"
+  type="article"
+  {crumbs}
+  keywords={[
+    'regular expression features',
+    'regex semantics',
+    'regex feature reference',
+  ]}
+>
+  <header class="page-hero regex-catalog-hero">
+    <div class="container reading stack">
+      <Breadcrumbs items={crumbs} />
+      <span class="eyebrow">Canonical semantic reference</span>
+      <h1>Regex Feature Catalog</h1>
+      <p>
+        A complete public reference to the declared-cutoff Regex Conformance
+        semantic corpus: {regexFeatures.length} features in {
+          regexCategories.length
+        } exact canonical categories.
+      </p>
+      <dl class="regex-catalog-facts">
+        <div>
+          <dt>Semantic cutoff</dt>
+          <dd>{regexDocs.source.cutoffDate}</dd>
+        </div>
+        <div>
+          <dt>Categories</dt>
+          <dd>{regexCategories.length}</dd>
+        </div>
+        <div>
+          <dt>Features</dt>
+          <dd>{regexFeatures.length}</dd>
+        </div>
+      </dl>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container regex-catalog-intro">
+      <div class="prose stack">
+        <h2>One semantic universe, many manifestations</h2>
+        <p>
+          A <strong>semantic feature</strong> identifies observable regex behavior.
+          A syntax token, API call, option, or product control is a
+          <strong>manifestation</strong> of that behavior in a particular engine,
+          language, or host. This catalog keeps those layers separate; it does not
+          present one implementation’s spelling as universal regex syntax.
+        </p>
+        <p>
+          The catalog is a website projection of the immutable <a
+            href={regexSnapshotUrl}>Regex Conformance semantic snapshot</a
+          >, not an independent taxonomy. Every feature page binds to a
+          canonical semantic ID and the reviewed corpus digest.
+        </p>
+      </div>
+      <aside class="callout stack-sm" aria-labelledby="compatibility-boundary">
+        <h2 id="compatibility-boundary">Meaning is not support</h2>
+        <p>
+          These pages define what features mean. Compatibility requires
+          empirical evidence for an exact engine, version, profile, host, mode,
+          and option set.
+        </p>
+        <p>
+          The future <a href="/regex/compatibility/">Compatibility Explorer</a> will
+          start with this complete feature universe and left-join certified Regex
+          Conformance evidence. Missing evidence is never labeled unsupported.
+        </p>
+      </aside>
+    </div>
+  </section>
+
+  <section
+    class="section section--bordered"
+    aria-labelledby="categories-heading"
+  >
+    <div class="container">
+      <div class="section-heading">
+        <span class="eyebrow">All canonical categories</span>
+        <h2 id="categories-heading">Browse the semantic catalog</h2>
+        <p>
+          Category membership and counts come directly from the reviewed
+          semantic projection.
+        </p>
+      </div>
+      <ol class="regex-category-grid">
+        {
+          regexCategories.map((category) => (
+            <li>
+              <article class="regex-category-card stack-sm">
+                <div class="regex-category-card-meta">
+                  <span class="mono">{category.semanticCategoryId}</span>
+                  <span>{category.featureCount} features</span>
+                </div>
+                <h3>
+                  <a href={category.route}>{category.name}</a>
+                </h3>
+                <p>{category.description}</p>
+                <a
+                  class="text-link regex-category-card-link"
+                  href={category.route}
+                >
+                  View category
+                </a>
+              </article>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section
+    class="section section--bordered"
+    aria-labelledby="find-feature-heading"
+  >
+    <div class="container">
+      <div class="section-heading">
+        <span class="eyebrow">Canonical names and aliases</span>
+        <h2 id="find-feature-heading">Find a feature</h2>
+        <p>
+          Search names, aliases, definitions, or semantic IDs. Filtering changes
+          only this list; every route remains available as static HTML.
+        </p>
+      </div>
+      <form class="regex-feature-filter" data-regex-feature-filter>
+        <div>
+          <label for="regex-feature-search">Search the catalog</label>
+          <input
+            id="regex-feature-search"
+            type="search"
+            name="query"
+            autocomplete="off"
+            placeholder="Try “lookbehind” or feature.word-boundary"
+          />
+        </div>
+        <div>
+          <label for="regex-category-filter">Category</label>
+          <select id="regex-category-filter" name="category">
+            <option value="">All categories</option>
+            {
+              regexCategories.map((category) => (
+                <option value={category.semanticCategoryId}>
+                  {category.name}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+        <button class="button button--secondary" type="reset">Clear</button>
+      </form>
+      <p
+        class="regex-filter-status"
+        aria-live="polite"
+        data-regex-filter-status
+      >
+        Showing all {regexFeatures.length} features.
+      </p>
+      <ul class="regex-feature-results" data-regex-feature-results>
+        {
+          regexFeatures.map((feature) => {
+            const category = regexCategories.find(
+              (item) => item.semanticCategoryId === feature.semanticCategoryId,
+            );
+            const searchText = [
+              feature.canonicalName,
+              feature.semanticFeatureId,
+              feature.semanticDefinition,
+              ...feature.aliases,
+            ]
+              .join(' ')
+              .toLocaleLowerCase();
+            return (
+              <li
+                data-regex-feature-item
+                data-category={feature.semanticCategoryId}
+                data-search={searchText}
+              >
+                <a href={feature.route}>
+                  <span>
+                    <strong>{feature.canonicalName}</strong>
+                    <span class="mono">{feature.semanticFeatureId}</span>
+                  </span>
+                  <span>{category?.name}</span>
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section--bordered">
+    <div class="container reading prose">
+      <h2>Reviewed source binding</h2>
+      <p>
+        This projection binds to semantic digest <code
+          >{regexDocs.source.semanticDigest}</code
+        > from revision <code>{regexDocs.source.revision}</code>. Website
+        validation compares every category, feature identity, name, membership,
+        route, relation, and required metadata field with that reviewed source.
+        Cross-repository CI separately checks the current default branch for
+        upstream drift.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  const form = document.querySelector('[data-regex-feature-filter]');
+  const search = document.querySelector('#regex-feature-search');
+  const category = document.querySelector('#regex-category-filter');
+  const status = document.querySelector('[data-regex-filter-status]');
+  const items = [
+    ...document.querySelectorAll<HTMLElement>('[data-regex-feature-item]'),
+  ];
+
+  function applyRegexFeatureFilter() {
+    if (!(search instanceof HTMLInputElement)) return;
+    if (!(category instanceof HTMLSelectElement)) return;
+    const query = search.value.trim().toLocaleLowerCase();
+    let visible = 0;
+    for (const item of items) {
+      const matchesQuery = !query || item.dataset.search?.includes(query);
+      const matchesCategory =
+        !category.value || item.dataset.category === category.value;
+      item.hidden = !(matchesQuery && matchesCategory);
+      if (!item.hidden) visible += 1;
+    }
+    if (status)
+      status.textContent = `Showing ${visible} of ${items.length} features.`;
+  }
+
+  search?.addEventListener('input', applyRegexFeatureFilter);
+  category?.addEventListener('change', applyRegexFeatureFilter);
+  form?.addEventListener('reset', () =>
+    window.setTimeout(applyRegexFeatureFilter, 0),
+  );
+</script>

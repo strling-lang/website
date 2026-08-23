@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 import { bindings } from '@/data/bindings';
+import { regexCategories, regexFeatures } from '@/data/regexDocs';
 import { canonicalUrl } from '@/data/site';
 import { regexSurfaces, strlingSurfaces } from '@/data/surfaces';
 
@@ -25,6 +26,8 @@ export const GET: APIRoute = async () => {
     ...fixed,
     ...availableSurfaceRoutes,
     ...bindings.map((binding) => `/packages/${binding.slug}/`),
+    ...regexCategories.map((category) => category.route),
+    ...regexFeatures.map((feature) => feature.route),
     ...docs.map((entry) => `/docs/${entry.id.replace(/\.(md|mdx)$/i, '')}/`),
     ...learn.map((entry) => `/learn/${entry.id.replace(/\.(md|mdx)$/i, '')}/`),
   ];

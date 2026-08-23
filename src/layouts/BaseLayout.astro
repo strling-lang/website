@@ -18,6 +18,7 @@ interface Props {
   crumbs?: Crumb[];
   keywords?: string[];
   noindex?: boolean;
+  additionalStructuredData?: Record<string, unknown>[];
 }
 
 const {
@@ -28,6 +29,7 @@ const {
   crumbs = [],
   keywords = [],
   noindex = false,
+  additionalStructuredData = [],
 } = Astro.props;
 const canonical = canonicalUrl(pathname);
 const fullTitle = title.includes('STRling') ? title : `${title} | STRling`;
@@ -81,6 +83,8 @@ if (crumbs.length > 1) {
     })),
   });
 }
+
+graph.push(...additionalStructuredData);
 
 const structuredData = { '@context': 'https://schema.org', '@graph': graph };
 ---

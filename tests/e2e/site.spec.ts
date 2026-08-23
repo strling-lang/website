@@ -1,5 +1,21 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { readFileSync } from 'node:fs';
+
+const regexProjection = JSON.parse(
+  readFileSync(
+    new URL('../../src/data/regex-docs/projection.json', import.meta.url),
+    'utf8',
+  ),
+);
+const regexCategoryRoutes = regexProjection.categories.map(
+  (category: { route: string }) => category.route,
+);
+const regexFeatureRoutes = regexProjection.features.map(
+  (feature: { route: string }) => feature.route,
+);
+const sampleRegexCategory = '/regex/docs/character-classes/';
+const sampleRegexFeature = '/regex/docs/character-classes/word-class/';
 
 const requiredRoutes = [
   '/',
@@ -16,6 +32,8 @@ const requiredRoutes = [
   '/lab/',
   '/regex/',
   '/regex/docs/',
+  sampleRegexCategory,
+  sampleRegexFeature,
   '/regex/lab/',
   '/regex/compatibility/',
   '/learn/',
@@ -59,7 +77,6 @@ test.describe('routes', () => {
 
   for (const [route, heading] of [
     ['/lab/', 'STRling Lab'],
-    ['/regex/docs/', 'RegEx Docs'],
     ['/regex/lab/', 'RegEx Lab'],
     ['/regex/compatibility/', 'RegEx Compatibility Check'],
   ] as const) {
@@ -75,6 +92,72 @@ test.describe('routes', () => {
       );
     });
   }
+
+  test('Regex Feature Catalog exposes canonical categories and searchable features', async ({
+    page,
+  }) => {
+    await page.goto('/regex/docs/');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'Regex Feature Catalog',
+    );
+    await expect(page.locator('.regex-category-card')).toHaveCount(14);
+    await expect(page.locator('[data-regex-feature-item]')).toHaveCount(251);
+
+    const search = page.getByLabel('Search the catalog');
+    await search.fill('feature.word-boundary');
+    await expect(page.locator('[data-regex-feature-item]:visible')).toHaveCount(
+      1,
+    );
+    await expect(page.getByText('Showing 1 of 251 features.')).toBeVisible();
+    await search.press('Tab');
+    await expect(page.getByLabel('Category')).toBeFocused();
+  });
+
+  test('all canonical Regex Feature Catalog routes render exactly once', async ({
+    request,
+  }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith('mobile'));
+    const routes = [...regexCategoryRoutes, ...regexFeatureRoutes];
+    expect(new Set(routes).size).toBe(routes.length);
+    expect(regexCategoryRoutes).toHaveLength(14);
+    expect(regexFeatureRoutes).toHaveLength(251);
+    for (let index = 0; index < routes.length; index += 20) {
+      const batch = routes.slice(index, index + 20);
+      const responses = await Promise.all(
+        batch.map(async (route: string) => ({
+          route,
+          response: await request.get(route),
+        })),
+      );
+      for (const { route, response } of responses)
+        expect(response.status(), route).toBe(200);
+    }
+  });
+
+  test('category and feature pages expose canonical metadata and breadcrumbs', async ({
+    page,
+  }) => {
+    await page.goto(sampleRegexCategory);
+    await expect(page.locator('[data-semantic-category-id]')).toHaveAttribute(
+      'data-semantic-category-id',
+      'character-classes',
+    );
+    await expect(page.locator('.regex-category-features')).toContainText(
+      'Word-character shorthand class',
+    );
+
+    await page.goto(sampleRegexFeature);
+    await expect(page.locator('[data-semantic-feature-id]')).toHaveAttribute(
+      'data-semantic-feature-id',
+      'feature.word-class',
+    );
+    await expect(
+      page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('link'),
+    ).toHaveCount(4);
+    await expect(
+      page.getByText(/Compatibility evidence is not yet available/),
+    ).toBeVisible();
+  });
 
   test('RegEx hub links all three feature destinations', async ({ page }) => {
     await page.goto('/regex/');
@@ -94,6 +177,7 @@ test.describe('metadata and discoverability', () => {
   for (const route of [
     '/',
     '/docs/composition/',
+    sampleRegexFeature,
     '/packages/typescript/',
     '/fourth-edition/',
   ]) {
@@ -142,8 +226,9 @@ test.describe('metadata and discoverability', () => {
     );
     const sitemap = await (await request.get('/sitemap.xml')).text();
     expect(sitemap).toContain('/regex/');
+    expect(sitemap).toContain(sampleRegexCategory);
+    expect(sitemap).toContain(sampleRegexFeature);
     expect(sitemap).not.toContain('/lab/');
-    expect(sitemap).not.toContain('/regex/docs/');
     expect(sitemap).not.toContain('/regex/lab/');
     expect(sitemap).not.toContain('/regex/compatibility/');
   });
@@ -231,6 +316,164 @@ test.describe('responsive interaction', () => {
     }
   });
 
+  test('RegEx category selector stays sticky while only its category list scrolls', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith('mobile'));
+    await page.goto(sampleRegexCategory);
+
+    const header = page.locator('.site-header');
+    const sidebar = page.locator('.regex-docs-sidebar');
+    const catalogOverview = sidebar.getByRole('link', {
+      name: 'Catalog overview',
+    });
+    const categoryControl = sidebar.locator('summary');
+    const categoryList = sidebar.getByRole('navigation', {
+      name: 'Regex feature categories',
+    });
+    const categoryLinks = categoryList.getByRole('link');
+
+    await expect(categoryLinks).toHaveCount(14);
+    await expect(
+      categoryList.getByRole('link', { name: /Character classes/ }),
+    ).toHaveAttribute('aria-current', 'page');
+
+    const initialSidebarBox = await sidebar.boundingBox();
+    expect(initialSidebarBox).not.toBeNull();
+
+    await page.evaluate(() => {
+      document.documentElement.style.scrollBehavior = 'auto';
+      window.scrollTo(0, 600);
+    });
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+
+    const headerBox = await header.boundingBox();
+    const stickyBox = await sidebar.boundingBox();
+    const stickyTop = await sidebar.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).top),
+    );
+    expect(headerBox).not.toBeNull();
+    expect(stickyBox).not.toBeNull();
+    expect(Math.abs(stickyBox!.x - initialSidebarBox!.x)).toBeLessThanOrEqual(
+      1,
+    );
+    expect(
+      Math.abs(stickyBox!.width - initialSidebarBox!.width),
+    ).toBeLessThanOrEqual(1);
+    expect(Math.abs(stickyBox!.y - initialSidebarBox!.y)).toBeLessThanOrEqual(
+      1,
+    );
+    expect(Math.abs(stickyBox!.y - stickyTop)).toBeLessThanOrEqual(1);
+    expect(stickyBox!.y).toBeGreaterThanOrEqual(
+      headerBox!.y + headerBox!.height,
+    );
+
+    const overviewBox = await catalogOverview.boundingBox();
+    const controlBox = await categoryControl.boundingBox();
+    expect(overviewBox).not.toBeNull();
+    expect(controlBox).not.toBeNull();
+
+    await page.evaluate(() => window.scrollBy(0, 600));
+    await expect
+      .poll(async () =>
+        Math.abs((await sidebar.boundingBox())!.y - stickyBox!.y),
+      )
+      .toBeLessThanOrEqual(2);
+    expect(
+      Math.abs((await catalogOverview.boundingBox())!.y - overviewBox!.y),
+    ).toBeLessThanOrEqual(2);
+    expect(
+      Math.abs((await categoryControl.boundingBox())!.y - controlBox!.y),
+    ).toBeLessThanOrEqual(2);
+
+    const documentScrollTop = await page.evaluate(() => window.scrollY);
+    const listBox = await categoryList.boundingBox();
+    const firstLink = categoryLinks.first();
+    const lastLink = categoryLinks.last();
+    const firstLinkBox = await firstLink.boundingBox();
+    expect(listBox).not.toBeNull();
+    expect(firstLinkBox).not.toBeNull();
+
+    await page.mouse.move(
+      listBox!.x + listBox!.width / 2,
+      listBox!.y + listBox!.height / 2,
+    );
+    await page.mouse.wheel(0, 10_000);
+    await expect
+      .poll(() => categoryList.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(0);
+
+    const bottomScrollState = await categoryList.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
+    }));
+    const lastLinkBox = await lastLink.boundingBox();
+    expect(
+      bottomScrollState.scrollTop + bottomScrollState.clientHeight,
+    ).toBeGreaterThanOrEqual(bottomScrollState.scrollHeight - 2);
+    expect(lastLinkBox).not.toBeNull();
+    expect(lastLinkBox!.y + lastLinkBox!.height).toBeLessThanOrEqual(
+      listBox!.y + listBox!.height + 2,
+    );
+    expect((await firstLink.boundingBox())!.y).toBeLessThan(firstLinkBox!.y);
+    expect(
+      Math.abs((await catalogOverview.boundingBox())!.y - overviewBox!.y),
+    ).toBeLessThanOrEqual(2);
+    expect(
+      Math.abs((await categoryControl.boundingBox())!.y - controlBox!.y),
+    ).toBeLessThanOrEqual(2);
+    expect(
+      Math.abs((await page.evaluate(() => window.scrollY)) - documentScrollTop),
+    ).toBeLessThanOrEqual(2);
+
+    await page.mouse.wheel(0, -10_000);
+    await expect
+      .poll(() => categoryList.evaluate((element) => element.scrollTop))
+      .toBeLessThanOrEqual(1);
+    const restoredFirstLinkBox = await firstLink.boundingBox();
+    expect(restoredFirstLinkBox).not.toBeNull();
+    expect(restoredFirstLinkBox!.y).toBeGreaterThanOrEqual(listBox!.y - 2);
+  });
+
+  test('RegEx category selector returns to normal flow on mobile', async ({
+    page,
+  }, testInfo) => {
+    test.skip(!testInfo.project.name.startsWith('mobile'));
+    await page.goto(sampleRegexCategory);
+
+    const sidebar = page.locator('.regex-docs-sidebar');
+    const disclosure = sidebar.locator('details');
+    const categoryList = sidebar.getByRole('navigation', {
+      name: 'Regex feature categories',
+    });
+
+    await expect(sidebar).toHaveCSS('position', 'static');
+    await expect(disclosure).not.toHaveAttribute('open', '');
+    await disclosure.locator('summary').focus();
+    await page.keyboard.press('Enter');
+    await expect(disclosure).toHaveAttribute('open', '');
+    await expect(categoryList).toHaveCSS('overflow-y', 'visible');
+
+    const listOverflow = await categoryList.evaluate(
+      (element) => element.scrollWidth - element.clientWidth,
+    );
+    const pageOverflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect(listOverflow).toBeLessThanOrEqual(1);
+    expect(pageOverflow).toBeLessThanOrEqual(1);
+
+    await categoryList.getByRole('link').last().scrollIntoViewIfNeeded();
+    await expect(categoryList.getByRole('link').last()).toBeInViewport();
+    await disclosure.locator('summary').click();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
   for (const route of [
     '/',
     '/packages/',
@@ -239,6 +482,9 @@ test.describe('responsive interaction', () => {
     '/fourth-edition/',
     '/lab/',
     '/regex/',
+    '/regex/docs/',
+    sampleRegexCategory,
+    sampleRegexFeature,
     '/regex/compatibility/',
   ]) {
     test(`${route} has no horizontal page overflow`, async ({ page }) => {
@@ -342,6 +588,9 @@ test.describe('accessibility', () => {
     '/fourth-edition/',
     '/regex/',
     '/lab/',
+    '/regex/docs/',
+    sampleRegexCategory,
+    sampleRegexFeature,
   ]) {
     test(`${route} has no serious or critical axe violations`, async ({
       page,

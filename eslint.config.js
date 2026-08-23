@@ -6,6 +6,7 @@ import tseslint from 'typescript-eslint';
 const nodeGlobals = {
   console: 'readonly',
   process: 'readonly',
+  structuredClone: 'readonly',
   URL: 'readonly',
 };
 

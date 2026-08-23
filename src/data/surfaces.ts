@@ -53,16 +53,16 @@ export const surfaces = {
     label: 'RegEx Docs',
     navigationLabel: 'RegEx Docs',
     route: '/regex/docs/',
-    status: 'coming-soon',
+    status: 'available',
     description:
-      'A comprehensive user-facing reference for governed regular-expression features known to exist in at least one regex system or profile.',
+      'The canonical public catalog of regular-expression feature meaning, variants, manifestations, relationships, and source provenance.',
     capabilities: [
       'Feature meaning, syntax forms, examples, and semantics',
       'Variants, edge cases, and feature interactions',
       'Terminology and portability context',
     ],
     scopeNote:
-      'The governed feature index will be audited and certified before this reference is populated. No speculative feature inventory is published here.',
+      'Semantic definitions come from the reviewed Regex Conformance corpus. Empirical compatibility evidence remains a separate layer.',
   },
   regexLab: {
     id: 'regex-lab',

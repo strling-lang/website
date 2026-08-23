@@ -840,7 +840,7 @@ table {
   display: grid;
   grid-template-columns: 1.5fr repeat(3, 1fr);
   gap: var(--space-6);
-  padding-block: var(--space-8);
+  padding-block: var(--space-6);
 }
 .footer-brand p {
   max-width: 42ch;

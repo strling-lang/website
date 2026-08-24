@@ -48,3 +48,13 @@ state keeps both cursors `null` until a real certified checkpoint is available.
 All synthetic profiles, findings, evidence, and checkpoint payloads are under
 `tests/fixtures/regex-conformance/`. Website source must never import those
 fixtures.
+
+## Progressive profile resolver
+
+`src/lib/regex-profiles/resolver.ts` derives every question and answer from the
+normalized profile metadata. It filters candidates after each answer, omits
+dimensions already implied by the remaining candidates, stops as soon as one
+exact profile remains, and reports ambiguous or invalid metadata without
+inventing a choice. Lab and Compatibility share this resolver, so new profile
+branches and deeper catalogs require checkpoint metadata rather than component
+changes.

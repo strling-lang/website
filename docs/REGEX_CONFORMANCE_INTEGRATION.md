@@ -22,6 +22,10 @@ downstream/compatibility/coverage-shard-XXXX.json
 Exact upstream serialization can change behind the parser without requiring a
 Lab or Compatibility redesign.
 
+`src/data/regexConformance.ts` exposes the website's current canonical semantic
+snapshot identity from the existing RegEx Docs projection. A real checkpoint
+must validate against that identity before either product state is generated.
+
 The v1 digest contract is SHA-256 over canonical JSON: object keys are sorted
 recursively, arrays retain order, and the digest is encoded as
 `sha256:<lowercase hex>`. The first real checkpoint integration must confirm
@@ -71,3 +75,35 @@ empty values.
 The reactive coordinator owns debounce, abort signals, request generations,
 and stale-response rejection. The fixture provider used to certify those
 behaviors is test-only and is not imported by website source.
+
+The Lab custom element accepts normalized Lab state and an execution provider.
+Its controls are generated from checkpoint operations and options; the page has
+no runtime-specific branches. Until a certified state and real provider are
+wired at build time, the production page stays locked and `noindex`.
+
+## Compatibility projection
+
+`src/lib/regex-compatibility/` left-joins normalized findings onto the existing
+canonical semantic feature catalog. It preserves all six states. A catalog
+feature without a checkpoint finding is rendered as unknown/insufficient
+evidence with an explicit absent-finding origin; it is never inferred to be
+unsupported. The evidence surface retains exact profile and release IDs,
+tested scope, checkpoint and semantic snapshot identity, evidence-manifest
+identity, and observation/derived-finding references.
+
+The Compatibility custom element supports one exact environment or a
+multi-environment comparison using the shared progressive resolver. The
+production page remains empty, locked, and `noindex` while the Compatibility
+cursor is `null`.
+
+## First-checkpoint integration runbook
+
+1. Import or copy the certified downstream index and referenced files without
+   changing their bytes or identities.
+2. Adapt any upstream serialization changes only inside the protocol parser.
+3. Validate the bundle against `regexConformanceSemanticSnapshot`.
+4. Consume Lab and Compatibility independently, enabling only the projection
+   present and ready for each product.
+5. Configure eligible Lab profiles with a matching execution provider.
+6. Run the focused contract, product, accessibility, and browser suites before
+   advancing either production cursor.

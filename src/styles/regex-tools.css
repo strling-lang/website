@@ -494,6 +494,7 @@ regex-profile-resolver {
 }
 
 .capture-participation--nonparticipating,
+.capture-participation--unmatched,
 .capture-participation--unavailable {
   font-style: italic;
 }
@@ -877,6 +878,14 @@ regex-profile-resolver {
 
 .evidence-dialog-header p {
   color: var(--text-secondary);
+}
+
+.evidence-tree > summary {
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  font-weight: 600;
 }
 
 .evidence-details {

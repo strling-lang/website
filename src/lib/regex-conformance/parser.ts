@@ -47,6 +47,25 @@ const nullableStringAt = (value: unknown): string | null | undefined =>
   value === null ? null : typeof value === 'string' ? value : undefined;
 const integerAt = (value: unknown): number | null =>
   Number.isInteger(value) && (value as number) > 0 ? (value as number) : null;
+const stringArrayAt = (value: unknown): string[] | null =>
+  Array.isArray(value) && value.every((item) => stringAt(item) !== null)
+    ? [...value]
+    : null;
+const scalarRecordAt = (
+  value: unknown,
+): Record<string, boolean | string | number | null> | null => {
+  const record = objectAt(value);
+  if (
+    !record ||
+    !Object.values(record).every(
+      (item) =>
+        item === null || ['boolean', 'string', 'number'].includes(typeof item),
+    )
+  ) {
+    return null;
+  }
+  return record as Record<string, boolean | string | number | null>;
+};
 
 function issue(
   issues: CheckpointValidationIssue[],
@@ -350,8 +369,12 @@ function parseLabProjection(
     const profile = objectAt(candidate);
     const profileReleaseId = stringAt(profile?.profileReleaseId);
     const nativeIndexUnit = stringAt(profile?.nativeIndexUnit);
-    const operations = Array.isArray(profile?.operations)
-      ? profile.operations
+    const rawOperations = profile?.operations;
+    const operationCount = Array.isArray(rawOperations)
+      ? rawOperations.length
+      : null;
+    const operations = Array.isArray(rawOperations)
+      ? rawOperations
           .map((operation) => {
             const item = objectAt(operation);
             const operationId = stringAt(item?.operationId);
@@ -365,16 +388,22 @@ function parseLabProjection(
             Boolean(operation),
           )
       : null;
-    const options = Array.isArray(profile?.options)
-      ? profile.options
+    const rawOptions = profile?.options;
+    const optionCount = Array.isArray(rawOptions) ? rawOptions.length : null;
+    const options = Array.isArray(rawOptions)
+      ? rawOptions
           .map((option): LabOptionDefinition | null => {
             const item = objectAt(option);
             const optionId = stringAt(item?.optionId);
             const label = stringAt(item?.label);
             const kind = item?.kind;
             const defaultValue = item?.defaultValue;
-            const choices = Array.isArray(item?.choices)
-              ? item.choices
+            const rawChoices = item?.choices;
+            const choiceCount = Array.isArray(rawChoices)
+              ? rawChoices.length
+              : null;
+            const choices = Array.isArray(rawChoices)
+              ? rawChoices
                   .map((choice) => {
                     const value = stringAt(objectAt(choice)?.value);
                     const choiceLabel = stringAt(objectAt(choice)?.label);
@@ -390,8 +419,13 @@ function parseLabProjection(
               !optionId ||
               !label ||
               !['boolean', 'choice'].includes(String(kind)) ||
-              !['boolean', 'string'].includes(typeof defaultValue) ||
-              (kind === 'choice' && (!choices || choices.length === 0))
+              (kind === 'boolean' && typeof defaultValue !== 'boolean') ||
+              (kind === 'choice' && typeof defaultValue !== 'string') ||
+              (kind === 'choice' &&
+                (!choices ||
+                  choices.length === 0 ||
+                  choices.length !== choiceCount ||
+                  !choices.some((choice) => choice.value === defaultValue)))
             )
               return null;
             return {
@@ -404,7 +438,17 @@ function parseLabProjection(
           })
           .filter((option): option is LabOptionDefinition => Boolean(option))
       : null;
-    if (!profileReleaseId || !nativeIndexUnit || !operations || !options) {
+    if (
+      !profileReleaseId ||
+      !nativeIndexUnit ||
+      !operations ||
+      operations.length !== operationCount ||
+      !options ||
+      options.length !== optionCount ||
+      new Set(operations.map((operation) => operation.operationId)).size !==
+        operations.length ||
+      new Set(options.map((option) => option.optionId)).size !== options.length
+    ) {
       issue(
         issues,
         'MALFORMED_DOCUMENT',
@@ -415,14 +459,21 @@ function parseLabProjection(
     }
     profiles.push({ profileReleaseId, operations, options, nativeIndexUnit });
   }
-  return checkpointId && sourceSemanticSnapshot
-    ? {
-        schemaVersion: LAB_PROJECTION_SCHEMA,
-        checkpointId,
-        sourceSemanticSnapshot,
-        profiles,
-      }
-    : null;
+  if (!checkpointId || !sourceSemanticSnapshot) {
+    issue(
+      issues,
+      'MALFORMED_DOCUMENT',
+      path,
+      'Lab projection identity is incomplete.',
+    );
+    return null;
+  }
+  return {
+    schemaVersion: LAB_PROJECTION_SCHEMA,
+    checkpointId,
+    sourceSemanticSnapshot,
+    profiles,
+  };
 }
 
 function parseFinding(
@@ -434,11 +485,7 @@ function parseFinding(
   const profileReleaseId = stringAt(record?.profileReleaseId);
   const semanticFeatureId = stringAt(record?.semanticFeatureId);
   const state = record?.state;
-  const conditions = Array.isArray(record?.conditions)
-    ? record.conditions.filter((condition): condition is string =>
-        Boolean(stringAt(condition)),
-      )
-    : null;
+  const conditions = stringArrayAt(record?.conditions);
   const explanation = nullableStringAt(record?.explanation);
   const scopeRecord =
     record?.testedScope === null ? null : objectAt(record?.testedScope);
@@ -446,7 +493,7 @@ function parseFinding(
     ? {
         operationId: stringAt(scopeRecord.operationId),
         mode: nullableStringAt(scopeRecord.mode),
-        options: objectAt(scopeRecord.options),
+        options: scalarRecordAt(scopeRecord.options),
       }
     : null;
   const evidenceRecord =
@@ -456,8 +503,12 @@ function parseFinding(
         evidenceId: stringAt(evidenceRecord.evidenceId),
         reference: stringAt(evidenceRecord.reference),
         digest: evidenceRecord.digest,
-        observationReferences: evidenceRecord.observationReferences,
-        derivedFindingReferences: evidenceRecord.derivedFindingReferences,
+        observationReferences: stringArrayAt(
+          evidenceRecord.observationReferences,
+        ),
+        derivedFindingReferences: stringArrayAt(
+          evidenceRecord.derivedFindingReferences,
+        ),
       }
     : null;
 
@@ -475,8 +526,8 @@ function parseFinding(
       (!evidence?.evidenceId ||
         !evidence.reference ||
         !isSha256Digest(evidence.digest) ||
-        !Array.isArray(evidence.observationReferences) ||
-        !Array.isArray(evidence.derivedFindingReferences))) ||
+        !evidence.observationReferences ||
+        !evidence.derivedFindingReferences)) ||
     (state === 'conditional' && conditions.length === 0) ||
     (['supported', 'unsupported', 'conditional'].includes(String(state)) &&
       !evidence) ||
@@ -534,13 +585,9 @@ function parseCompatibilityProjection(
     `${path}.sourceSemanticSnapshot`,
     issues,
   );
-  const publishedProfileReleaseIds = Array.isArray(
+  const publishedProfileReleaseIds = stringArrayAt(
     record?.publishedProfileReleaseIds,
-  )
-    ? record.publishedProfileReleaseIds.filter((id): id is string =>
-        Boolean(stringAt(id)),
-      )
-    : null;
+  );
   const findings = Array.isArray(record?.findings)
     ? record.findings
         .map((finding, index) =>
@@ -550,18 +597,29 @@ function parseCompatibilityProjection(
           (finding): finding is CompatibilityFindingProjection => !!finding,
         )
     : null;
-  return checkpointId &&
-    sourceSemanticSnapshot &&
-    publishedProfileReleaseIds &&
-    findings
-    ? {
-        schemaVersion: COMPATIBILITY_PROJECTION_SCHEMA,
-        checkpointId,
-        sourceSemanticSnapshot,
-        publishedProfileReleaseIds,
-        findings,
-      }
-    : null;
+  if (
+    !checkpointId ||
+    !sourceSemanticSnapshot ||
+    !publishedProfileReleaseIds ||
+    !findings ||
+    new Set(publishedProfileReleaseIds).size !==
+      publishedProfileReleaseIds.length
+  ) {
+    issue(
+      issues,
+      'MALFORMED_DOCUMENT',
+      path,
+      'Compatibility projection identity, publication list, or findings are malformed.',
+    );
+    return null;
+  }
+  return {
+    schemaVersion: COMPATIBILITY_PROJECTION_SCHEMA,
+    checkpointId,
+    sourceSemanticSnapshot,
+    publishedProfileReleaseIds,
+    findings,
+  };
 }
 
 function parseEvidenceManifest(
@@ -592,7 +650,11 @@ function parseEvidenceManifest(
         : null;
     })
     .filter((item): item is NonNullable<typeof item> => !!item);
-  if (!checkpointId || evidence.length !== record.evidence.length) {
+  if (
+    !checkpointId ||
+    evidence.length !== record.evidence.length ||
+    new Set(evidence.map((item) => item.evidenceId)).size !== evidence.length
+  ) {
     issue(
       issues,
       'MALFORMED_DOCUMENT',
@@ -851,8 +913,8 @@ export function validateCheckpointBundle(
       compatibilityProjection?.publishedProfileReleaseIds ?? [],
     );
     const findingKeys = new Set<string>();
-    const evidenceIds = new Set(
-      evidenceManifest?.evidence.map((item) => item.evidenceId) ?? [],
+    const evidenceById = new Map(
+      evidenceManifest?.evidence.map((item) => [item.evidenceId, item]) ?? [],
     );
     for (const finding of compatibilityProjection?.findings ?? []) {
       const key = `${finding.profileReleaseId}\u0000${finding.semanticFeatureId}`;
@@ -873,13 +935,26 @@ export function validateCheckpointBundle(
           `Finding references unpublished profile ${finding.profileReleaseId}.`,
         );
       }
-      if (finding.evidence && !evidenceIds.has(finding.evidence.evidenceId)) {
-        issue(
-          issues,
-          'MALFORMED_COMPATIBILITY_STATE',
-          checkpoint.projections.compatibility?.path ?? entry.path,
-          `Finding references missing evidence ${finding.evidence.evidenceId}.`,
-        );
+      if (finding.evidence) {
+        const manifestEvidence = evidenceById.get(finding.evidence.evidenceId);
+        if (!manifestEvidence) {
+          issue(
+            issues,
+            'MALFORMED_COMPATIBILITY_STATE',
+            checkpoint.projections.compatibility?.path ?? entry.path,
+            `Finding references missing evidence ${finding.evidence.evidenceId}.`,
+          );
+        } else if (
+          manifestEvidence.digest !== finding.evidence.digest ||
+          manifestEvidence.reference !== finding.evidence.reference
+        ) {
+          issue(
+            issues,
+            'DIGEST_MISMATCH',
+            checkpoint.projections.compatibility?.path ?? entry.path,
+            `Finding evidence ${finding.evidence.evidenceId} does not match its evidence manifest identity.`,
+          );
+        }
       }
     }
     if (

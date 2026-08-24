@@ -115,6 +115,18 @@ test('fails closed on duplicate profile identities', () => {
   rejection(bundle, 'DUPLICATE_PROFILE_IDENTITY');
 });
 
+test('fails closed on conflicting profile identities across checkpoints', () => {
+  const bundle = validCheckpointBundle();
+  const first = bundle.files[fixturePaths.checkpointOne].profileReleases[0];
+  const secondCheckpoint = bundle.files[fixturePaths.checkpointTwo];
+  secondCheckpoint.profileReleases.push({
+    ...structuredClone(first),
+    displayName: `${first.displayName} conflicting`,
+  });
+  redigestCheckpoint(bundle, fixturePaths.checkpointTwo);
+  rejection(bundle, 'CONFLICTING_PROFILE_IDENTITY');
+});
+
 test('fails closed on malformed compatibility states', () => {
   const bundle = validCheckpointBundle();
   const projection = bundle.files[fixturePaths.compatibilityOne];
@@ -136,6 +148,16 @@ test('unsupported findings without evidence are rejected', () => {
   checkpoint.projections.compatibility.digest = sha256Json(projection);
   redigestCheckpoint(bundle, fixturePaths.checkpointOne);
   rejection(bundle, 'MALFORMED_COMPATIBILITY_STATE');
+});
+
+test('finding evidence identity must match the evidence manifest', () => {
+  const bundle = validCheckpointBundle();
+  const projection = bundle.files[fixturePaths.compatibilityOne];
+  projection.findings[0].evidence.digest = `sha256:${'d'.repeat(64)}`;
+  const checkpoint = bundle.files[fixturePaths.checkpointOne];
+  checkpoint.projections.compatibility.digest = sha256Json(projection);
+  redigestCheckpoint(bundle, fixturePaths.checkpointOne);
+  rejection(bundle, 'DIGEST_MISMATCH');
 });
 
 test('consumes Lab and Compatibility with independent cursors', () => {

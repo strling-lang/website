@@ -25,6 +25,7 @@ test('fixture provider models multiple matches and capture participation', async
     [
       ['word', 'participated', 'alpha'],
       [undefined, 'nonparticipating', undefined],
+      [undefined, 'unmatched', undefined],
     ],
   );
   assert.equal(result.matches[1].captures[1].participation, 'unavailable');

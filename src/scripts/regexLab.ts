@@ -235,6 +235,14 @@ export class RegexLabElement extends HTMLElement {
     editor?.addEventListener('input', () => this.#scheduleExecution());
     editor?.addEventListener('paste', (event) => this.#pastePlainText(event));
     editor?.addEventListener('mouseup', () => this.#focusSelectedDecoration());
+    editor?.addEventListener('keyup', (event) => {
+      if (
+        event.shiftKey &&
+        ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)
+      ) {
+        this.#focusSelectedDecoration();
+      }
+    });
     this.querySelector('[data-lab-clear-inspection]')?.addEventListener(
       'click',
       () => this.#clearInspection(),
@@ -675,6 +683,7 @@ export class RegexLabElement extends HTMLElement {
 
   #focusSelectedDecoration(): void {
     const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
     const node = selection?.anchorNode;
     const target =
       node instanceof Element ? node : (node?.parentElement ?? null);

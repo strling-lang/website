@@ -107,6 +107,11 @@ export class DeterministicFixtureLabProvider {
               index: 2,
               participation: 'nonparticipating',
             },
+            {
+              captureId: 'match-1-capture-3',
+              index: 3,
+              participation: 'unmatched',
+            },
           ],
         },
         {

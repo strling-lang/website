@@ -33,7 +33,7 @@ export interface LabSpan {
 }
 
 export type CaptureParticipation =
-  'participated' | 'nonparticipating' | 'unavailable';
+  'participated' | 'unmatched' | 'nonparticipating' | 'unavailable';
 
 export interface LabCapture {
   captureId: string;

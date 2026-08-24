@@ -118,6 +118,11 @@ async function installFixtureLab(page: Page): Promise<void> {
                   index: 2,
                   participation: 'nonparticipating',
                 },
+                {
+                  captureId: 'capture-unmatched-1',
+                  index: 3,
+                  participation: 'unmatched',
+                },
               ],
             },
             {
@@ -232,6 +237,12 @@ test.describe('RegEx Lab foundation', () => {
   }) => {
     await installFixtureLab(page);
     const firstMatch = page.locator('.lab-match-summary').first();
+    await expect(page.locator('.lab-capture-summary').first()).toContainText(
+      'word',
+    );
+    await expect(
+      page.getByText('unmatched', { exact: true }).first(),
+    ).toBeVisible();
     const decorated = page.locator(
       '[data-lab-editor] [data-inspection-refs~="match-1"]',
     );
@@ -243,11 +254,45 @@ test.describe('RegEx Lab foundation', () => {
     await firstMatch.press('Escape');
     await expect(decorated.first()).not.toHaveClass(/is-inspected/);
 
+    const decoratedCapture = page
+      .locator('[data-lab-editor] [data-inspection-ref="capture-word-1"]')
+      .first();
+    await decoratedCapture.evaluate((element) => {
+      const text = element.firstChild;
+      if (!text) throw new Error('Expected decorated text node.');
+      const range = document.createRange();
+      range.setStart(text, 0);
+      range.setEnd(text, Math.min(2, text.textContent?.length ?? 0));
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      element.closest('[data-lab-editor]')?.dispatchEvent(
+        new KeyboardEvent('keyup', {
+          key: 'ArrowRight',
+          shiftKey: true,
+          bubbles: true,
+        }),
+      );
+    });
+    await expect(
+      page.locator(
+        '.lab-capture-summary[data-inspection-ref="capture-word-1"]',
+      ),
+    ).toBeFocused();
+
     const objectTab = page.getByRole('tab', { name: 'Object' });
     await objectTab.click();
     await expect(
       page.locator('[data-lab-object-tree] details'),
     ).not.toHaveCount(0);
+    await page
+      .locator('[data-lab-object-tree] summary[data-tree-key="matches"]')
+      .click();
+    await page
+      .locator('[data-lab-object-tree] summary[data-inspection-ref="match-1"]')
+      .first()
+      .click();
+    await expect(decorated.first()).toHaveClass(/is-inspected/);
     await objectTab.press('ArrowLeft');
     await expect(page.getByRole('tab', { name: 'Matches' })).toHaveAttribute(
       'aria-selected',

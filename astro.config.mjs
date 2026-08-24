@@ -1,6 +1,7 @@
 import { unified } from '@astrojs/markdown-remark';
 import { defineConfig } from 'astro/config';
-import rehypeAccessibleTables from './src/utils/rehypeAccessibleTables';
+import { fileURLToPath } from 'node:url';
+import rehypeAccessibleTables from './src/utils/rehypeAccessibleTables.ts';
 
 const fallbackSite = 'https://strling-lang.netlify.app';
 
@@ -11,5 +12,14 @@ export default defineConfig({
   markdown: {
     processor: unified({ rehypePlugins: [rehypeAccessibleTables] }),
     shikiConfig: { theme: 'github-dark-default', wrap: false },
+  },
+  vite: {
+    resolve: {
+      alias: {
+        picomatch: fileURLToPath(
+          new URL('./scripts/picomatch-esm-bridge.mjs', import.meta.url),
+        ),
+      },
+    },
   },
 });

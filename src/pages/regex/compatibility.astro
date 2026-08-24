@@ -1,20 +1,224 @@
 ---
-import PendingFeaturePage from '@/components/PendingFeaturePage.astro';
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import ProfileResolver from '@/components/regex/ProfileResolver.astro';
+import StatusBadge from '@/components/StatusBadge.astro';
+import { regexConformanceState } from '@/data/regexConformance';
+import {
+  regexCategories,
+  regexCategoryById,
+  regexFeatures,
+} from '@/data/regexDocs';
 import { surfaces } from '@/data/surfaces';
+import BaseLayout from '@/layouts/BaseLayout.astro';
 
+const surface = surfaces.regexCompatibility;
 const crumbs = [
   { label: 'Home', href: '/' },
   { label: 'RegEx', href: '/regex/' },
-  {
-    label: 'Compatibility Check',
-    href: surfaces.regexCompatibility.route,
-  },
+  { label: 'Compatibility Check', href: surface.route },
 ];
+const initialState = JSON.stringify({
+  ...regexConformanceState.compatibility,
+  catalog: regexFeatures.map((feature) => ({
+    semanticFeatureId: feature.semanticFeatureId,
+    name: feature.canonicalName,
+    categoryId: feature.semanticCategoryId,
+    categoryName:
+      regexCategoryById.get(feature.semanticCategoryId)?.name ??
+      feature.semanticCategoryId,
+    route: feature.route,
+  })),
+  categories: regexCategories.map((category) => ({
+    categoryId: category.semanticCategoryId,
+    name: category.name,
+  })),
+}).replaceAll('<', '\u003c');
 ---
 
-<PendingFeaturePage
-  surface={surfaces.regexCompatibility}
+<BaseLayout
+  title={surface.label}
+  description={surface.description}
+  pathname={surface.route}
   {crumbs}
-  backHref="/regex/"
-  backLabel="Back to RegEx resources"
-/>
+  noindex
+>
+  <regex-compatibility>
+    <script
+      is:inline
+      type="application/json"
+      data-compatibility-state
+      set:html={initialState}
+    />
+
+    <header class="container regex-tool-intro">
+      <div class="stack-sm">
+        <Breadcrumbs items={crumbs} />
+        <span class="eyebrow">Certified evidence explorer</span>
+        <h1>RegEx Compatibility Check</h1>
+        <p>
+          Inspect exactly what certified Conformance evidence establishes for a
+          semantic feature and one or more precisely identified environments.
+        </p>
+      </div>
+      <StatusBadge label="Coming soon" tone="coming-soon" />
+    </header>
+
+    <section
+      class="container regex-tool-shell compatibility-shell"
+      aria-label="RegEx compatibility workspace"
+    >
+      <div class="tool-gate" data-compatibility-gate role="status">
+        <span class="status-badge status-badge--coming-soon"
+          >Checkpoint gate</span
+        >
+        <div>
+          <strong>Certified compatibility results are not yet available.</strong
+          >
+          This explorer remains empty until a publication-ready Regex Conformance
+          checkpoint is consumed. Documentation and general RegEx knowledge are never
+          used to infer results.
+        </div>
+      </div>
+
+      <section
+        class="tool-panel compatibility-controls"
+        aria-labelledby="compatibility-scope-heading"
+      >
+        <div class="tool-panel-header">
+          <h2 id="compatibility-scope-heading">Comparison scope</h2>
+        </div>
+        <div class="tool-panel-body compatibility-control-grid">
+          <fieldset class="compatibility-mode">
+            <legend class="tool-field-label">View mode</legend>
+            <label>
+              <input
+                type="radio"
+                name="compatibility-mode"
+                value="single"
+                checked
+                data-compatibility-control
+                disabled
+              />
+              <span>Single profile</span>
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="compatibility-mode"
+                value="comparison"
+                data-compatibility-control
+                disabled
+              />
+              <span>Compare profiles</span>
+            </label>
+          </fieldset>
+          <div class="compatibility-profile-control">
+            <ProfileResolver label="Selected environment" />
+            <p class="compatibility-hint" data-comparison-hint hidden></p>
+          </div>
+          <label class="stack-sm compatibility-search-control">
+            <span class="tool-field-label">Find a semantic feature</span>
+            <input
+              class="tool-input"
+              type="search"
+              placeholder="Name or semantic ID"
+              data-compatibility-search
+              data-compatibility-control
+              disabled
+            />
+          </label>
+          <label class="stack-sm compatibility-category-control">
+            <span class="tool-field-label">Feature category</span>
+            <select
+              class="tool-select"
+              data-compatibility-category
+              data-compatibility-control
+              disabled
+            >
+              <option>All feature categories</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section
+        class="tool-panel compatibility-results"
+        aria-labelledby="compatibility-results-heading"
+      >
+        <div class="tool-panel-header compatibility-results-header">
+          <div>
+            <h2 id="compatibility-results-heading">Certified findings</h2>
+            <p class="compatibility-coverage" data-compatibility-coverage>
+              No certified profile scope selected.
+            </p>
+          </div>
+          <details class="compatibility-state-key">
+            <summary>State definitions</summary>
+            <dl>
+              <div><dt>Supported</dt><dd>Established for tested scope</dd></div>
+              <div><dt>Unsupported</dt><dd>Established as unavailable</dd></div>
+              <div><dt>Conditional</dt><dd>Depends on qualifiers</dd></div>
+              <div>
+                <dt>Not applicable</dt><dd>Outside this profile scope</dd>
+              </div>
+              <div><dt>Not tested</dt><dd>Explicitly not exercised</dd></div>
+              <div>
+                <dt>Unknown / insufficient evidence</dt>
+                <dd>No result is established</dd>
+              </div>
+            </dl>
+          </details>
+        </div>
+        <p
+          class="tool-empty-message compatibility-empty"
+          data-compatibility-empty
+        >
+          Certified compatibility results are not yet available.
+        </p>
+        <div
+          class="compatibility-table-scroll"
+          role="region"
+          aria-label="Compatibility findings table"
+          tabindex="0"
+        >
+          <table class="compatibility-table">
+            <thead data-compatibility-head></thead>
+            <tbody data-compatibility-body></tbody>
+          </table>
+        </div>
+        <p class="visually-hidden" aria-live="polite" data-compatibility-live>
+          Waiting for a certified compatibility checkpoint.
+        </p>
+      </section>
+    </section>
+
+    <dialog
+      class="evidence-dialog"
+      data-evidence-dialog
+      aria-labelledby="evidence-dialog-title"
+    >
+      <div class="evidence-dialog-inner">
+        <header class="evidence-dialog-header">
+          <div class="stack-sm">
+            <span class="eyebrow">Certified evidence details</span>
+            <h2 id="evidence-dialog-title" data-evidence-title>Evidence</h2>
+            <p data-evidence-subtitle></p>
+          </div>
+          <button
+            class="tool-icon-button"
+            type="button"
+            data-evidence-close
+            aria-label="Close evidence details"
+          >
+            Close
+          </button>
+        </header>
+        <dl class="evidence-details" data-evidence-details></dl>
+      </div>
+    </dialog>
+  </regex-compatibility>
+</BaseLayout>
+
+<script>
+  import '@/scripts/regexCompatibility';
+</script>

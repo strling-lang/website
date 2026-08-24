@@ -163,7 +163,17 @@ export class RegexProfileResolverElement extends HTMLElement {
     const technical = this.querySelector<HTMLElement>(
       '[data-profile-technical]',
     );
+    const done = this.querySelector<HTMLButtonElement>('[data-profile-done]');
+    const dialogTitle = this.querySelector<HTMLElement>(
+      '[data-profile-dialog-title]',
+    );
     if (open) open.disabled = this.#profiles.length === 0;
+    if (done) done.hidden = !this.multiple;
+    if (dialogTitle) {
+      dialogTitle.textContent = this.multiple
+        ? 'Add comparison environment'
+        : 'Change environment';
+    }
     if (!name || !path || !details || !technical || !selectedContainer) return;
 
     if (this.#profiles.length === 0) {

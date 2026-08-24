@@ -4,8 +4,10 @@ import astro from 'eslint-plugin-astro';
 import tseslint from 'typescript-eslint';
 
 const nodeGlobals = {
+  AbortController: 'readonly',
   console: 'readonly',
   process: 'readonly',
+  setTimeout: 'readonly',
   structuredClone: 'readonly',
   URL: 'readonly',
 };

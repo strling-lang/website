@@ -58,3 +58,16 @@ exact profile remains, and reports ambiguous or invalid metadata without
 inventing a choice. Lab and Compatibility share this resolver, so new profile
 branches and deeper catalogs require checkpoint metadata rather than component
 changes.
+
+## Lab execution boundary
+
+`src/lib/regex-lab/` defines versioned request/result unions and a provider
+interface for browser-local or remote-isolated execution. Result states keep
+no-match, compile rejection, runtime failure, resource termination,
+unsupported operation, and infrastructure failure distinct. Optional spans,
+captures, native metadata, and timing stay optional rather than becoming false
+empty values.
+
+The reactive coordinator owns debounce, abort signals, request generations,
+and stale-response rejection. The fixture provider used to certify those
+behaviors is test-only and is not imported by website source.

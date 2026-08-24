@@ -1,17 +1,218 @@
 ---
-import PendingFeaturePage from '@/components/PendingFeaturePage.astro';
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import ProfileResolver from '@/components/regex/ProfileResolver.astro';
+import StatusBadge from '@/components/StatusBadge.astro';
+import { regexConformanceState } from '@/data/regexConformance';
 import { surfaces } from '@/data/surfaces';
+import BaseLayout from '@/layouts/BaseLayout.astro';
 
+const surface = surfaces.regexLab;
 const crumbs = [
   { label: 'Home', href: '/' },
   { label: 'RegEx', href: '/regex/' },
-  { label: 'Lab', href: surfaces.regexLab.route },
+  { label: 'Lab', href: surface.route },
 ];
+const initialState = JSON.stringify(regexConformanceState.lab).replaceAll(
+  '<',
+  '\\u003c',
+);
 ---
 
-<PendingFeaturePage
-  surface={surfaces.regexLab}
+<BaseLayout
+  title={surface.label}
+  description={surface.description}
+  pathname={surface.route}
   {crumbs}
-  backHref="/regex/"
-  backLabel="Back to RegEx resources"
-/>
+  noindex
+>
+  <regex-lab>
+    <script
+      is:inline
+      type="application/json"
+      data-lab-state
+      set:html={initialState}
+    />
+
+    <header class="container regex-tool-intro">
+      <div class="stack-sm">
+        <Breadcrumbs items={crumbs} />
+        <span class="eyebrow">RegEx execution workspace</span>
+        <h1>RegEx Lab</h1>
+        <p>
+          Test a pattern against editable text in one exactly identified RegEx
+          environment, then inspect synchronized matches, captures, spans, and
+          native result data.
+        </p>
+      </div>
+      <StatusBadge label="Coming soon" tone="coming-soon" />
+    </header>
+
+    <section
+      class="container regex-tool-shell"
+      aria-label="RegEx Lab workspace"
+    >
+      <div class="tool-gate" data-lab-gate role="status">
+        <span class="status-badge status-badge--coming-soon"
+          >Checkpoint gate</span
+        >
+        <div>
+          <strong>Certified Lab profiles are not yet available.</strong>
+          The complete workspace is ready, but execution stays locked until an eligible
+          Regex Conformance checkpoint is consumed.
+        </div>
+      </div>
+
+      <div class="lab-workspace" data-lab-workspace aria-busy="false">
+        <section
+          class="tool-panel lab-environment"
+          aria-labelledby="lab-environment-heading"
+        >
+          <div class="tool-panel-header">
+            <h2 id="lab-environment-heading">Environment</h2>
+          </div>
+          <div class="tool-panel-body">
+            <ProfileResolver label="Selected environment" />
+          </div>
+        </section>
+
+        <section
+          class="tool-panel lab-pattern"
+          aria-labelledby="lab-pattern-heading"
+        >
+          <div class="tool-panel-header">
+            <h2 id="lab-pattern-heading">Pattern</h2>
+            <span class="tool-run-state" data-lab-run-state>Waiting</span>
+          </div>
+          <div class="tool-panel-body stack">
+            <label class="stack-sm">
+              <span class="tool-field-label">Regular expression</span>
+              <textarea
+                class="tool-input lab-pattern-input mono"
+                rows="3"
+                spellcheck="false"
+                autocomplete="off"
+                data-lab-pattern
+                disabled>(?&lt;word&gt;[A-Za-z]+)-(\d+)</textarea
+              >
+            </label>
+            <label class="stack-sm">
+              <span class="tool-field-label">Operation</span>
+              <select class="tool-select" data-lab-operation disabled>
+                <option>Waiting for profile metadata</option>
+              </select>
+            </label>
+            <fieldset class="lab-options" data-lab-options-fieldset disabled>
+              <legend class="tool-field-label">Options and mode</legend>
+              <div class="lab-option-grid" data-lab-options>
+                <span class="muted"
+                  >Options derive from the selected profile.</span
+                >
+              </div>
+            </fieldset>
+          </div>
+        </section>
+
+        <section class="tool-panel lab-text" aria-labelledby="lab-text-heading">
+          <div class="tool-panel-header">
+            <h2 id="lab-text-heading">Test text</h2>
+            <span class="muted mono" data-lab-text-meta
+              >Editable after checkpoint</span
+            >
+          </div>
+          <div
+            class="lab-editor"
+            data-lab-editor
+            role="textbox"
+            aria-label="Test text"
+            aria-multiline="true"
+            aria-disabled="true"
+            contenteditable="false"
+            spellcheck="false"
+            tabindex="0"
+            set:text={'alpha-1 beta-2'}
+          />
+          <div class="lab-editor-help">
+            <span>Decorations follow certified runtime spans.</span>
+            <button
+              class="tool-icon-button"
+              type="button"
+              data-lab-clear-inspection
+              disabled
+            >
+              Clear inspection
+            </button>
+          </div>
+        </section>
+
+        <section
+          class="tool-panel lab-results"
+          aria-labelledby="lab-results-heading"
+        >
+          <div class="tool-panel-header lab-results-header">
+            <h2 id="lab-results-heading">Results</h2>
+            <div class="tool-tabs" role="tablist" aria-label="Lab result views">
+              <button
+                type="button"
+                role="tab"
+                id="lab-tab-matches"
+                aria-controls="lab-panel-matches"
+                aria-selected="true"
+                tabindex="0"
+                data-lab-tab="matches"
+              >
+                Matches
+              </button>
+              <button
+                type="button"
+                role="tab"
+                id="lab-tab-object"
+                aria-controls="lab-panel-object"
+                aria-selected="false"
+                tabindex="-1"
+                data-lab-tab="object"
+              >
+                Object
+              </button>
+            </div>
+          </div>
+          <div
+            class="lab-result-panel"
+            id="lab-panel-matches"
+            role="tabpanel"
+            aria-labelledby="lab-tab-matches"
+            data-lab-panel="matches"
+          >
+            <p class="tool-empty-message" data-lab-matches-empty>
+              Select a certified profile to run this pattern.
+            </p>
+            <ol class="lab-match-list" data-lab-matches hidden></ol>
+          </div>
+          <div
+            class="lab-result-panel"
+            id="lab-panel-object"
+            role="tabpanel"
+            aria-labelledby="lab-tab-object"
+            data-lab-panel="object"
+            hidden
+          >
+            <p class="tool-empty-message" data-lab-object-empty>
+              A structured result will appear here after execution.
+            </p>
+            <div class="lab-object-tree" data-lab-object-tree hidden></div>
+            <details class="lab-raw-result" data-lab-raw hidden>
+              <summary>Exact raw serialization</summary>
+              <pre tabindex="0"><code data-lab-raw-code /></pre>
+            </details>
+          </div>
+          <p class="visually-hidden" aria-live="polite" data-lab-live>
+            Waiting for a certified profile.
+          </p>
+        </section>
+      </div>
+    </section>
+  </regex-lab>
+</BaseLayout>
+
+<script>
+  import '@/scripts/regexLab';
+</script>

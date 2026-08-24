@@ -1,0 +1,83 @@
+---
+import '@/styles/regex-tools.css';
+
+interface Props {
+  label?: string;
+  multiple?: boolean;
+  emptyLabel?: string;
+}
+
+const {
+  label = 'Environment',
+  multiple = false,
+  emptyLabel = 'No certified profile available',
+} = Astro.props;
+---
+
+<regex-profile-resolver data-multiple={multiple ? 'true' : 'false'}>
+  <div class="profile-resolver-summary" data-profile-summary>
+    <div class="stack-sm">
+      <span class="tool-field-label">{label}</span>
+      <strong data-profile-name>{emptyLabel}</strong>
+      <span class="profile-resolver-path muted" data-profile-path>
+        Waiting for an eligible Conformance checkpoint.
+      </span>
+    </div>
+    <button
+      class="button button--secondary profile-resolver-change"
+      type="button"
+      data-profile-open
+      aria-haspopup="dialog"
+      disabled
+    >
+      Change
+    </button>
+  </div>
+  <div class="profile-resolver-selected" data-profile-selected hidden></div>
+  <details class="profile-technical-details" data-profile-details hidden>
+    <summary>Exact profile details</summary>
+    <dl data-profile-technical></dl>
+  </details>
+
+  <dialog class="profile-resolver-dialog" data-profile-dialog>
+    <div class="profile-resolver-dialog-inner">
+      <header class="profile-resolver-dialog-header">
+        <div class="stack-sm">
+          <span class="eyebrow">Exact environment</span>
+          <h2 data-profile-dialog-title>Change environment</h2>
+        </div>
+        <button
+          class="tool-icon-button"
+          type="button"
+          data-profile-close
+          aria-label="Close environment selector"
+        >
+          Close
+        </button>
+      </header>
+      <div class="profile-resolver-answers" data-profile-answers></div>
+      <div class="profile-resolver-question stack" data-profile-question></div>
+      <footer class="profile-resolver-dialog-footer">
+        <button
+          class="button button--secondary"
+          type="button"
+          data-profile-back
+          disabled
+        >
+          Back
+        </button>
+        {
+          multiple && (
+            <button class="button" type="button" data-profile-done>
+              Done
+            </button>
+          )
+        }
+      </footer>
+    </div>
+  </dialog>
+</regex-profile-resolver>
+
+<script>
+  import '@/scripts/regexProfileResolver';
+</script>

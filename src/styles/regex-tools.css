@@ -97,7 +97,6 @@
 .tool-select:disabled,
 fieldset:disabled .tool-input,
 fieldset:disabled .tool-select {
-  cursor: not-allowed;
   opacity: 0.58;
 }
 
@@ -210,7 +209,6 @@ regex-profile-resolver {
 
 .profile-resolver-dialog::backdrop {
   background: rgba(4, 5, 7, 0.78);
-  backdrop-filter: blur(3px);
 }
 
 .profile-resolver-dialog-inner {
@@ -342,7 +340,6 @@ regex-profile-resolver {
 
 .lab-pattern-input {
   min-height: 6rem;
-  resize: vertical;
 }
 
 .lab-options {
@@ -400,7 +397,6 @@ regex-profile-resolver {
 
 .lab-editor[aria-disabled='true'] {
   color: var(--text-muted);
-  cursor: not-allowed;
 }
 
 .lab-editor-help {
@@ -523,7 +519,7 @@ regex-profile-resolver {
 }
 
 .lab-zero-marker {
-  display: inline-block;
+  display: inline-flex;
   width: 0.55rem;
   height: 1.15em;
   border-inline-start: 3px solid var(--prerelease);
@@ -632,7 +628,6 @@ regex-profile-resolver {
 }
 
 .compatibility-mode label:has(input:disabled) {
-  cursor: not-allowed;
   opacity: 0.58;
 }
 

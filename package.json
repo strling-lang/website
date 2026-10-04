@@ -15,7 +15,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "npm run build && npm run check:css && npm run check:regex-docs -- --dist dist && node --test tests/unit/*.test.mjs && node scripts/check-links.mjs",
+    "test": "npm run build && npm run check:css && npm run check:regex-docs -- --dist dist && node --experimental-strip-types --test tests/unit/*.test.mjs && node scripts/check-links.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

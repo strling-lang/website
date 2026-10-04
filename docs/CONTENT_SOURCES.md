@@ -32,28 +32,30 @@ empirical authority merely because a claim already appears in website copy.
 
 ## Sources reviewed
 
-| Source                           | Public evidence used                                                                                                                                                                                            |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `strling-lang/strling`           | 17 binding directories; Simply APIs; TypeScript and Python examples; manifests; feature registry; grammar; semantics; conformance fixtures; Apache License 2.0; distribution workflow                           |
-| `strling-lang/regex-conformance` | Immutable Regex Semantic Feature Corpus snapshot; 14 canonical categories; 251 canonical features; variants, manifestations, relations, operations, and exact source bindings at the 2026-08-22 declared cutoff |
-| `strling-lang/STRling.py`        | Established Python API/package history and PyPI identity                                                                                                                                                        |
-| `strling-lang/STRling.js`        | Established JavaScript API/package history                                                                                                                                                                      |
-| `strling-lang/.github`           | Organization identity and the remotely referenced silver bell mark                                                                                                                                              |
-| PyPI                             | `STRling` public package, version 2.5.9 at review time                                                                                                                                                          |
-| npm                              | `@strling-lang/strling` public package, version 3.0.0 at review time                                                                                                                                            |
-| NuGet                            | `STRling` and `STRling.FSharp`, version 3.0.0 at review time                                                                                                                                                    |
-| Pub.dev                          | `strling`, version 3.0.0 at review time                                                                                                                                                                         |
-| RubyGems                         | `strling`, version 3.0.0 at review time                                                                                                                                                                         |
-| Packagist and MetaCPAN           | No matching verified release at review time                                                                                                                                                                     |
+| Source                           | Public evidence used                                                                                                                                                                                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `strling-lang/strling`           | 17 binding directories; Simply APIs; TypeScript and Python examples; manifests; feature registry; grammar; semantics; conformance fixtures; Apache License 2.0; distribution workflow                                                                  |
+| `strling-lang/regex-conformance` | Immutable Regex Semantic Feature Corpus snapshot; 16 canonical categories; 269 canonical features; variants, manifestations, relations, operations, and exact source bindings at the 2026-09-08 declared cutoff (semantic source rechecked 2026-10-04) |
+| `strling-lang/STRling.py`        | Established Python API/package history and PyPI identity                                                                                                                                                                                               |
+| `strling-lang/STRling.js`        | Established JavaScript API/package history                                                                                                                                                                                                             |
+| `strling-lang/.github`           | Organization identity and the remotely referenced silver bell mark                                                                                                                                                                                     |
+| PyPI                             | `STRling` public package, version 2.5.9 at review time                                                                                                                                                                                                 |
+| npm                              | `@strling-lang/strling` public package, version 3.0.0 at review time                                                                                                                                                                                   |
+| NuGet                            | `STRling` and `STRling.FSharp`, version 3.0.0 at review time                                                                                                                                                                                           |
+| Pub.dev                          | `strling`, version 3.0.0 at review time                                                                                                                                                                                                                |
+| RubyGems                         | `strling`, version 3.0.0 at review time                                                                                                                                                                                                                |
+| Packagist and MetaCPAN           | No matching verified release at review time                                                                                                                                                                                                            |
 
 Registry versions are time-sensitive evidence, not promises. Update `src/data/bindings.ts` only after rechecking the live record and repository ownership.
 
 ## Generic regex semantics and compatibility
 
 The Regex Feature Catalog consumes the promoted immutable snapshot at
-`semantic-corpus/snapshots/regex-semantic-features-2026-08-22.v1.json`. Its
+`semantic-corpus/snapshots/regex-semantic-features-2026-09-08.v4.json`. The
+public `semantic-corpus/authority/current.v1.json` identifies it as current,
+verified at revision `3285cc9fa8310df0af00fa50724d65531e0695d9`. Its
 reviewed semantic digest is
-`350bfea4c3da07b3426d885aa8ff645ac55539bbb1294a2ea35dd5319541d6c7`.
+`e2c99c582ad9c8f2875060f9cb9d3ec0da8057f554ac09477f8e07b96da30b05`.
 The checked-in website lock and documentation projection are derived consumer
 artifacts, not another taxonomy. Notion is not a machine source.
 
@@ -63,9 +65,10 @@ and API forms as source-specific and must not infer empirical support from a
 documented manifestation. Compatibility is modeled as the complete canonical
 feature universe left-joined with certified evidence for an exact profile.
 
-The nine unresolved legacy candidates remain research records upstream. They
-are not canonical public feature pages unless a future reviewed semantic
-snapshot promotes them.
+Only features in the promoted snapshot become canonical public feature pages.
+Research candidates alone do not establish publication authority. The v4
+consumer retains source-bound assertions and the typed interactions explicitly
+carried forward from the immutable v1 snapshot.
 
 ## API examples
 

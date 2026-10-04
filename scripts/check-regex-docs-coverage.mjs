@@ -1,6 +1,7 @@
 import { access, readFile, readdir } from 'node:fs/promises';
 import { relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { snapshotDigest } from './regex-docs-snapshot.mjs';
 
 const expectedGeneration = {
   format: 'strling-regex-docs-projection',
@@ -62,7 +63,7 @@ export function canonicalFromLock(lock) {
 export function canonicalFromSnapshot(snapshot, snapshotPath = undefined) {
   return {
     kind: 'upstream-snapshot',
-    digest: snapshot.corpus_digest_sha256,
+    digest: snapshotDigest(snapshot),
     snapshotPath,
     declaredFeatureCount: snapshot.counts?.canonical_features,
     features: snapshot.features.map((feature) => ({
@@ -475,7 +476,13 @@ export async function verifyCoverage({
       if (!Array.isArray(feature[field]))
         requiredMetadataFailures.push(`${feature.semanticFeatureId}: ${field}`);
     }
-    if (!feature.testConcepts?.positive || !feature.testConcepts?.negative)
+    const validTestConcepts = Array.isArray(feature.testConcepts)
+      ? feature.testConcepts.length > 0 &&
+        feature.testConcepts.every(
+          (concept) => typeof concept === 'string' && concept.trim(),
+        )
+      : feature.testConcepts?.positive && feature.testConcepts?.negative;
+    if (!validTestConcepts)
       requiredMetadataFailures.push(
         `${feature.semanticFeatureId}: testConcepts`,
       );
@@ -579,7 +586,36 @@ export async function verifyCoverage({
   };
 }
 
-async function discoverCanonicalSnapshot(root) {
+export async function discoverCanonicalSnapshot(root) {
+  const authorityPath = resolve(
+    root,
+    'semantic-corpus',
+    'authority',
+    'current.v1.json',
+  );
+  if (await exists(authorityPath)) {
+    const authority = JSON.parse(await readFile(authorityPath, 'utf8'));
+    const current = authority.current_snapshot;
+    if (
+      authority.schema_version !== 'regex-semantic-authority-index.v1' ||
+      !current?.path
+    )
+      throw new Error('Invalid canonical semantic authority index.');
+    const directory = resolve(root, 'semantic-corpus', 'snapshots');
+    const path = resolve(root, current.path);
+    if (!path.startsWith(`${directory}${sep}`) || !path.endsWith('.json'))
+      throw new Error(`Invalid promoted snapshot path: ${current.path}`);
+    const snapshot = JSON.parse(await readFile(path, 'utf8'));
+    if (
+      snapshotDigest(snapshot) !== current.digest_sha256 ||
+      snapshot.snapshot_id !== current.id
+    )
+      throw new Error(
+        'Promoted snapshot does not match the canonical authority index.',
+      );
+    return { path, snapshotPath: normalizePath(current.path) };
+  }
+  // Legacy default branches predate the explicit authority index.
   const snapshotDirectory = resolve(root, 'semantic-corpus', 'snapshots');
   const entries = await readdir(snapshotDirectory, { withFileTypes: true });
   const snapshots = entries

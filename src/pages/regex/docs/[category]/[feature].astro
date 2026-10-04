@@ -411,11 +411,36 @@ const headings = [
           These are semantic test concepts, not claims about the syntax or
           support of a particular implementation.
         </p>
-        <dl class="regex-detail-list">
-          <div><dt>Positive</dt><dd>{feature.testConcepts.positive}</dd></div>
-          <div><dt>Negative</dt><dd>{feature.testConcepts.negative}</dd></div>
-          <div><dt>Edge</dt><dd>{feature.testConcepts.edge}</dd></div>
-        </dl>
+        {
+          Array.isArray(feature.testConcepts) ? (
+            <ul>
+              {feature.testConcepts.map((concept) => (
+                <li>{concept}</li>
+              ))}
+            </ul>
+          ) : (
+            <dl class="regex-detail-list">
+              <div>
+                <>
+                  <dt>Positive</dt>
+                  <dd>{feature.testConcepts.positive}</dd>
+                </>
+              </div>
+              <div>
+                <>
+                  <dt>Negative</dt>
+                  <dd>{feature.testConcepts.negative}</dd>
+                </>
+              </div>
+              <div>
+                <>
+                  <dt>Edge</dt>
+                  <dd>{feature.testConcepts.edge}</dd>
+                </>
+              </div>
+            </dl>
+          )
+        }
         {
           feature.unresolvedSemanticQuestions.length > 0 && (
             <>

@@ -73,9 +73,9 @@ export interface RegexFeature {
   diagnosticErrorSemantics: string;
   resourceTerminationImplications: string;
   optionStateDependencies: string[];
-  testConcepts: { positive: string; negative: string; edge: string };
+  testConcepts: { positive: string; negative: string; edge: string } | string[];
   unresolvedSemanticQuestions: string[];
-  lifecycle: {
+  lifecycle?: {
     status: string;
     evidence: Array<{ claim: string; source_ids: string[] }>;
   };
@@ -141,6 +141,8 @@ const regexCategorySidebarLabels: Record<string, string> = {
   'groups-and-captures': 'Groups & captures',
   'replacement-language': 'Replacement',
   'lookaround-assertions': 'Lookaround',
+  lookaround: 'Lookaround extensions',
+  'options-and-state': 'Options & state',
   'grammar-and-composition': 'Grammar & composition',
   'host-operations-and-results': 'Operations & results',
   'editor-cli-and-product-surfaces': 'Editor, CLI & product',

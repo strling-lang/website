@@ -47,6 +47,36 @@ Install the Playwright Chromium runtime once with
 `npx playwright install chromium`. Document any check that could not run and
 why.
 
+## Scheduled documentation coverage
+
+GitHub Actions runs `.github/workflows/regex-docs-coverage.yml` for pull
+requests, pushes to `main`, manual dispatches, and daily at **08:17 UTC**
+(`17 8 * * *`). The daily check detects changes in Regex Conformance even
+when the website has no new commits. It does not deploy the website.
+GitHub can delay scheduled runs, so the displayed start time is not an exact
+appointment; see [GitHub's schedule documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+The job checks the current public Regex Conformance default branch against the
+reviewed website projection, then runs `npm test`. A source-drift failure needs
+a reviewed consumer update, not a disabled check or a pinned historical
+upstream checkout. Prefer the promoted snapshot named by
+`semantic-corpus/authority/current.v1.json`; older upstream revisions without
+that index use snapshot filename discovery.
+
+To update after reviewing a public canonical change, use a separate clean
+checkout of the canonical repository and record its exact public revision:
+
+```bash
+npm run generate:regex-docs -- --canonical-root <canonical-checkout> --source-revision <reviewed-public-sha>
+npm run check:regex-docs -- --canonical-root <canonical-checkout>
+npm test
+```
+
+Review category presentation, source assertions, carried-forward references,
+and moved URLs as part of that update. Local edits affect the remote schedule
+only after an authorized publication and merge into `main`. Changing the
+daily cadence is a separate maintenance decision; keep the drift gate active.
+
 ## Content authority
 
 Follow [`docs/CONTENT_SOURCES.md`](docs/CONTENT_SOURCES.md). Verify public claims

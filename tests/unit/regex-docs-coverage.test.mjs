@@ -81,6 +81,16 @@ test('gate fails when the documentation source digest changes', async () => {
   assert.equal(hasIssue(result, 'WEBSITE_DIGEST_MISMATCH'), true);
 });
 
+test('gate fails for empty or malformed current-schema test concepts', async () => {
+  for (const concepts of [[], [''], [42]]) {
+    const docs = copy(projection);
+    docs.features[0].testConcepts = concepts;
+    const result = await verify(docs);
+    assert.equal(result.ok, false);
+    assert.equal(hasIssue(result, 'REQUIRED_METADATA_MISSING'), true);
+  }
+});
+
 test('gate fails for a newly added upstream canonical feature', async () => {
   const canonical = copy(canonicalFromLock(lock));
   canonical.kind = 'upstream-snapshot';

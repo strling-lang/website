@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 import {
   consumeCheckpoints,
@@ -21,6 +22,13 @@ const fixtureCompatibilityState = consumeCheckpoints(
   validatedFixtures,
   'compatibility',
 ).compatibility;
+const canonicalProjection = JSON.parse(
+  readFileSync(
+    new URL('../../src/data/regex-docs/projection.json', import.meta.url),
+    'utf8',
+  ),
+);
+const canonicalFeatureCount = canonicalProjection.features.length;
 
 async function installFixtureCompatibility(page: Page): Promise<void> {
   await page.goto('/regex/compatibility/');
@@ -41,7 +49,9 @@ async function installFixtureCompatibility(page: Page): Promise<void> {
         ...fixtureState,
       });
     }, fixtureCompatibilityState);
-  await expect(page.locator('[data-compatibility-body] tr')).toHaveCount(251);
+  await expect(page.locator('[data-compatibility-body] tr')).toHaveCount(
+    canonicalFeatureCount,
+  );
 }
 
 test.describe('RegEx Compatibility foundation', () => {
@@ -83,7 +93,12 @@ test.describe('RegEx Compatibility foundation', () => {
     await page
       .locator('[data-compatibility-category]')
       .selectOption('anchors-and-boundaries');
-    await expect(page.locator('[data-compatibility-body] tr')).toHaveCount(19);
+    await expect(page.locator('[data-compatibility-body] tr')).toHaveCount(
+      canonicalProjection.categories.find(
+        (category: { semanticCategoryId: string }) =>
+          category.semanticCategoryId === 'anchors-and-boundaries',
+      ).featureCount,
+    );
   });
 
   test('adds environments progressively for comparison mode', async ({

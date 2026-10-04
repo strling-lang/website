@@ -1,7 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { discoverCanonicalSnapshot } from './check-regex-docs-coverage.mjs';
+import { readCanonicalSnapshot } from './regex-docs-snapshot.mjs';
 
 export const projectionFormat = 'strling-regex-docs-projection';
 export const projectionVersion = 1;
@@ -72,6 +74,18 @@ const categoryPresentation = [
     name: 'Lookaround assertions',
     description:
       'Lookaround tests whether a subpattern does or does not match before or after the current position without consuming it as part of the result.',
+  },
+  {
+    id: 'lookaround',
+    name: 'Lookaround extensions',
+    description:
+      'These assertions test captured text or permit non-atomic lookbehind behavior under source-specific matching rules.',
+  },
+  {
+    id: 'options-and-state',
+    name: 'Options and state',
+    description:
+      'These features govern inline and scoped modifier state within a pattern.',
   },
   {
     id: 'grammar-and-composition',
@@ -146,7 +160,7 @@ function unique(values) {
 }
 
 function relationDetails(feature, interactions) {
-  return interactions
+  const relations = interactions
     .filter(
       (interaction) =>
         (interaction.source_id === feature.feature_id &&
@@ -169,6 +183,12 @@ function relationDetails(feature, interactions) {
         `${b.targetFeatureId}:${b.relationType}:${b.direction}`,
       ),
     );
+  return relations.filter(
+    (relation, index) =>
+      index === 0 ||
+      `${relation.targetFeatureId}:${relation.relationType}:${relation.direction}` !==
+        `${relations[index - 1].targetFeatureId}:${relations[index - 1].relationType}:${relations[index - 1].direction}`,
+  );
 }
 
 export async function generateProjection({
@@ -176,7 +196,7 @@ export async function generateProjection({
   outputDirectory,
   revision,
 }) {
-  const canonical = JSON.parse(await readFile(canonicalPath, 'utf8'));
+  const canonical = await readCanonicalSnapshot(canonicalPath);
   const canonicalCategories = unique(
     canonical.features.map((feature) => feature.category),
   );
@@ -184,12 +204,9 @@ export async function generateProjection({
   const missingPresentation = canonicalCategories.filter(
     (category) => !presentationIds.includes(category),
   );
-  const stalePresentation = presentationIds.filter(
-    (category) => !canonicalCategories.includes(category),
-  );
-  if (missingPresentation.length || stalePresentation.length) {
+  if (missingPresentation.length) {
     throw new Error(
-      `Category presentation requires review. Missing: ${missingPresentation.join(', ') || 'none'}. Stale: ${stalePresentation.join(', ') || 'none'}.`,
+      `Category presentation requires review. Missing: ${missingPresentation.join(', ')}.`,
     );
   }
 
@@ -284,6 +301,9 @@ export async function generateProjection({
         featureRelations,
         featureClass: feature.feature_class,
         semanticDefinition: feature.semantic_definition,
+        ...(feature.semantic_assertions
+          ? { semanticAssertions: feature.semantic_assertions }
+          : {}),
         abstractGrammarForm: feature.abstract_grammar_form,
         semanticVariants: feature.semantic_variants,
         manifestations,
@@ -310,37 +330,39 @@ export async function generateProjection({
   const projectedFeatureById = new Map(
     features.map((feature) => [feature.semanticFeatureId, feature]),
   );
-  const categories = categoryPresentation.map((presentation, order) => {
-    const categoryFeatures = features.filter(
-      (feature) => feature.semanticCategoryId === presentation.id,
-    );
-    const crossCategoryCounts = new Map();
-    for (const feature of categoryFeatures) {
-      for (const relatedId of feature.relatedFeatures) {
-        const related = projectedFeatureById.get(relatedId);
-        if (!related || related.semanticCategoryId === presentation.id)
-          continue;
-        crossCategoryCounts.set(
-          related.semanticCategoryId,
-          (crossCategoryCounts.get(related.semanticCategoryId) ?? 0) + 1,
-        );
+  const categories = categoryPresentation
+    .filter((presentation) => canonicalCategories.includes(presentation.id))
+    .map((presentation, order) => {
+      const categoryFeatures = features.filter(
+        (feature) => feature.semanticCategoryId === presentation.id,
+      );
+      const crossCategoryCounts = new Map();
+      for (const feature of categoryFeatures) {
+        for (const relatedId of feature.relatedFeatures) {
+          const related = projectedFeatureById.get(relatedId);
+          if (!related || related.semanticCategoryId === presentation.id)
+            continue;
+          crossCategoryCounts.set(
+            related.semanticCategoryId,
+            (crossCategoryCounts.get(related.semanticCategoryId) ?? 0) + 1,
+          );
+        }
       }
-    }
-    const relatedCategoryIds = [...crossCategoryCounts.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .slice(0, 4)
-      .map(([id]) => id);
-    return {
-      semanticCategoryId: presentation.id,
-      slug: presentation.id,
-      name: presentation.name,
-      description: presentation.description,
-      order: order + 1,
-      featureCount: categoryFeatures.length,
-      relatedCategoryIds,
-      route: `/regex/docs/${presentation.id}/`,
-    };
-  });
+      const relatedCategoryIds = [...crossCategoryCounts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 4)
+        .map(([id]) => id);
+      return {
+        semanticCategoryId: presentation.id,
+        slug: presentation.id,
+        name: presentation.name,
+        description: presentation.description,
+        order: order + 1,
+        featureCount: categoryFeatures.length,
+        relatedCategoryIds,
+        route: `/regex/docs/${presentation.id}/`,
+      };
+    });
 
   const snapshotPath = sourceSnapshotPath(canonicalPath);
   const reviewedRevision = sourceRevision(canonicalPath, revision);
@@ -409,10 +431,13 @@ const isDirect =
 
 if (isDirect) {
   const options = parseArgs(process.argv.slice(2));
-  const canonicalPath = resolve(
-    options.canonical ??
-      '../regex-conformance/semantic-corpus/snapshots/regex-semantic-features-2026-08-22.v1.json',
-  );
+  const canonicalPath = options.canonical
+    ? resolve(options.canonical)
+    : (
+        await discoverCanonicalSnapshot(
+          resolve(options['canonical-root'] ?? '../regex-conformance'),
+        )
+      ).path;
   const outputDirectory = resolve(options.output ?? 'src/data/regex-docs');
   const { lock } = await generateProjection({
     canonicalPath,

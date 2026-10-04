@@ -5,30 +5,32 @@
   },
   "source": {
     "repository": "strling-lang/regex-conformance",
-    "snapshotPath": "semantic-corpus/snapshots/regex-semantic-features-2026-08-22.v1.json",
-    "revision": "5e4ebd58dc4c567cfb20f6d8c04caa79ae3b0001",
-    "semanticDigest": "350bfea4c3da07b3426d885aa8ff645ac55539bbb1294a2ea35dd5319541d6c7",
-    "snapshotId": "regex-semantic-features-2026-08-22.sha256-350bfea4c3da07b3426d885aa8ff645ac55539bbb1294a2ea35dd5319541d6c7",
-    "schemaVersion": "regex-semantic-corpus-v1",
-    "cutoffDate": "2026-08-22",
-    "status": "frozen-declared-cutoff-baseline"
+    "snapshotPath": "semantic-corpus/snapshots/regex-semantic-features-2026-09-08.v4.json",
+    "revision": "3285cc9fa8310df0af00fa50724d65531e0695d9",
+    "semanticDigest": "e2c99c582ad9c8f2875060f9cb9d3ec0da8057f554ac09477f8e07b96da30b05",
+    "snapshotId": "rcid:v1:ontology-snapshot:h:jcs-sha256-v1:4c9afcd3ea350a6f6c0a429d96fd6b10ca7d142300ce9a39e94809a1f383899e",
+    "schemaVersion": "regex-semantic-corpus.v4",
+    "cutoffDate": "2026-09-08T00:14:25Z",
+    "status": "frozen-declared-cutoff-semantic-universe"
   },
-  "canonicalFeatureCount": 251,
-  "canonicalCategoryCount": 14,
+  "canonicalFeatureCount": 269,
+  "canonicalCategoryCount": 16,
   "categoryCounts": {
     "character-classes": 27,
     "approximate-partial-and-multipattern": 24,
     "quantification-and-match-selection": 20,
-    "unicode-and-text-model": 20,
+    "unicode-and-text-model": 23,
     "diagnostics-resources-and-safety": 20,
-    "anchors-and-boundaries": 19,
-    "backreferences-recursion-and-conditionals": 18,
+    "anchors-and-boundaries": 18,
+    "backreferences-recursion-and-conditionals": 19,
     "backtracking-control-and-code": 17,
     "groups-and-captures": 17,
     "replacement-language": 16,
     "lookaround-assertions": 15,
-    "grammar-and-composition": 13,
-    "host-operations-and-results": 13,
+    "lookaround": 2,
+    "options-and-state": 2,
+    "grammar-and-composition": 21,
+    "host-operations-and-results": 16,
     "editor-cli-and-product-surfaces": 12
   },
   "reviewedCategories": [
@@ -50,7 +52,7 @@
     {
       "semanticCategoryId": "unicode-and-text-model",
       "canonicalName": "Unicode and text model",
-      "featureCount": 20
+      "featureCount": 23
     },
     {
       "semanticCategoryId": "diagnostics-resources-and-safety",
@@ -60,12 +62,12 @@
     {
       "semanticCategoryId": "anchors-and-boundaries",
       "canonicalName": "Anchors and boundaries",
-      "featureCount": 19
+      "featureCount": 18
     },
     {
       "semanticCategoryId": "backreferences-recursion-and-conditionals",
       "canonicalName": "Backreferences, recursion and conditionals",
-      "featureCount": 18
+      "featureCount": 19
     },
     {
       "semanticCategoryId": "backtracking-control-and-code",
@@ -88,14 +90,24 @@
       "featureCount": 15
     },
     {
+      "semanticCategoryId": "lookaround",
+      "canonicalName": "Lookaround extensions",
+      "featureCount": 2
+    },
+    {
+      "semanticCategoryId": "options-and-state",
+      "canonicalName": "Options and state",
+      "featureCount": 2
+    },
+    {
       "semanticCategoryId": "grammar-and-composition",
       "canonicalName": "Grammar and composition",
-      "featureCount": 13
+      "featureCount": 21
     },
     {
       "semanticCategoryId": "host-operations-and-results",
       "canonicalName": "Host-operation and result semantics",
-      "featureCount": 13
+      "featureCount": 16
     },
     {
       "semanticCategoryId": "editor-cli-and-product-surfaces",
@@ -345,6 +357,12 @@
       "slug": "capture-value"
     },
     {
+      "semanticFeatureId": "feature.captured-substring-assertion",
+      "canonicalName": "Captured-substring assertion",
+      "semanticCategoryId": "lookaround",
+      "slug": "captured-substring-assertion"
+    },
+    {
       "semanticFeatureId": "feature.character-category-class",
       "canonicalName": "Editor character-category class",
       "semanticCategoryId": "editor-cli-and-product-surfaces",
@@ -507,6 +525,12 @@
       "slug": "empty-alternative"
     },
     {
+      "semanticFeatureId": "feature.empty-language-atom",
+      "canonicalName": "Empty-language atom",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "empty-language-atom"
+    },
+    {
       "semanticFeatureId": "feature.empty-pattern",
       "canonicalName": "Empty pattern",
       "semanticCategoryId": "grammar-and-composition",
@@ -517,6 +541,12 @@
       "canonicalName": "Enhanced next approximate match",
       "semanticCategoryId": "approximate-partial-and-multipattern",
       "slug": "enhanced-approximate-match"
+    },
+    {
+      "semanticFeatureId": "feature.enumerated-unicode-property-value",
+      "canonicalName": "Enumerated Unicode property value",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "enumerated-unicode-property-value"
     },
     {
       "semanticFeatureId": "feature.escaped-literal",
@@ -535,6 +565,24 @@
       "canonicalName": "Explicit capture number",
       "semanticCategoryId": "groups-and-captures",
       "slug": "explicit-capture-number"
+    },
+    {
+      "semanticFeatureId": "feature.expression-complement",
+      "canonicalName": "Expression-level language complement",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "expression-complement"
+    },
+    {
+      "semanticFeatureId": "feature.expression-difference",
+      "canonicalName": "Expression-level language difference",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "expression-difference"
+    },
+    {
+      "semanticFeatureId": "feature.expression-intersection",
+      "canonicalName": "Expression-level language intersection",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "expression-intersection"
     },
     {
       "semanticFeatureId": "feature.extended-grapheme-cluster",
@@ -631,6 +679,12 @@
       "canonicalName": "Ignore combining-character differences",
       "semanticCategoryId": "editor-cli-and-product-surfaces",
       "slug": "ignore-combining-differences"
+    },
+    {
+      "semanticFeatureId": "feature.inline-modifier-directive",
+      "canonicalName": "Inline modifier directive",
+      "semanticCategoryId": "options-and-state",
+      "slug": "inline-modifier-directive"
     },
     {
       "semanticFeatureId": "feature.invalid-escape-error",
@@ -873,6 +927,12 @@
       "slug": "mutable-match-cursor"
     },
     {
+      "semanticFeatureId": "feature.named-automaton-reference",
+      "canonicalName": "Named automaton reference",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "named-automaton-reference"
+    },
+    {
       "semanticFeatureId": "feature.named-backreference",
       "canonicalName": "Named backreference",
       "semanticCategoryId": "backreferences-recursion-and-conditionals",
@@ -933,6 +993,12 @@
       "slug": "non-atomic-lookahead"
     },
     {
+      "semanticFeatureId": "feature.non-atomic-positive-lookbehind",
+      "canonicalName": "Non-atomic positive lookbehind",
+      "semanticCategoryId": "lookaround",
+      "slug": "non-atomic-positive-lookbehind"
+    },
+    {
       "semanticFeatureId": "feature.non-word-boundary",
       "canonicalName": "Non-word boundary",
       "semanticCategoryId": "anchors-and-boundaries",
@@ -975,10 +1041,34 @@
       "slug": "numeric-callout"
     },
     {
+      "semanticFeatureId": "feature.numeric-escape-disambiguation",
+      "canonicalName": "Numeric escape disambiguation",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "numeric-escape-disambiguation"
+    },
+    {
+      "semanticFeatureId": "feature.numeric-interval-language-atom",
+      "canonicalName": "Numeric interval language atom",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "numeric-interval-language-atom"
+    },
+    {
       "semanticFeatureId": "feature.numeric-subroutine-call",
       "canonicalName": "Numeric subroutine call",
       "semanticCategoryId": "backreferences-recursion-and-conditionals",
       "slug": "numeric-subroutine-call"
+    },
+    {
+      "semanticFeatureId": "feature.numeric-unicode-code-point-escape",
+      "canonicalName": "Numeric Unicode code-point escape",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "numeric-unicode-code-point-escape"
+    },
+    {
+      "semanticFeatureId": "feature.numeric-unicode-property-value",
+      "canonicalName": "Numeric Unicode property value",
+      "semanticCategoryId": "unicode-and-text-model",
+      "slug": "numeric-unicode-property-value"
     },
     {
       "semanticFeatureId": "feature.occurrence-selection",
@@ -1107,6 +1197,12 @@
       "slug": "recursion-conditional"
     },
     {
+      "semanticFeatureId": "feature.recursion-level-qualified-backreference",
+      "canonicalName": "Recursion-level-qualified backreference",
+      "semanticCategoryId": "backreferences-recursion-and-conditionals",
+      "slug": "recursion-level-qualified-backreference"
+    },
+    {
       "semanticFeatureId": "feature.recursion-returned-captures",
       "canonicalName": "Returned captures from recursion",
       "semanticCategoryId": "backreferences-recursion-and-conditionals",
@@ -1217,14 +1313,20 @@
     {
       "semanticFeatureId": "feature.reset-reported-match-end",
       "canonicalName": "Reset reported match end",
-      "semanticCategoryId": "anchors-and-boundaries",
+      "semanticCategoryId": "host-operations-and-results",
       "slug": "reset-reported-match-end"
     },
     {
       "semanticFeatureId": "feature.reset-reported-match-start",
       "canonicalName": "Reset reported match start",
-      "semanticCategoryId": "anchors-and-boundaries",
+      "semanticCategoryId": "host-operations-and-results",
       "slug": "reset-reported-match-start"
+    },
+    {
+      "semanticFeatureId": "feature.scoped-modifier-group",
+      "canonicalName": "Scoped modifier group",
+      "semanticCategoryId": "options-and-state",
+      "slug": "scoped-modifier-group"
     },
     {
       "semanticFeatureId": "feature.script-run",
@@ -1407,6 +1509,12 @@
       "slug": "transparent-region-bounds"
     },
     {
+      "semanticFeatureId": "feature.typed-capture-result-shape",
+      "canonicalName": "Typed capture result shape",
+      "semanticCategoryId": "host-operations-and-results",
+      "slug": "typed-capture-result-shape"
+    },
+    {
       "semanticFeatureId": "feature.unbounded-negative-lookbehind",
       "canonicalName": "Unbounded negative lookbehind",
       "semanticCategoryId": "lookaround-assertions",
@@ -1455,6 +1563,12 @@
       "slug": "unicode-grapheme-boundary"
     },
     {
+      "semanticFeatureId": "feature.unicode-line-break-boundary",
+      "canonicalName": "Unicode line-break boundary",
+      "semanticCategoryId": "anchors-and-boundaries",
+      "slug": "unicode-line-break-boundary"
+    },
+    {
       "semanticFeatureId": "feature.unicode-property-alias",
       "canonicalName": "Unicode property alias resolution",
       "semanticCategoryId": "character-classes",
@@ -1501,6 +1615,12 @@
       "canonicalName": "Default Unicode word boundary",
       "semanticCategoryId": "unicode-and-text-model",
       "slug": "unicode-word-boundary"
+    },
+    {
+      "semanticFeatureId": "feature.universal-language-atom",
+      "canonicalName": "Universal-language atom",
+      "semanticCategoryId": "grammar-and-composition",
+      "slug": "universal-language-atom"
     },
     {
       "semanticFeatureId": "feature.unset-backreference-behavior",

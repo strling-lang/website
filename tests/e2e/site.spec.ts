@@ -110,15 +110,21 @@ test.describe('routes', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       'Regex Feature Catalog',
     );
-    await expect(page.locator('.regex-category-card')).toHaveCount(14);
-    await expect(page.locator('[data-regex-feature-item]')).toHaveCount(251);
+    await expect(page.locator('.regex-category-card')).toHaveCount(
+      regexCategoryRoutes.length,
+    );
+    await expect(page.locator('[data-regex-feature-item]')).toHaveCount(
+      regexFeatureRoutes.length,
+    );
 
     const search = page.getByLabel('Search the catalog');
     await search.fill('feature.word-boundary');
     await expect(page.locator('[data-regex-feature-item]:visible')).toHaveCount(
       1,
     );
-    await expect(page.getByText('Showing 1 of 251 features.')).toBeVisible();
+    await expect(
+      page.getByText(`Showing 1 of ${regexFeatureRoutes.length} features.`),
+    ).toBeVisible();
     await search.press('Tab');
     await expect(page.getByLabel('Category')).toBeFocused();
   });
@@ -130,8 +136,8 @@ test.describe('routes', () => {
     testInfo.setTimeout(90_000);
     const routes = [...regexCategoryRoutes, ...regexFeatureRoutes];
     expect(new Set(routes).size).toBe(routes.length);
-    expect(regexCategoryRoutes).toHaveLength(14);
-    expect(regexFeatureRoutes).toHaveLength(251);
+    expect(regexCategoryRoutes).toHaveLength(16);
+    expect(regexFeatureRoutes).toHaveLength(269);
     for (let index = 0; index < routes.length; index += 20) {
       const batch = routes.slice(index, index + 20);
       const responses = await Promise.all(
@@ -176,7 +182,9 @@ test.describe('routes', () => {
     const categoryNavigation = page.getByRole('navigation', {
       name: 'Regex feature categories',
     });
-    await expect(categoryNavigation.getByRole('link')).toHaveCount(15);
+    await expect(categoryNavigation.getByRole('link')).toHaveCount(
+      regexCategoryRoutes.length + 1,
+    );
     await expect(
       categoryNavigation.getByRole('link', {
         name: 'Character classes (27)',
@@ -207,6 +215,48 @@ test.describe('routes', () => {
     await expect(
       page.getByText(/Compatibility evidence is not yet available/),
     ).toBeVisible();
+  });
+
+  test('promoted source renders new categories, assertion concepts and moved features', async ({
+    page,
+    request,
+  }) => {
+    const route = '/regex/docs/lookaround/captured-substring-assertion/';
+    await page.goto(route);
+    await expect(page.locator('[data-semantic-feature-id]')).toHaveAttribute(
+      'data-semantic-feature-id',
+      'feature.captured-substring-assertion',
+    );
+    await expect(page.locator('[data-source-semantic-digest]')).toHaveAttribute(
+      'data-source-semantic-digest',
+      regexProjection.source.semanticDigest,
+    );
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      `https://strling-lang.netlify.app${route}`,
+    );
+    await expect(
+      page.locator('section[aria-labelledby="test-concepts"] li'),
+    ).toHaveCount(3);
+    await expect(
+      page.locator('section[aria-labelledby="test-concepts"]'),
+    ).not.toContainText('undefined');
+    const severe = (
+      await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.filter(
+      (violation) =>
+        violation.impact === 'serious' || violation.impact === 'critical',
+    );
+    expect(severe).toEqual([]);
+    for (const path of [
+      '/regex/docs/options-and-state/',
+      '/regex/docs/options-and-state/scoped-modifier-group/',
+      '/regex/docs/host-operations-and-results/reset-reported-match-start/',
+      '/regex/docs/host-operations-and-results/reset-reported-match-end/',
+    ])
+      expect((await request.get(path)).status(), path).toBe(200);
   });
 
   test('RegEx hub links all three feature destinations', async ({ page }) => {
@@ -486,7 +536,7 @@ test.describe('responsive interaction', () => {
     await expect(sidebar).toHaveCSS('position', 'sticky');
     await expect(categoryList).toHaveCSS('overflow-y', 'auto');
     await expect(
-      categoryList.getByRole('link', { name: 'Grammar & composition (13)' }),
+      categoryList.getByRole('link', { name: 'Grammar & composition (21)' }),
     ).toHaveAttribute('aria-current', 'page');
 
     const initialSidebar = await sidebar.boundingBox();
@@ -559,7 +609,9 @@ test.describe('responsive interaction', () => {
     await expect(sidebar).toHaveCSS('position', 'static');
     await expect(toc).toBeHidden();
     await expect(sidebar.locator('details')).toHaveCount(0);
-    await expect(categoryList.getByRole('link')).toHaveCount(15);
+    await expect(categoryList.getByRole('link')).toHaveCount(
+      regexCategoryRoutes.length + 1,
+    );
 
     const pageOverflow = await page.evaluate(
       () =>

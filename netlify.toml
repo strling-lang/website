@@ -5,6 +5,16 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[[redirects]]
+  from = "/regex/docs/anchors-and-boundaries/reset-reported-match-start/"
+  to = "/regex/docs/host-operations-and-results/reset-reported-match-start/"
+  status = 301
+
+[[redirects]]
+  from = "/regex/docs/anchors-and-boundaries/reset-reported-match-end/"
+  to = "/regex/docs/host-operations-and-results/reset-reported-match-end/"
+  status = 301
+
 [[headers]]
   for = "/*"
   [headers.values]

@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
   schedule:
+    # Daily upstream semantic drift check at 08:17 UTC; GitHub may start it later.
     - cron: '17 8 * * *'
   workflow_dispatch:
 

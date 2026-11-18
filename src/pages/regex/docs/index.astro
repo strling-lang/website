@@ -93,46 +93,6 @@ const crumbs = [
 
   <section
     class="section section--bordered"
-    aria-labelledby="categories-heading"
-  >
-    <div class="container">
-      <div class="section-heading">
-        <span class="eyebrow">All canonical categories</span>
-        <h2 id="categories-heading">Browse the semantic catalog</h2>
-        <p>
-          Category membership and counts come directly from the reviewed
-          semantic projection.
-        </p>
-      </div>
-      <ol class="regex-category-grid">
-        {
-          regexCategories.map((category) => (
-            <li>
-              <article class="regex-category-card stack-sm">
-                <div class="regex-category-card-meta">
-                  <span class="mono">{category.semanticCategoryId}</span>
-                  <span>{category.featureCount} features</span>
-                </div>
-                <h3>
-                  <a href={category.route}>{category.name}</a>
-                </h3>
-                <p>{category.description}</p>
-                <a
-                  class="text-link regex-category-card-link"
-                  href={category.route}
-                >
-                  View category
-                </a>
-              </article>
-            </li>
-          ))
-        }
-      </ol>
-    </div>
-  </section>
-
-  <section
-    class="section section--bordered"
     aria-labelledby="find-feature-heading"
   >
     <div class="container">

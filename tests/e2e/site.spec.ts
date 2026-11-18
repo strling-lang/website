@@ -110,7 +110,13 @@ test.describe('routes', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       'Regex Feature Catalog',
     );
-    await expect(page.locator('.regex-category-card')).toHaveCount(
+    await expect(
+      page
+        .locator('section:has(.regex-catalog-intro) + section')
+        .getByRole('heading', { name: 'Find a feature', exact: true }),
+    ).toBeVisible();
+    const category = page.getByLabel('Category', { exact: true });
+    await expect(category.locator('option:not([value=""])')).toHaveCount(
       regexCategoryRoutes.length,
     );
     await expect(page.locator('[data-regex-feature-item]')).toHaveCount(
@@ -126,7 +132,7 @@ test.describe('routes', () => {
       page.getByText(`Showing 1 of ${regexFeatureRoutes.length} features.`),
     ).toBeVisible();
     await search.press('Tab');
-    await expect(page.getByLabel('Category')).toBeFocused();
+    await expect(category).toBeFocused();
   });
 
   test('all canonical Regex Feature Catalog routes render exactly once', async ({

@@ -97,7 +97,7 @@ Other package pages link to source or a verified registry without inventing a co
 
 ## Fourth Edition
 
-The edition is pre-release. Public source supports discussion of shared binding vocabulary, specification/conformance infrastructure, target diagnostics, and distribution preparation. Final version, date, certified package matrix, complete compatibility guarantees, and migration guidance remain provisional.
+Public source supports discussion of shared binding vocabulary, specification/conformance infrastructure, target diagnostics, and distribution preparation. Final version, date, certified package matrix, complete compatibility guarantees, and migration guidance remain provisional.
 
 ## Website versus owning repositories
 

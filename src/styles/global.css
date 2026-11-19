@@ -367,9 +367,9 @@ table {
   color: var(--success);
 }
 .status-badge--prepared,
-.status-badge--prerelease,
+.status-badge--edition,
 .status-badge--coming-soon {
-  color: var(--prerelease);
+  color: var(--accent-violet);
 }
 .status-badge--source {
   color: var(--warning);
@@ -639,7 +639,7 @@ table {
 .pending-feature-note {
   padding: var(--space-5);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--prerelease);
+  border-left: 3px solid var(--accent-violet);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: var(--surface);
 }
@@ -787,7 +787,7 @@ table {
 .callout {
   padding: var(--space-5);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--prerelease);
+  border-left: 3px solid var(--accent-violet);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: var(--surface);
   color: var(--text-secondary);

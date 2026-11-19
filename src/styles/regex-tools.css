@@ -31,7 +31,7 @@
   margin-bottom: var(--space-4);
   padding: var(--space-4);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--prerelease);
+  border-left: 3px solid var(--accent-violet);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: var(--surface);
   color: var(--text-secondary);
@@ -456,7 +456,7 @@ regex-profile-resolver {
 .lab-match-summary.is-inspected,
 .lab-capture-summary.is-inspected {
   background: var(--surface-elevated);
-  box-shadow: inset 3px 0 0 var(--prerelease);
+  box-shadow: inset 3px 0 0 var(--accent-violet);
 }
 
 .lab-match-summary code,
@@ -497,10 +497,14 @@ regex-profile-resolver {
 
 .lab-decoration {
   border-radius: 0.18rem;
-  background: color-mix(in srgb, var(--prerelease) 18%, transparent);
+  background: color-mix(in srgb, var(--accent-violet) 18%, transparent);
   cursor: pointer;
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--prerelease) 55%, transparent);
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--accent-violet) 55%,
+    transparent
+  );
   text-decoration-thickness: 2px;
   text-underline-offset: 0.16em;
 }
@@ -513,8 +517,8 @@ regex-profile-resolver {
 .lab-decoration:hover,
 .lab-decoration:focus-visible,
 .lab-decoration.is-inspected {
-  background: color-mix(in srgb, var(--prerelease) 32%, transparent);
-  outline: 2px solid var(--prerelease);
+  background: color-mix(in srgb, var(--accent-violet) 32%, transparent);
+  outline: 2px solid var(--accent-violet);
   outline-offset: 1px;
 }
 
@@ -522,7 +526,7 @@ regex-profile-resolver {
   display: inline-flex;
   width: 0.55rem;
   height: 1.15em;
-  border-inline-start: 3px solid var(--prerelease);
+  border-inline-start: 3px solid var(--accent-violet);
   cursor: pointer;
   vertical-align: -0.18em;
 }
@@ -530,8 +534,8 @@ regex-profile-resolver {
 .lab-zero-marker:hover,
 .lab-zero-marker:focus-visible,
 .lab-zero-marker.is-inspected {
-  background: color-mix(in srgb, var(--prerelease) 22%, transparent);
-  outline: 2px solid var(--prerelease);
+  background: color-mix(in srgb, var(--accent-violet) 22%, transparent);
+  outline: 2px solid var(--accent-violet);
 }
 
 .lab-object-tree {
@@ -622,8 +626,8 @@ regex-profile-resolver {
 }
 
 .compatibility-mode label:has(input:checked) {
-  border-color: var(--prerelease);
-  background: color-mix(in srgb, var(--prerelease) 10%, transparent);
+  border-color: var(--accent-violet);
+  background: color-mix(in srgb, var(--accent-violet) 10%, transparent);
   color: var(--text-primary);
 }
 
@@ -826,7 +830,7 @@ regex-profile-resolver {
 }
 
 .compatibility-state--pending {
-  color: var(--prerelease);
+  color: var(--accent-violet);
 }
 
 .compatibility-evidence-availability {

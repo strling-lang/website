@@ -331,7 +331,7 @@ test.describe('metadata and discoverability', () => {
       expect((await response.text()).length, route).toBeGreaterThan(50);
     }
     expect(await (await request.get('/llms.txt')).text()).toContain(
-      'Pre-release',
+      'Fourth Edition: final version and date are not certified',
     );
     const sitemap = await (await request.get('/sitemap.xml')).text();
     expect(sitemap).toContain('/regex/');

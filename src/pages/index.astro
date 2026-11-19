@@ -43,10 +43,7 @@ const phone = s.merge(
       <div class="stack">
         <div class="cluster">
           <span class="eyebrow">The Universal Regular Expression Compiler</span
-          ><StatusBadge
-            label="Fourth Edition · Pre-release"
-            tone="prerelease"
-          />
+          ><StatusBadge label={fourthEdition.name} tone="edition" />
         </div>
         <h1 class="display">
           Readable. <span class="accent">Composable.</span> Universal.
@@ -212,10 +209,7 @@ const phone = s.merge(
   <section class="section section--bordered">
     <div class="container grid-2">
       <div class="stack">
-        <StatusBadge
-          label={`${fourthEdition.name} · ${fourthEdition.status}`}
-          tone="prerelease"
-        />
+        <StatusBadge label={fourthEdition.name} tone="edition" />
         <h2>A coordinated edition, still under certification</h2>
         <p class="kicker">{fourthEdition.summary}</p>
       </div>

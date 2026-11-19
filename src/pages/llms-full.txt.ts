@@ -76,9 +76,9 @@ Package state is intentionally qualified. “Source available” does not mean r
 
 ${packageIndex}
 
-## Fourth Edition
+## ${fourthEdition.name}
 
-Status: ${fourthEdition.status}. ${fourthEdition.summary}
+${fourthEdition.summary}
 
 Verified public preparation:
 ${fourthEdition.verifiedWork.map((item) => `- ${item}`).join('\n')}

@@ -2,7 +2,7 @@
 
 ## `llms.txt` design
 
-`/llms.txt` is a concise, plain-text orientation file. It defines STRling, names the canonical website and GitHub sources, links Learn, Docs, Packages, Why STRling, and Project, and states the Fourth Edition pre-release qualifier.
+`/llms.txt` is a concise, plain-text orientation file. It defines STRling, names the canonical website and GitHub sources, links Learn, Docs, Packages, Why STRling, and Project, and notes that the Fourth Edition version and date are provisional.
 
 ## `llms-full.txt` generation
 
@@ -33,7 +33,7 @@ Use these terms consistently:
 - **generated RegEx** — target expression produced from a Pattern;
 - **binding** — host-language implementation;
 - **target engine** — RegEx runtime that executes output;
-- **Fourth Edition** — explicitly pre-release until centralized status changes.
+- **Fourth Edition** — name of the next coordinated STRling edition.
 
 Avoid conflating a binding package with the entire edition. Avoid “type-safe” as a universal claim; compile-time help depends on the host language and specific API path.
 

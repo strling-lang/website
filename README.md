@@ -8,8 +8,8 @@ user-facing site defects belong here. Compiler implementation, binding
 development, formal specifications, and engineering governance belong in
 [`strling-lang/strling`](https://github.com/strling-lang/strling).
 
-The site is actively developed and may describe pre-release STRling work only
-with the explicit status and evidence boundaries defined below.
+The site is actively developed and describes ongoing STRling work within the
+evidence boundaries defined below.
 
 ## Branch and deployment policy
 
@@ -75,9 +75,8 @@ Do not infer install commands, registry publication, compatibility guarantees, r
 
 ## Fourth Edition content rules
 
-Fourth Edition status is centralized in `src/data/release.ts`. Until certification:
+Fourth Edition information is centralized in `src/data/release.ts`. Until certification:
 
-- label the edition pre-release;
 - publish no final version or date;
 - distinguish current registry records from edition certification;
 - mark migration guidance and binding-by-binding guarantees provisional;

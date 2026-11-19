@@ -1,7 +1,5 @@
 export const fourthEdition = {
   name: 'Fourth Edition',
-  status: 'Pre-release',
-  statusTone: 'prerelease' as const,
   version: null,
   releaseDate: null,
   summary:

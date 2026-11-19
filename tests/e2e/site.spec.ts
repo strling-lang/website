@@ -120,6 +120,37 @@ test('package cards and detail pages display the same distribution and support',
   ).toBeLessThanOrEqual(1);
 });
 
+test('TypeScript Preview links to post-publication release evidence', async ({
+  page,
+}) => {
+  await page.goto('/packages/typescript/');
+  await expect(
+    page.getByText('The npm package declares Node.js >=22 <23.', {
+      exact: false,
+    }),
+  ).toContainText('have no Supported guarantee');
+  await page
+    .getByRole('link', { name: 'release and verification status', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/project\/#release-status$/);
+  const status = page.getByRole('region', {
+    name: 'Release and verification status',
+  });
+  await expect(status).toContainText(
+    '232 checks across the 16 distribution routes',
+  );
+  await expect(
+    status.getByRole('link', {
+      name: 'Completed independent public verification',
+    }),
+  ).toHaveAttribute('href', fourthEdition.verificationRun);
+  await expect(
+    status.getByRole('link', {
+      name: 'Historical support matrix and runtime scopes',
+    }),
+  ).toHaveAttribute('href', new RegExp(fourthEdition.certificationClosure));
+});
+
 test.describe('routes', () => {
   for (const route of requiredRoutes) {
     test(`${route} renders static content`, async ({ page }) => {

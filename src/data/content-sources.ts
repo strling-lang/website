@@ -2,14 +2,14 @@ import {
   fourthEdition,
   productRelease,
   releasePolicy,
-  supportMatrix,
+  historicalSupportMatrix,
 } from './release.ts';
 
 export const contentSources = [
   {
     label: 'Official Fourth Edition release',
     url: productRelease,
-    use: 'Public release identity, date, certified source, and certification closure.',
+    use: 'Public release identity, date, certified source, and certification closure. The release notes were written before independent public verification completed.',
   },
   {
     label: 'Release policy',
@@ -17,9 +17,9 @@ export const contentSources = [
     use: 'Authoritative product version and versioning rules at the certification closure.',
   },
   {
-    label: 'Product support matrix',
-    url: supportMatrix,
-    use: 'Governed binding tiers, runtime scopes, and native prerequisites.',
+    label: 'Historical support matrix',
+    url: historicalSupportMatrix,
+    use: 'Governed binding tiers, runtime scopes, and native prerequisites at certification. The snapshot predates publication.',
   },
   {
     label: 'Independent public distribution verification',

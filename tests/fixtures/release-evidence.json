@@ -4,6 +4,7 @@
   "policySha256": "6d313d11b2b21d3545233d5656a8f2c900895659b903573c9fa6db2671e95045",
   "source": "d01ac3785736ad552c90f00b4ca13c0e2e5c9c62",
   "verificationRunId": "44580786117",
+  "verifiedObligations": 232,
   "verifiedRoutes": {
     "c": "Supported",
     "csharp": "Supported",

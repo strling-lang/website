@@ -313,7 +313,7 @@ export const bindings: Binding[] = [
     summary:
       'The ESM package includes the canonical WebAssembly compiler and provides an explicit Node loader.',
     requirements:
-      'Node.js 22 for the Node API. Browser WASM integration is Preview and requires explicit loading.',
+      'The npm package declares Node.js >=22 <23. The upstream release verification did not exercise that Node 22 range. The upstream support matrix records an earlier Windows observation on Node.js 24, outside the declared range. Browser WebAssembly has Preview evidence. Node.js and general browser use have no Supported guarantee.',
     install: 'npm install @strling-lang/strling@4.0.3',
   },
 ];

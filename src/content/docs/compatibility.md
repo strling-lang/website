@@ -91,4 +91,4 @@ Multiline changes anchors; dot-all changes dot; Unicode modes change properties 
 
 ## Fourth Edition support
 
-Use [Packages](/packages/) for the current release’s verified installation routes and governed binding tiers. Supported and Preview scopes apply to the environments listed in the product support matrix linked there. For independent findings about a specific RegEx profile, consult [RegEx Compatibility](/regex/compatibility/).
+Use [Packages](/packages/) for the current release’s verified installation routes and governed binding tiers. Supported and Preview scopes apply to the environments listed in the historical support matrix linked from the [current release and verification status](/project/#release-status). The [TypeScript binding page](/packages/typescript/) explains the difference between its declared Node.js range and the runtime evidence for its Preview tier. For independent findings about a specific RegEx profile, consult [RegEx Compatibility](/regex/compatibility/).

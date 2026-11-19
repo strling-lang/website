@@ -156,7 +156,9 @@ leaves `durationMs` undefined and consumes no separator.
 ## 5. Compile for ECMAScript and run in Node
 
 Run this example with Node.js 22 and the published STRling 4.0.3 TypeScript
-Preview adapter. In a new npm project with `"type": "module"` in `package.json`,
+Preview adapter. Node.js 22 is the declared runtime for this walkthrough. See the
+[TypeScript binding page](/packages/typescript/) for the scope of Preview runtime evidence.
+In a new npm project with `"type": "module"` in `package.json`,
 install `@strling-lang/strling@4.0.3`. Save the <a href="/examples/pattern-engineering/production-event-logs.ts" download>log source</a>,
 <a href="/examples/pattern-engineering/lexical.ts" download>lexical module</a>,
 <a href="/examples/pattern-engineering/compiler.ts" download>compiler helper</a>, and

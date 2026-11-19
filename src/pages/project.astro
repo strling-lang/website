@@ -2,7 +2,13 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
 import { contentSources } from '@/data/content-sources';
-import { releaseSummary } from '@/data/release';
+import {
+  fourthEdition,
+  historicalSupportMatrix,
+  productRelease,
+  releaseSummary,
+  releaseStatusId,
+} from '@/data/release';
 import { site } from '@/data/site';
 const title = 'The STRling open-source project';
 const description =
@@ -143,13 +149,41 @@ const crumbs = [
       </div>
     </div>
   </section>
-  <section class="section section--bordered">
+  <section class="section section--bordered" aria-labelledby={releaseStatusId}>
     <div class="container reading stack">
-      <span class="eyebrow">Fourth Edition context</span><h2>
-        The stable release
+      <span class="eyebrow">Fourth Edition</span><h2 id={releaseStatusId}>
+        Release and verification status
       </h2><p class="kicker">
         {releaseSummary}
       </p>
+      <p>
+        The historical support matrix records the binding tiers and runtime
+        scopes at certification. Its publication wording reflects that point in
+        time. The official release notes record verification as pending at
+        publication. The later independent verification run completed
+        successfully.
+      </p>
+      <ul>
+        <li>
+          <a href={historicalSupportMatrix}
+            >Historical support matrix and runtime scopes</a
+          >
+        </li>
+        <li>
+          <a href={productRelease}
+            >Official release record and certified source</a
+          >
+        </li>
+        <li>
+          <a href={fourthEdition.publicationRun}>Publication run and receipts</a
+          >
+        </li>
+        <li>
+          <a href={fourthEdition.verificationRun}
+            >Completed independent public verification</a
+          >
+        </li>
+      </ul>
     </div>
   </section>
 </BaseLayout>

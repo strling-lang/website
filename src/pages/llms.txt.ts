@@ -1,5 +1,11 @@
 import type { APIRoute } from 'astro';
-import { fourthEdition, productRelease, releaseLabel } from '@/data/release';
+import {
+  fourthEdition,
+  productRelease,
+  publicVerificationSummary,
+  releaseLabel,
+  releaseStatusPath,
+} from '@/data/release';
 import { site } from '@/data/site';
 
 export const GET: APIRoute = () =>
@@ -15,6 +21,7 @@ export const GET: APIRoute = () =>
 - Regex Feature Catalog: ${site.origin}/regex/docs/ — canonical generic regex semantics; compatibility evidence is separate
 - Packages and bindings: ${site.origin}/packages/
 - ${fourthEdition.name}: ${releaseLabel}, released ${fourthEdition.releaseDate} — ${productRelease}
+- Current release and verification status: ${new URL(releaseStatusPath, site.origin)} — ${publicVerificationSummary}
 - Why STRling: ${site.origin}/why-strling/
 - Open-source project: ${site.origin}/project/
 - GitHub organization: ${site.organizationUrl}

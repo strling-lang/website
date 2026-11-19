@@ -5,6 +5,8 @@ import test from 'node:test';
 import { bindings } from '../../src/data/bindings.ts';
 import {
   fourthEdition,
+  historicalSupportMatrix,
+  releaseStatusPath,
   productTag,
   releasePolicy,
 } from '../../src/data/release.ts';
@@ -24,6 +26,12 @@ test('Fourth Edition agrees with the pinned upstream policy and independent veri
     ),
   );
   assert.ok(releasePolicy.includes(evidence.policyCommit));
+  assert.ok(historicalSupportMatrix.includes(evidence.policyCommit));
+  assert.equal(
+    fourthEdition.verifiedRoutes,
+    Object.keys(evidence.verifiedRoutes).length,
+  );
+  assert.equal(fourthEdition.verifiedObligations, evidence.verifiedObligations);
 
   // The normal build uses the checked-in evidence. Reviewers can supply the
   // exact upstream policy bytes during a release audit.
@@ -118,5 +126,36 @@ test('static release surfaces share the product version and every binding coordi
       ),
       binding.slug,
     );
+  }
+});
+
+test('release addendum and discovery distinguish current verification from historical evidence', async () => {
+  const [project, short, full, typescript] = await Promise.all(
+    [
+      'project/index.html',
+      'llms.txt',
+      'llms-full.txt',
+      'packages/typescript/index.html',
+    ].map((path) => read(`dist/${path}`)),
+  );
+  for (const output of [project, short, full]) {
+    assert.ok(output.includes('232 checks across the 16 distribution routes'));
+  }
+  for (const output of [short, full, typescript])
+    assert.ok(output.includes(releaseStatusPath));
+  assert.match(project, /id="release-status"/);
+  assert.match(project, /Historical support matrix and runtime scopes/);
+  assert.ok(project.includes(fourthEdition.publicationRun));
+  assert.ok(project.includes(fourthEdition.verificationRun));
+  assert.ok(project.includes(historicalSupportMatrix));
+  for (const output of [
+    typescript.replaceAll('&gt;', '>').replaceAll('&lt;', '<'),
+    full,
+  ]) {
+    assert.match(output, /declares Node\.js >=22 <23/);
+    assert.match(output, /did not exercise that Node 22 range/);
+    assert.match(output, /Node\.js 24, outside the declared range/);
+    assert.match(output, /WebAssembly has Preview evidence/);
+    assert.match(output, /have no Supported guarantee/);
   }
 });

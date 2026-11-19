@@ -3,7 +3,11 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
 import CodeBlock from '@/components/CodeBlock.astro';
 import StatusBadge from '@/components/StatusBadge.astro';
-import { productRelease, releaseLabel, supportMatrix } from '@/data/release';
+import {
+  historicalSupportMatrix,
+  releaseLabel,
+  releaseStatusPath,
+} from '@/data/release';
 import { bindings } from '@/data/bindings';
 
 export function getStaticPaths() {
@@ -92,9 +96,10 @@ const tone = binding.status === 'Registry published' ? 'published' : 'source';
     <div class="container reading stack">
       <h2>Release and support</h2>
       <p>
-        <a href={productRelease}>{releaseLabel}</a> is the current product release.
-        See the <a href={supportMatrix}>product support matrix</a> for the full scope
-        of the {binding.support} tier.
+        See the <a href={releaseStatusPath}>release and verification status</a> for
+        {releaseLabel} and the <a href={historicalSupportMatrix}
+          >historical support matrix</a
+        > for the scope of the {binding.support} tier.
       </p>
       <div class="cluster">
         <a class="button" href="/docs/compatibility/">Compatibility guidance</a>

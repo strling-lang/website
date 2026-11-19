@@ -12,7 +12,7 @@ import {
   productRelease,
   releaseLabel,
   releaseSummary,
-  supportMatrix,
+  releaseStatusPath,
 } from '@/data/release';
 import { site } from '@/data/site';
 
@@ -229,14 +229,18 @@ const phone = s.merge(
         <span class="eyebrow">Release resources</span>
         <ul>
           <li>
-            <a href={productRelease}>Official release and certified source</a>
+            <a href={productRelease}>Official release record</a>
           </li>
           <li>
             <a href={fourthEdition.verificationRun}
               >Independent public verification</a
             >
           </li>
-          <li><a href={supportMatrix}>Binding and target support scopes</a></li>
+          <li>
+            <a href={releaseStatusPath}
+              >Current release and verification status</a
+            >
+          </li>
         </ul>
       </div>
     </div>

@@ -2,7 +2,11 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
 import PackageCard from '@/components/PackageCard.astro';
-import { productRelease, releaseLabel, supportMatrix } from '@/data/release';
+import {
+  productRelease,
+  releaseLabel,
+  releaseStatusPath,
+} from '@/data/release';
 import { bindings } from '@/data/bindings';
 const title = 'STRling packages and language bindings';
 const description =
@@ -82,10 +86,9 @@ const crumbs = [
   <section class="section section--bordered">
     <div class="container reading callout stack-sm">
       <strong>Evidence policy</strong><p>
-        Each tier applies to the runtimes and platforms in the <a
-          href={supportMatrix}>product support matrix</a
-        >. Open a binding for its verified distribution route and platform
-        requirements.
+        Open a binding for its verified distribution and runtime requirements.
+        The <a href={releaseStatusPath}>release and verification status</a> links
+        the historical matrix that defines each tier’s scope.
       </p>
     </div>
   </section>

@@ -89,8 +89,10 @@ The TypeScript Learn examples pin published package versions to keep the two
 API generations reproducible. The legacy quickstart uses TypeScript `3.0.0` and
 Python `2.5.9`, and the legacy tour uses TypeScript `3.0.0`. The Advanced and
 Frontier examples use the verified Fourth Edition TypeScript Preview adapter
-on Node 22 with its bundled
-canonical WebAssembly compiler. The examples use the
+on Node 22 with its bundled canonical WebAssembly compiler. The package
+declares Node `>=22 <23`. Website lesson tests exercise that setup. The upstream
+release evidence leaves Node 22 unexecuted, records a Node 24 observation
+outside that range, and records browser WebAssembly at Preview tier. The examples use the
 [ECMAScript 2024 profile](https://github.com/strling-lang/strling/blob/d01ac3785736ad552c90f00b4ca13c0e2e5c9c62/spec/targets/profiles/ecmascript-2024.json)
 and [profile reference](https://github.com/strling-lang/strling/blob/d01ac3785736ad552c90f00b4ca13c0e2e5c9c62/spec/contracts/1.0/examples/compile-request/equivalence-explanation.json)
 from the same canonical revision. `tests/unit/pattern-engineering.test.mjs`
@@ -106,6 +108,12 @@ verified 232 obligations across the 16 routes authorized for initial publication
 Supported consumers were exercised in the reported platform scopes. Preview
 verification covers public artifacts and associated evidence. The C++ ConanCenter
 route was explicitly deferred. The release documents the direct CMake build.
+
+The [website release-status addendum](https://strling-lang.netlify.app/project/#release-status)
+records the post-publication result. Keep the certified support matrix pinned
+as historical evidence. Its introductory publication language predates release,
+and the GitHub release description predates the successful verification run.
+Use the addendum and verification run when citing current publication status.
 
 To synchronize after a release:
 

@@ -6,7 +6,8 @@ import {
   fourthEdition,
   productRelease,
   releaseSummary,
-  supportMatrix,
+  historicalSupportMatrix,
+  releaseStatusPath,
 } from '@/data/release';
 import { regexCategories, regexDocs, regexFeatures } from '@/data/regexDocs';
 import { site } from '@/data/site';
@@ -86,9 +87,11 @@ ${packageIndex}
 
 ${releaseSummary}
 
-- Official release: ${productRelease}
+- Current release and verification status: ${new URL(releaseStatusPath, site.origin)}
+- Official release record at publication: ${productRelease}
+- Publication run and receipts: ${fourthEdition.publicationRun}
 - Independent public verification: ${fourthEdition.verificationRun}
-- Product support matrix: ${supportMatrix}
+- Historical support matrix (before publication): ${historicalSupportMatrix}
 
 ## Canonical sources
 

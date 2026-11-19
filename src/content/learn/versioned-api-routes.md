@@ -171,7 +171,7 @@ test a precedence rule before adding them.
 
 To target another engine, select its exact profile, inspect the compilation
 diagnostics and emitted artifact, then run the same path and capture fixtures
-in that engine's runtime. The Node results here verify the ECMAScript target.
+in that engine's runtime. The Node results here cover these ECMAScript fixtures.
 
 ## 6. Test path recognition and dispatch separately
 

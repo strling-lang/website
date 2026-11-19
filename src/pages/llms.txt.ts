@@ -12,7 +12,7 @@ export const GET: APIRoute = () =>
   new Response(
     `# STRling
 
-> The Universal Regular Expression Compiler. STRling provides a readable, maintainable, composable interface for regular-expression capabilities.
+> The Universal Regular Expression Compiler. STRling compiles semantic pattern intent from versioned textual frontends and Simply APIs into requested artifacts for an exact target profile.
 
 - Canonical website: ${site.origin}/
 - Learn: ${site.origin}/learn/

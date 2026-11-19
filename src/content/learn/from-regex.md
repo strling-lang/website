@@ -16,191 +16,41 @@ related:
   ['/docs/composition/', '/docs/groups-and-captures/', '/docs/lookarounds/']
 ---
 
-The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). See the [Fourth Edition walkthrough](/learn/production-event-logs/) for current compilation and execution.
+The examples use the [TypeScript 4.0.3 Preview adapter](/packages/typescript/). Start with the [Core concepts setup](/docs/core-concepts/#run-the-examples).
 
-## The translation model
+## Translate intent before syntax
 
-STRling does not discard regular-expression concepts. It names them. A constructor produces a Pattern, composition combines Patterns, and the emitter produces target RegEx.
+Identify the input domain, boundaries, and captures you intend. Recreate that intent with Simply operations and compile for an explicit target profile. The table describes source intent. Inspect the artifact for the target's actual spelling and flags.
 
-| RegEx intent        | TypeScript               | Python                   |
-| ------------------- | ------------------------ | ------------------------ |
-| literal text        | `s.lit("text")`          | `s.lit("text")`          |
-| sequence            | `s.merge(a, b)`          | `s.merge(a, b)`          |
-| alternatives        | `s.anyOf(a, b)`          | `s.any_of(a, b)`         |
-| optional            | `s.may(value)`           | `s.may(value)`           |
-| repeated class      | `s.digit(2, 4)`          | `s.digit(2, 4)`          |
-| numbered capture    | `s.capture(value)`       | `s.capture(value)`       |
-| named capture       | `s.group("name", value)` | `s.group("name", value)` |
-| positive lookahead  | `s.ahead(value)`         | `s.ahead(value)`         |
-| positive lookbehind | `s.behind(value)`        | `s.behind(value)`        |
-| start/end           | `s.start()`, `s.end()`   | `s.start()`, `s.end()`   |
+| RegEx intent            | TypeScript Simply          |
+| ----------------------- | -------------------------- |
+| Literal text            | `s.lit('report.pdf')`      |
+| Sequence                | `s.merge(a, b)`            |
+| Alternatives            | `s.anyOf(a, b)`            |
+| Optional sequence       | `s.may(a, b)`              |
+| Explicit ASCII digits   | `s.between('0', '9')`      |
+| Two to four occurrences | `piece.rep(2, 4)`          |
+| Named capture           | `s.group('serial', piece)` |
+| Positive lookahead      | `s.ahead(piece)`           |
+| Strict input boundaries | `s.start()`, `s.end()`     |
 
-## Literals
+## Check the translated pattern
 
-Raw RegEx:
-
-```regex
-report\.pdf
-```
-
-STRling:
+The expression accepts a literal label, an optional hyphen, and two through four ASCII digits. The capture contains only the digits. The host RegEx engine performs the match.
 
 ```typescript
-const filename = s.merge('report', '.', 'pdf');
+const serial = s.between('0', '9').rep(2, 4);
+const pattern = s.merge(
+  s.start(),
+  'ID',
+  s.may('-'),
+  s.group('serial', serial),
+  s.end(),
+);
+const expression = compilePattern(pattern);
+console.log(expression.exec('ID-042')?.groups?.serial); // 042
+console.log(expression.test('ID-０４２')); // false
+console.log(expression.test('ID-042\n')); // false
 ```
 
-Strings in composition are literal. The generated RegEx escapes the dot.
-
-## Digits and character classes
-
-Raw RegEx:
-
-```regex
-[A-Z]\d{3}
-```
-
-STRling:
-
-```typescript
-const code = s.merge(s.between('A', 'Z'), s.digit(3));
-```
-
-For a custom one-character set, use `inChars`/`in_chars`:
-
-```python
-separator = s.in_chars("-._")
-```
-
-## Sequencing
-
-RegEx concatenates tokens. STRling makes the sequence explicit:
-
-```typescript
-const isoDate = s.merge(s.digit(4), '-', s.digit(2), '-', s.digit(2));
-```
-
-Each part can become a named value before it is merged.
-
-## Alternatives
-
-Raw RegEx:
-
-```regex
-cat|dog
-```
-
-STRling:
-
-```typescript
-const pet = s.anyOf('cat', 'dog');
-```
-
-Alternatives choose whole Patterns. A character set chooses one character.
-
-## Optionality
-
-Raw RegEx:
-
-```regex
-https?
-```
-
-Readable intent:
-
-```typescript
-const protocol = s.merge('http', s.may('s'));
-```
-
-The `may` call shows exactly which Pattern is optional.
-
-## Repetition
-
-Raw RegEx:
-
-```regex
-\d{2,4}
-```
-
-STRling:
-
-```python
-digits = s.digit(2, 4)
-```
-
-Use a maximum of `0` for unbounded repetition in the public Simply API:
-
-```python
-one_or_more = s.digit(1, 0)
-```
-
-## Numbered and named captures
-
-Raw numbered group:
-
-```regex
-(\d{3})
-```
-
-STRling:
-
-```typescript
-const area = s.capture(s.digit(3));
-```
-
-Raw named-group syntax changes by engine. STRling keeps the source call stable:
-
-```typescript
-const area = s.group('area', s.digit(3));
-```
-
-The target emitter is responsible for the appropriate RegEx spelling.
-
-## Lookarounds
-
-Raw positive lookahead:
-
-```regex
-[A-Za-z](?=\d)
-```
-
-STRling:
-
-```typescript
-const letterBeforeDigit = s.merge(s.letter(), s.ahead(s.digit()));
-```
-
-Raw positive lookbehind:
-
-```regex
-(?<=[A-Za-z])\d
-```
-
-STRling:
-
-```python
-digit_after_letter = s.merge(s.behind(s.letter()), s.digit())
-```
-
-Keep lookbehind fixed in length for current PCRE2 and ECMAScript portability.
-
-## Anchors and boundaries
-
-Raw full-value shape:
-
-```regex
-^\d{3}$
-```
-
-STRling:
-
-```typescript
-const exact = s.merge(s.start(), s.digit(3), s.end());
-```
-
-Use `bound()` around a word instead of embedding `\b` into a string.
-
-## What not to translate mechanically
-
-A direct token-for-token rewrite can preserve a hard-to-read design. Use the migration as a chance to name domain pieces, remove incidental captures, constrain repetition, and record target assumptions.
-
-Next, read [Composition](/docs/composition/) or take the complete [Guided tour](/learn/tour/).
+Use a character set for one position and alternatives for whole patterns. Keep lookaround width, Unicode classes, and matching mode in the portability review. To import raw source programmatically, use the versioned regex compatibility frontend and its documented accepted subset. See [Core concepts](/docs/core-concepts/#source-languages-and-version-boundaries) for the distinction between that import dialect and the Semantic STRling textual language.

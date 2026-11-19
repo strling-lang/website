@@ -151,7 +151,7 @@ The three captures for the opening example are exactly the three pieces in the m
 
 ## Explain the opening occurrence
 
-The compiler gates acceptance. A separate lesson-owned evaluator tries literal markers and finite splits under the same family policy. Each successful path records the original text, stable rule, exact depth where applicable, interval, and ordered children. The evaluator retains every valid derivation. For each compiled match, the selected capture tuple must agree with at least one tree. All three worked positives have a single witness in this corpus.
+The compiled RegExp gates acceptance of each exact window. A separate lesson-owned evaluator tries literal markers and finite splits under the same family policy. Each successful path records the original text, stable rule, exact depth where applicable, interval, and ordered children. The evaluator retains every valid derivation. For each compiled match, the selected capture tuple must agree with at least one tree. All three worked positives have a single witness in this corpus.
 
 - Alpha context window [0,59)
   - Left context [0,6), TTAA followed by AT

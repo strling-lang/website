@@ -27,7 +27,7 @@ export const surfaces = {
     route: '/docs/',
     status: 'available',
     description:
-      'Canonical user documentation for STRling concepts, behavior, diagnostics, and portability.',
+      'User documentation for STRling concepts, behavior, diagnostics, and portability.',
     capabilities: [],
   },
   strlingLab: {
@@ -38,14 +38,14 @@ export const surfaces = {
     route: '/lab/',
     status: 'coming-soon',
     description:
-      'An interactive workspace for writing STRling syntax, testing it against sample text, and seeing live matching behavior.',
+      'A planned website workspace for writing STRling source and inspecting execution results.',
     capabilities: [
       'Write STRling syntax and test it against sample text',
       'See live matching behavior',
       'Inspect returned matches, ranges, captures, named groups, and structured result data',
     ],
     scopeNote:
-      'The first edition will focus on execution and observable results. Explanations, failure analysis, optimization, warnings, and intelligent guidance will come later.',
+      'Compilation and execution are unavailable in the website Lab. Use the downloadable examples to run the published compiler locally.',
   },
   regexDocs: {
     id: 'regex-docs',
@@ -72,14 +72,14 @@ export const surfaces = {
     route: '/regex/lab/',
     status: 'coming-soon',
     description:
-      'An interactive environment for testing regular expressions against sample text with an explicitly identified execution engine and profile.',
+      'An interface for running RegEx against sample text when a qualified execution engine and exact profile are configured.',
     capabilities: [
       'Enter a regular expression and use identified engine options or flags',
       'Test against sample text and inspect matches and ranges',
       'Inspect captures, named groups, and structured or raw result information',
     ],
     scopeNote:
-      'Later versions may add portability warnings, explanations, optimization guidance, unsupported-feature warnings, and alternative formulations.',
+      'Public execution is gated on a certified profile and an execution provider.',
   },
   regexCompatibility: {
     id: 'regex-compatibility',
@@ -89,7 +89,7 @@ export const surfaces = {
     route: '/regex/compatibility/',
     status: 'coming-soon',
     description:
-      'An evidence-backed tool for comparing feature availability across exact regex systems, versions, profiles, hosts, modes, and options.',
+      'An explorer for certified feature findings scoped to exact RegEx systems, versions, profiles, hosts, modes, and options.',
     capabilities: [
       'Select exact regex implementations, systems, and versions',
       'Account for profiles, hosts, modes, and options',

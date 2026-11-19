@@ -19,76 +19,21 @@ related:
   ]
 ---
 
-The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+The examples on this page use the [TypeScript 4.0.3 Preview adapter](/packages/typescript/). Run each fragment with the [Core concepts setup](/docs/core-concepts/#run-the-examples).
 
-## Summary
+## Exact, bounded, and unbounded counts
 
-Quantifiers specify how many times a Pattern may repeat. STRling uses constructor bounds, `may`, and Pattern repetition methods rather than requiring handwritten `?`, `*`, `+`, or brace syntax.
-
-## When to use it
-
-Use repetition for fixed-width fields, bounded identifiers, lists, optional sections, and runs of a character class. Keep the repeated Pattern as small as the requirement allows.
-
-## Static constructor bounds
-
-Many predefined constructors accept `min` and `max` arguments:
+`rep(3)` repeats exactly three times. `rep(2, 4)` permits two through four. In this TypeScript facade, a second argument of `0` denotes an unbounded maximum. In canonical Simply records the unbounded maximum is JSON `null`. In the Semantic STRling textual dialect it is the keyword `unbounded`. Keep those three forms separate.
 
 ```typescript
-const exactlyThree = s.digit(3);
-const twoToFour = s.letter(2, 4);
-const oneOrMore = s.alphaNum(1, 0);
+const unit = s.merge(s.between('A', 'Z'), s.between('0', '9'));
+const expression = compilePattern(s.merge(s.start(), unit.rep(2, 3), s.end()));
+console.log(expression.test('A1B2')); // true
+console.log(expression.test('A1B2C3D4')); // false
 ```
 
-The public API uses `0` as the unbounded maximum. Omitting `max` means “exactly `min`” for these constructors.
+## Repetition modes and capture effects
 
-| STRling call     | RegEx shape               | Meaning                  |
-| ---------------- | ------------------------- | ------------------------ |
-| `s.digit(3)`     | `\d{3}`                   | exactly three digits     |
-| `s.letter(2, 4)` | letter class with `{2,4}` | two through four letters |
-| `s.digit(1, 0)`  | `\d+`                     | one or more digits       |
-| `s.may(value)`   | value with `?`            | zero or one occurrence   |
+Greedy and lazy modes control which counts are tried first. A possessive repeat prevents backtracking into the repeat after it succeeds. The canonical contracts represent these modes. The TypeScript 4.0.3 convenience Pattern does not expose the legacy fluent `.lazy()` or `.possessive()` calls. Use the appropriate textual construct or an explicit Simply repeat operation, then check the target plan for the requested mode.
 
-## Repeat any Pattern
-
-Pattern values expose `rep` for repetition:
-
-```typescript
-const pair = s.merge(s.letter(), s.digit());
-const fourPairs = pair.rep(4);
-```
-
-Grouping required for correct precedence is handled by the generated structure. This is one advantage of repeating a Pattern value instead of concatenating raw strings.
-
-## Greedy and lazy repetition
-
-Greedy repetition consumes as much as it can while allowing the rest of the pattern to match. Lazy repetition consumes as little as it can.
-
-```typescript
-const shortRun = s.letter().rep(1, 5).lazy();
-```
-
-Choose lazy mode because the matching requirement calls for the earliest viable boundary, not as a general performance fix.
-
-## Possessive repetition
-
-Possessive quantifiers do not backtrack after consuming text:
-
-```typescript
-const digits = s.digit().rep(1, 0).possessive();
-```
-
-This is an engine-sensitive feature. The formal feature registry marks possessive quantifiers as available for PCRE2 and Python targets and unavailable for ECMAScript.
-
-## Interactions with captures
-
-Repeating a numbered capture can affect how many capture slots or which captured value a runtime exposes. Named groups cannot safely be duplicated by repetition in the public Simply model. Repeat the content inside one group, or use numbered captures when repeated extraction is required.
-
-## Edge cases and errors
-
-Invalid bounds—negative counts, a minimum greater than a finite maximum, or a quantifier with no preceding Pattern—must be rejected. Exact error timing differs between fluent API validation, compiler validation, and the target runtime.
-
-Nested unbounded quantifiers can create severe backtracking behavior. STRling’s diagnostic specification reserves structured warnings such as `REDOS_RISK`, but not every binding or code path should be assumed to diagnose every risky expression today.
-
-## Portability considerations
-
-Greedy and lazy forms are widely supported. Possessive quantifiers and atomic grouping are not supported by ECMAScript. Even portable syntax can have performance differences by engine, input, and surrounding alternatives. Benchmark critical patterns with realistic hostile and benign inputs.
+Repeat the unit whose count you intend. A repeated capture generally exposes one slot with runtime-specific update behavior. Ambiguous nested repetition can still be expensive. Measure execution with representative inputs in the actual engine.

@@ -14,71 +14,20 @@ keywords:
 related: ['/docs/lookarounds/', '/docs/compatibility/', '/docs/core-concepts/']
 ---
 
-The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+The examples on this page use the [TypeScript 4.0.3 Preview adapter](/packages/typescript/). Run each fragment with the [Core concepts setup](/docs/core-concepts/#run-the-examples).
 
-## Summary
+## Strict input positions
 
-`start()` and `end()` represent line anchors. `bound()` and `notBound()`/`not_bound()` represent word-boundary and non-boundary assertions. They consume no character.
-
-## When to use it
-
-Use anchors for full-value validation, line-oriented matching, and token boundaries. Without anchors, a matching runtime may find a valid substring inside otherwise invalid text.
-
-## Start and end
+In the current TypeScript facade, `start()` and `end()` record strict input positions. They do not mean line start or line end. Raw `^` and `$` depend on engine and mode, including rules around final line terminators. The compiler lowers strict input positions according to the chosen profile.
 
 ```typescript
-const threeDigits = s.merge(s.start(), s.digit(3), s.end());
-
-console.assert(new RegExp(String(threeDigits)).test('123'));
-console.assert(!new RegExp(String(threeDigits)).test('x123'));
+const pattern = s.merge(s.start(), s.between('0', '9').rep(3), s.end());
+const expression = compilePattern(pattern);
+console.log(expression.test('123')); // true
+console.log(expression.test('123\n')); // false
+console.log(expression.test('x123')); // false
 ```
-
-The documented output shape is:
-
-```regex
-^\d{3}$
-```
-
-These are line anchors. Multiline mode changes where they can match.
 
 ## Word boundaries
 
-```python
-whole_word = s.merge(s.bound(), "cat", s.bound())
-```
-
-A word boundary is the position between a word character and a non-word character, or an appropriate string edge. It does not consume whitespace or punctuation.
-
-Use the inverse boundary when the position must remain inside or outside the same word classification:
-
-```typescript
-const internal = s.merge('cat', s.notBound());
-```
-
-## Full-value validation
-
-Anchoring a Pattern is necessary but not sufficient for domain validation. `^\d{4}$` confirms four digits, not that those digits form a valid year for your application.
-
-```python
-year_shape = s.merge(s.start(), s.digit(4), s.end())
-```
-
-Keep shape validation in the Pattern and domain constraints in application logic when RegEx would make the rule opaque.
-
-## Interactions with flags
-
-The canonical DSL defines a multiline flag. In multiline mode, `^` can match after a line terminator and `$` can match before one. Dot-all changes what `.` consumes; it does not change anchor positions. Treat these flags as separate decisions.
-
-## Absolute anchors
-
-The formal grammar includes engine-specific absolute anchors such as `\A`, `\Z`, and `\z` as extensions. They are not core cross-target constructs and are unavailable in ECMAScript. The high-level Simply API’s `start` and `end` should not be described as absolute anchors.
-
-## Edge cases and errors
-
-Line-ending conventions vary. A final newline can affect `$` in ways that differ by engine and mode. Word boundaries depend on the target’s definition of a word character; they are not a language-independent tokenizer.
-
-Inside a raw character class, `\b` can mean backspace rather than word boundary. Using the boundary constructor avoids that ambiguous placement.
-
-## Portability considerations
-
-`^`, `$`, `\b`, and `\B` are widely recognized, but Unicode and multiline details differ. ECMAScript word characters are primarily ASCII-oriented even with Unicode mode, while other engines can use Unicode-aware word properties. For international text, define the token requirement explicitly and test representative scripts.
+Word-boundary assertions consume no character. Their behavior depends on the selected word domain and target support. In the TypeScript facade `bound()` and `notBound()` record word-boundary and inverse word-boundary intent. They do not segment natural-language words. Line positions and strict input positions are distinct operations. Whole-value matching confirms lexical shape and leaves application validation to the caller.

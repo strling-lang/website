@@ -12,11 +12,14 @@ const crumbs = [
   { label: 'Home', href: '/' },
   { label: 'Why STRling', href: '/why-strling/' },
 ];
-const composition = `const country = s.between(1, 3, s.digit);
-const area = s.between(3, 3, s.digit);
-const subscriber = s.between(4, 4, s.digit);
-const separator = s.may(s.inChars("-. "));
-const phone = s.merge(country, separator, area, separator, subscriber);`;
+const composition = `import * as s from '@strling-lang/strling/simply';
+
+const digit = s.between('0', '9');
+const prefix = digit.rep(1, 3);
+const area = digit.rep(3);
+const subscriber = digit.rep(4);
+const separator = s.may(s.inChars('-', '.', ' '));
+const phone = s.merge(prefix, separator, area, separator, subscriber);`;
 ---
 
 <BaseLayout
@@ -71,16 +74,16 @@ const phone = s.merge(country, separator, area, separator, subscriber);`;
       <SectionHeader
         eyebrow="Source-documented comparison"
         title="The pattern says what each part means"
-        description="The established Simply API accepts strings as literals and Pattern values as reusable pieces."
+        description="The TypeScript 4.0.3 Preview adapter records literal strings and reusable Pattern values as Simply operations."
       /><RegexComparison
         code={composition}
         language="typescript"
         label="Composable STRling"
-        result="[0-9]{1,3}[-. ]?[0-9]{3}[-. ]?[0-9]{4}"
+        result={String.raw`/(?:[0-9]){1,3}(?:[\x20\x2d.])?(?:[0-9]){3}(?:[\x20\x2d.])?(?:[0-9]){4}/u`}
       /><p class="muted" style="margin-top:1rem">
-        This phone-number form and emitted RegEx are documented by the
-        authoritative compiler repository. Naming <code class="mono"
-          >country</code
+        This example shows an unanchored phone-like shape and the exact
+        ECMAScript 2024 artifact rendered as a JavaScript RegExp literal. Naming <code
+          class="mono">prefix</code
         >,
         <code class="mono">area</code>, and <code class="mono">subscriber</code>
         makes their roles available to review and reuse.
@@ -141,9 +144,9 @@ const phone = s.merge(country, separator, area, separator, subscriber);`;
           Safety depends on the binding and target
         </h2><p>
           STRling validates API inputs and the public specification defines
-          diagnostics for unsupported features and engine incompatibility.
-          Compile-time guarantees vary by host language, and generated RegEx
-          still inherits target-engine behavior.
+          diagnostics for unsupported features and engine incompatibility. The
+          canonical compiler analyzes requests and lowers them for an exact
+          target profile. The target engine executes the artifact.
         </p><a class="text-link" href="/docs/compatibility/"
           >Read the portability model</a
         >

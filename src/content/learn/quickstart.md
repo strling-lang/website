@@ -76,13 +76,13 @@ console.assert(regex.test('555 123 4567'));
 console.assert(!regex.test('call 555-123-4567 now'));
 ```
 
-The published 3.0.0 adapter emits this RegEx.
+The legacy JavaScript example produces this RegEx shape.
 
 ```regex
 ^(\d{3})(?:(?:-|\.|\ ))?(\d{3})(?:(?:-|\.|\ ))?(\d{4})$
 ```
 
-The anchors explain the third assertion: this Pattern validates the entire string rather than searching inside it.
+The legacy expression rejects surrounding text in this fixture. Its anchors follow JavaScript’s rules for the chosen flags. The Fourth Edition exposes strict input positions for full-value checks.
 
 ## The same concept in Python
 

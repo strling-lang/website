@@ -15,80 +15,19 @@ keywords:
 related: ['/docs/lookarounds/', '/docs/anchors-and-boundaries/', '/packages/']
 ---
 
-The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+## Choose an exact target
 
-## Summary
+An authoring binding, a compiler target profile, and an executing RegEx engine are separate choices. A versioned target profile records specific capability and lowering facts. An unlisted feature does not inherit support by analogy. Compilation can reject a request when a semantic requirement cannot be preserved for the selected profile.
 
-Portability has two dimensions: the STRling binding that builds the Pattern and the RegEx engine that executes the output. A familiar Simply API does not erase differences among PCRE2, Python `re`, ECMAScript `RegExp`, and other engines.
-
-## When to use this guide
-
-Review compatibility before sharing a Pattern across services, switching bindings, supporting multiple browsers, or using lookbehind, Unicode properties, atomic groups, possessive quantifiers, absolute anchors, or free-spacing.
-
-## Verified feature registry
-
-The canonical feature registry currently records:
-
-| Feature               | PCRE2     | Python    | ECMAScript    |
-| --------------------- | --------- | --------- | ------------- |
-| Atomic group          | Supported | Supported | Not supported |
-| Possessive quantifier | Supported | Supported | Not supported |
-| Lookbehind            | Supported | Supported | Supported     |
-| Named capture group   | Supported | Supported | Supported     |
-
-“Supported” is not a promise that every historical runtime version implements the feature. Establish your actual runtime floor.
-
-## Important semantic differences
-
-| Concern                   | PCRE2                        | ECMAScript                               |
-| ------------------------- | ---------------------------- | ---------------------------------------- |
-| Lookbehind                | Fixed-length constraints     | Modern engines; fixed-length constraints |
-| Atomic groups             | Available                    | Unavailable                              |
-| Possessive quantifiers    | Available                    | Unavailable                              |
-| Absolute `\A`, `\Z`, `\z` | Available as extensions      | Unavailable                              |
-| Free-spacing `x`          | Available                    | Unavailable                              |
-| Named captures            | Available                    | Available in modern engines              |
-| Unicode properties        | Available with configuration | Available with Unicode modes             |
-
-Python behavior is close to PCRE-style syntax in some areas but is its own runtime. Let the Python emitter choose named-group syntax and test the installed Python version.
-
-## Unicode
-
-`letter()` in the current Simply sources is built from ASCII letter ranges. `digit()` uses the target shorthand, whose Unicode behavior can vary. Word boundaries depend on the engine’s definition of a word character.
-
-For international text, define the requirement precisely:
-
-- ASCII identifiers;
-- Unicode general categories;
-- a particular script;
-- locale-sensitive case behavior;
-- grapheme clusters rather than code points.
-
-A RegEx engine matching code points does not automatically understand user-perceived characters.
-
-## Lookbehind
-
-Keep lookbehind deterministic in length. A fixed literal or exact repetition is more portable than alternation with different lengths or an unbounded quantifier.
-
-```typescript
-const fixed = s.behind(s.digit(3));
-```
-
-Even where syntax is supported, older browser or embedded JavaScript runtimes may lack lookbehind.
-
-## Flags and line behavior
-
-Multiline changes anchors; dot-all changes dot; Unicode modes change properties and sometimes case folding. Inline modifiers are explicitly disallowed by the canonical grammar; the DSL uses directives. Host-language binding APIs may expose target configuration separately.
+The Fourth Edition source includes profiles for ECMAScript 2024, PCRE2 10.42 and 10.43, and Python `re` 3.11 in Unicode-string and bytes modes. These are distinct profiles. See the [pinned profile data](https://github.com/strling-lang/strling/tree/d01ac3785736ad552c90f00b4ca13c0e2e5c9c62/spec/targets/profiles) and the historical support matrix linked from [release and verification status](/project/#release-status) for governed evidence and scope.
 
 ## Practical portability workflow
 
-1. Name the intended target engines and minimum versions.
-2. Prefer core sequence, alternation, literals, simple classes, captures, and fixed quantifiers.
-3. Isolate target-sensitive pieces behind a domain name.
-4. Inspect emitted RegEx for each target.
-5. Run shared positive and negative fixtures in every deployment runtime.
-6. Treat warnings as release blockers when semantics could change.
+1. Record engine, exact version, host, options, flags, and input domain.
+2. Keep engine-sensitive requirements explicit. Check lookbehind width, atomicity, capture updates, Unicode classes, and line behavior in the exact profile.
+3. Review compiler diagnostics and inspect the emitted artifact, including flags and emitted capture syntax.
+4. Execute shared positive and negative fixtures under each deployment runtime.
 
-## Fourth Edition support
+## Evidence and availability
 
-Use [Packages](/packages/) for the current release’s verified installation routes and governed binding tiers. Supported and Preview scopes apply to the environments listed in the historical support matrix linked from the [current release and verification status](/project/#release-status). The [TypeScript binding page](/packages/typescript/) explains the difference between its declared Node.js range and the runtime evidence for its Preview tier. For independent findings about a specific RegEx profile, consult [RegEx Compatibility](/regex/compatibility/).
+[Packages](/packages/) lists public distributions and binding tiers. The [TypeScript binding page](/packages/typescript/) distinguishes npm's declared Node range from observed runtime evidence. RegEx Docs describes generic feature meanings and source-specific manifestations. [RegEx Compatibility](/regex/compatibility/) surfaces certified Regex Conformance observations when an accepted checkpoint is configured. Those observations have their own exact scope and are separate from STRling target-lowering evidence.

@@ -110,7 +110,7 @@ Validation usually means the complete string must match:
 const validatedCode = s.merge(s.start(), capturedCode, s.end());
 ```
 
-Without anchors, a runtime search may find a valid-looking code inside a longer string.
+Without anchors, a runtime search may find a valid-looking code inside a longer string. The legacy anchor spelling is subject to JavaScript anchor and flag rules.
 
 ## 9. Add an assertion
 
@@ -130,7 +130,7 @@ Move reusable concepts behind functions or constants:
 const productPrefix = s.group('prefix', s.upper(3));
 const productSerial = s.group('serial', s.digit(4, 6));
 
-const productCode = s.merge(
+const finalCode = s.merge(
   s.start(),
   productPrefix,
   s.may(s.anyOf('-', ' ')),
@@ -144,7 +144,7 @@ Avoid reusing the same named-group Pattern twice in one final Pattern, because n
 ## 11. Convert at the runtime boundary
 
 ```typescript
-const regex = new RegExp(String(productCode));
+const regex = new RegExp(String(finalCode));
 const result = regex.exec('ABC-1234');
 
 console.assert(result?.groups?.prefix === 'ABC');

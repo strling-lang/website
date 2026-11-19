@@ -55,7 +55,7 @@ export const GET: APIRoute = async () => {
 
 ## Identity
 
-STRling is The Universal Regular Expression Compiler. It offers readable, composable building blocks that compile to regular-expression patterns. Canonical terminology: STRling, RegEx, Simply API, binding, generated RegEx, target engine, portability, and Fourth Edition.
+STRling is The Universal Regular Expression Compiler. Its textual frontends and Simply construction APIs feed the canonical Rust compiler. The compiler analyzes Semantic IR and emits requested target artifacts for exact profiles. Target engines execute the emitted RegEx. The Semantic Specification 1.0 is an unratified draft, and normative versioned frontend contracts have their own scope. Canonical terminology: STRling, RegEx, Simply API, binding, generated RegEx, target engine, portability, and Fourth Edition.
 
 ## Learn
 

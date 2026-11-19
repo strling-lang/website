@@ -9,9 +9,11 @@ This policy keeps public user documentation factual. Website copy may summarize 
 Authority follows the claim; the website does not merge these domains into one
 source order.
 
-1. [`strling-lang/strling`](https://github.com/strling-lang/strling) on its
-   default branch is authoritative for STRling language, compiler, binding,
-   grammar, formal semantic, fixture, and implementation behavior.
+1. Follow the [upstream authority hierarchy](https://github.com/strling-lang/strling/blob/d01ac3785736ad552c90f00b4ca13c0e2e5c9c62/governance/authority.md).
+   The Semantic Specification 1.0 remains a draft. Normative versioned contracts
+   govern their declared scopes. The certified source and shipping artifacts
+   establish implementation behavior. Historical tests and generated examples
+   do not define semantics.
 2. [`strling-lang/regex-conformance/semantic-corpus`](https://github.com/strling-lang/regex-conformance/tree/main/semantic-corpus)
    on its default branch is authoritative for canonical generic regex semantic
    identities, definitions, variants, aliases, manifestations, relations,
@@ -67,7 +69,7 @@ carried forward from the immutable v1 snapshot.
 
 ## API examples
 
-Prefer examples that exist in public binding README files or are direct compositions of exported functions whose behavior is covered by source and tests. Current safe examples use:
+Prefer examples that exist in public binding README files or are direct compositions of exported functions whose behavior is covered by source and tests. Current examples use the pinned TypeScript projection and submit explicit compiler requests. The following are examples of host-method names whose signatures and semantics must be checked per adapter:
 
 - `merge`, `may`, `capture`, `group`;
 - `anyOf`/`any_of` and `inChars`/`in_chars`;

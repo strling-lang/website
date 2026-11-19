@@ -1,250 +1,320 @@
+import { fourthEdition, productRelease, productRepository } from './release.ts';
+
 export type BindingStatus =
-  'Published' | 'Source available' | 'Publication prepared';
+  'Registry published' | 'Git distribution' | 'Direct build';
 
 export interface Binding {
   slug: string;
   language: string;
   distribution: string;
   status: BindingStatus;
-  registry?: { name: string; url: string; version?: string };
+  support: 'Supported' | 'Preview';
+  package: { name: string; url: string; version: string };
   install?: string;
+  installLanguage?: string;
   sourcePath: string;
   summary: string;
-  requirements?: string;
-  editionNote: string;
+  requirements: string;
 }
 
-const repo = 'https://github.com/strling-lang/strling/tree/main/bindings';
+const repo = `${productRepository}/tree/${fourthEdition.productSource}/bindings`;
 
 export const bindings: Binding[] = [
   {
     slug: 'c',
     language: 'C',
-    distribution: 'Source integration',
-    status: 'Source available',
+    distribution: 'Git source',
+    status: 'Git distribution',
+    support: 'Supported',
+    package: {
+      name: 'strling-c',
+      url: `${productRepository}/tree/c-v4.0.3/bindings/c`,
+      version: 'c-v4.0.3',
+    },
     sourcePath: `${repo}/c`,
     summary:
-      'C headers, sources, Makefile, tests, and binding documentation live in the canonical compiler repository.',
-    editionNote: 'Fourth Edition package certification is pending.',
+      'Build from the tagged checkout using the binding’s CMake and local-prefix instructions.',
+    requirements:
+      'CMake 3.20+, C toolchain and Rust 1.75. Supported interop on Windows x86-64 and GNU Linux x86-64.',
+    install:
+      'git clone --branch c-v4.0.3 --single-branch https://github.com/strling-lang/strling.git',
   },
   {
     slug: 'cpp',
     language: 'C++',
-    distribution: 'CMake source integration',
-    status: 'Source available',
+    distribution: 'Direct CMake build',
+    status: 'Direct build',
+    support: 'Supported',
+    package: { name: 'strling', url: productRelease, version: '4.0.3' },
     sourcePath: `${repo}/cpp`,
     summary:
-      'The C++ binding documents CMake FetchContent and a local Conan recipe; no public Conan release is asserted.',
-    requirements: 'CMake and a C++ toolchain',
-    editionNote: 'Fourth Edition package certification is pending.',
+      'Build the certified product source with CMake. ConanCenter admission is deferred.',
+    requirements:
+      'CMake 3.20+, C++ toolchain and Rust 1.75. Supported direct interop scope covers Windows x86-64 and GNU Linux x86-64.',
   },
   {
     slug: 'csharp',
     language: 'C#',
-    distribution: 'NuGet and source',
-    status: 'Published',
-    registry: {
-      name: 'NuGet · STRling',
-      url: 'https://www.nuget.org/packages/STRling',
-      version: '3.0.0',
+    distribution: 'NuGet',
+    status: 'Registry published',
+    support: 'Supported',
+    package: {
+      name: 'STRling',
+      url: 'https://www.nuget.org/packages/STRling/4.0.3',
+      version: '4.0.3',
     },
     sourcePath: `${repo}/csharp`,
-    summary:
-      'The C# binding provides the Simply API for .NET and a verified NuGet package.',
-    requirements: '.NET',
-    editionNote:
-      'Published package verified; Fourth Edition certification remains provisional.',
+    summary: 'Install the NuGet package with its Windows native assets.',
+    requirements:
+      '.NET 9, Windows x86-64 and Microsoft Visual C++ v14 x64 runtime.',
+    install: 'dotnet add package STRling --version 4.0.3',
   },
   {
     slug: 'dart',
     language: 'Dart',
-    distribution: 'Pub.dev and source',
-    status: 'Published',
-    registry: {
-      name: 'Pub.dev · strling',
-      url: 'https://pub.dev/packages/strling',
-      version: '3.0.0',
+    distribution: 'Pub.dev',
+    status: 'Registry published',
+    support: 'Supported',
+    package: {
+      name: 'strling',
+      url: 'https://pub.dev/packages/strling/versions/4.0.3',
+      version: '4.0.3',
     },
     sourcePath: `${repo}/dart`,
     summary:
-      'The Dart binding is available on Pub.dev and in the canonical source tree.',
-    requirements: 'Dart 3',
-    editionNote:
-      'Published package verified; Fourth Edition certification remains provisional.',
+      'Provide an absolute path to the matching native library when loading the Dart adapter.',
+    requirements: 'Dart 3 and GNU Linux x86-64.',
+    install: 'dart pub add strling:4.0.3',
   },
   {
     slug: 'fsharp',
     language: 'F#',
-    distribution: 'NuGet and source',
-    status: 'Published',
-    registry: {
-      name: 'NuGet · STRling.FSharp',
-      url: 'https://www.nuget.org/packages/STRling.FSharp',
-      version: '3.0.0',
+    distribution: 'NuGet',
+    status: 'Registry published',
+    support: 'Supported',
+    package: {
+      name: 'STRling.FSharp',
+      url: 'https://www.nuget.org/packages/STRling.FSharp/4.0.3',
+      version: '4.0.3',
     },
     sourcePath: `${repo}/fsharp`,
-    summary:
-      'The F# binding provides .NET-native STRling concepts and a verified NuGet package.',
-    requirements: '.NET',
-    editionNote:
-      'Published package verified; Fourth Edition certification remains provisional.',
+    summary: 'Install the NuGet package with its Windows native assets.',
+    requirements:
+      '.NET 9, Windows x86-64 and Microsoft Visual C++ v14 x64 runtime.',
+    install: 'dotnet add package STRling.FSharp --version 4.0.3',
   },
   {
     slug: 'go',
     language: 'Go',
-    distribution: 'Go module from Git source',
-    status: 'Source available',
+    distribution: 'Go module from Git',
+    status: 'Git distribution',
+    support: 'Supported',
+    package: {
+      name: 'github.com/strling-lang/strling/bindings/go',
+      url: 'https://proxy.golang.org/github.com/strling-lang/strling/bindings/go/@v/go-v4.0.3.info',
+      version: 'go-v4.0.3',
+    },
     sourcePath: `${repo}/go`,
     summary:
-      'The canonical repository declares the module path github.com/strling-lang/strling/bindings/go.',
-    requirements: 'Go 1.22',
-    editionNote: 'Fourth Edition module/tag certification is pending.',
+      'Go records the pseudo-version v0.0.0-20261118220028-d01ac3785736 for this product tag. Supply the matching native library.',
+    requirements: 'Go 1.22+, cgo and GNU Linux x86-64.',
+    install: 'go get github.com/strling-lang/strling/bindings/go@go-v4.0.3',
   },
   {
     slug: 'java',
     language: 'Java',
-    distribution: 'Maven project source',
-    status: 'Publication prepared',
+    distribution: 'Maven Central',
+    status: 'Registry published',
+    support: 'Supported',
+    package: {
+      name: 'io.github.strling-lang:strling',
+      url: 'https://central.sonatype.com/artifact/io.github.strling-lang/strling/4.0.3',
+      version: '4.0.3',
+    },
     sourcePath: `${repo}/java`,
     summary:
-      'A Maven project and Java binding are present in source; a Maven Central release is not asserted.',
-    requirements: 'Java 11 and Maven',
-    editionNote:
-      'Registry publication and Fourth Edition certification are pending.',
+      'The POM resolves the shared strling-jvm bridge. Add the coordinate to your project and supply the absolute path to the matching native library.',
+    requirements:
+      'Java 11 bytecode, verified with JDK 21 on Windows x86-64. Microsoft Visual C++ v14 x64 runtime.',
+    install:
+      'mvn dependency:get -Dartifact=io.github.strling-lang:strling:4.0.3',
   },
   {
     slug: 'kotlin',
     language: 'Kotlin',
-    distribution: 'Gradle project source',
-    status: 'Publication prepared',
+    distribution: 'Maven Central',
+    status: 'Registry published',
+    support: 'Supported',
+    package: {
+      name: 'io.github.strling-lang:strling-kotlin',
+      url: 'https://central.sonatype.com/artifact/io.github.strling-lang/strling-kotlin/4.0.3',
+      version: '4.0.3',
+    },
     sourcePath: `${repo}/kotlin`,
     summary:
-      'A Kotlin/JVM Gradle project is present in source; a public Maven registry release is not asserted.',
-    requirements: 'JVM toolchain',
-    editionNote:
-      'Registry publication and Fourth Edition certification are pending.',
+      'Add the coordinate to your Gradle dependencies and supply the absolute path to the matching native library.',
+    requirements:
+      'Kotlin/JVM with Java 11 bytecode, verified with JDK 21 on Windows x86-64. Microsoft Visual C++ v14 x64 runtime.',
+    install: 'implementation("io.github.strling-lang:strling-kotlin:4.0.3")',
+    installLanguage: 'kotlin',
   },
   {
     slug: 'lua',
     language: 'Lua',
-    distribution: 'LuaRocks manifest and source',
-    status: 'Publication prepared',
+    distribution: 'LuaRocks',
+    status: 'Registry published',
+    support: 'Preview',
+    package: {
+      name: 'strling-lang/strling',
+      url: 'https://luarocks.org/modules/strling-lang/strling/4.0.3-1',
+      version: '4.0.3-1',
+    },
     sourcePath: `${repo}/lua`,
     summary:
-      'The repository contains a Lua binding and a release-templated rockspec; no live LuaRocks package is asserted.',
-    requirements: 'Lua 5.1 or later',
-    editionNote:
-      'Registry publication and Fourth Edition certification are pending.',
+      'Install the published rock revision and provide the matching native library.',
+    requirements: 'Lua 5.1 through 5.4 and GNU Linux x86-64 Preview scope.',
+    install: 'luarocks install strling 4.0.3-1',
   },
   {
     slug: 'perl',
     language: 'Perl',
-    distribution: 'CPAN metadata and source',
-    status: 'Publication prepared',
+    distribution: 'CPAN',
+    status: 'Registry published',
+    support: 'Preview',
+    package: {
+      name: 'STRling',
+      url: 'https://metacpan.org/release/STRLING/STRling-4.0.3',
+      version: 'v4.0.3',
+    },
     sourcePath: `${repo}/perl`,
     summary:
-      'Perl source and distribution metadata are present; no verified MetaCPAN release is asserted.',
-    requirements: 'Perl 5.10 or later',
-    editionNote:
-      'Registry publication and Fourth Edition certification are pending.',
+      'Install the CPAN distribution and provide the matching native library.',
+    requirements: 'Perl 5.10+ and GNU Linux x86-64 Preview scope.',
+    install: 'cpanm STRling@4.0.3',
   },
   {
     slug: 'php',
     language: 'PHP',
-    distribution: 'Composer project source',
-    status: 'Publication prepared',
+    distribution: 'Composer from Git',
+    status: 'Git distribution',
+    support: 'Preview',
+    package: {
+      name: 'strling/strling',
+      url: `${productRepository}/tree/php-v4.0.3/bindings/php`,
+      version: 'php-v4.0.3',
+    },
     sourcePath: `${repo}/php`,
     summary:
-      'Composer metadata and PHP source are present; the package is not represented as published on Packagist.',
-    requirements: 'PHP 8.2 or later',
-    editionNote:
-      'Registry publication and Fourth Edition certification are pending.',
+      'Configure Composer to install the authenticated bindings/php subtree as a local path package. Supply the matching native library. The governed route is Git.',
+    requirements: 'PHP 8.2+, enabled FFI, and GNU Linux x86-64 Preview scope.',
+    install:
+      'git clone --branch php-v4.0.3 --single-branch https://github.com/strling-lang/strling.git',
   },
   {
     slug: 'python',
     language: 'Python',
     distribution: 'PyPI',
-    status: 'Published',
-    registry: {
-      name: 'PyPI · STRling',
-      url: 'https://pypi.org/project/STRling/',
-      version: '2.5.9',
+    status: 'Registry published',
+    support: 'Supported',
+    package: {
+      name: 'STRling',
+      url: 'https://pypi.org/project/STRling/4.0.3/',
+      version: '4.0.3',
     },
-    install: 'pip install strling',
     sourcePath: `${repo}/python`,
     summary:
-      'The established Python package is on PyPI. The canonical source manifest is ahead of that public package line.',
-    requirements: 'Python 3.8 or later',
-    editionNote:
-      'Use the published package as the current public line; Fourth Edition synchronization and migration guidance are pending.',
+      'PyPI provides CPython 3.12 wheels for Windows x86-64 and manylinux 2.34 x86-64, plus a source archive.',
+    requirements:
+      'CPython 3.12. Windows x86-64 with Microsoft Visual C++ v14 x64 runtime or GNU Linux x86-64.',
+    install: 'python -m pip install STRling==4.0.3',
   },
   {
     slug: 'r',
     language: 'R',
-    distribution: 'R package source',
-    status: 'Source available',
+    distribution: 'Git source',
+    status: 'Git distribution',
+    support: 'Preview',
+    package: {
+      name: 'strling',
+      url: `${productRepository}/tree/r-v4.0.3/bindings/r`,
+      version: 'r-v4.0.3',
+    },
     sourcePath: `${repo}/r`,
     summary:
-      'An R package structure is present in source; no CRAN release is asserted.',
-    editionNote:
-      'Registry publication and Fourth Edition certification are pending.',
+      'Install bindings/r from the authenticated checkout and supply the matching native library.',
+    requirements: 'R 4.3 through 4.x and GNU Linux x86-64 Preview scope.',
+    install:
+      'git clone --branch r-v4.0.3 --single-branch https://github.com/strling-lang/strling.git\nR CMD INSTALL strling/bindings/r',
   },
   {
     slug: 'ruby',
     language: 'Ruby',
-    distribution: 'RubyGems and source',
-    status: 'Published',
-    registry: {
-      name: 'RubyGems · strling',
-      url: 'https://rubygems.org/gems/strling',
-      version: '3.0.0',
+    distribution: 'RubyGems',
+    status: 'Registry published',
+    support: 'Preview',
+    package: {
+      name: 'strling',
+      url: 'https://rubygems.org/gems/strling/versions/4.0.3',
+      version: '4.0.3',
     },
     sourcePath: `${repo}/ruby`,
     summary:
-      'The Ruby binding has a verified RubyGems release and canonical source.',
-    requirements: 'Ruby 3.0 or later',
-    editionNote:
-      'Published package verified; Fourth Edition certification remains provisional.',
+      'Install the published gem and provide the matching native library.',
+    requirements: 'Ruby 3.x and GNU Linux x86-64 Preview scope.',
+    install: 'gem install strling --version 4.0.3',
   },
   {
     slug: 'rust',
     language: 'Rust',
-    distribution: 'Cargo project source',
-    status: 'Source available',
+    distribution: 'crates.io',
+    status: 'Registry published',
+    support: 'Supported',
+    package: {
+      name: 'strling',
+      url: 'https://crates.io/crates/strling/4.0.3',
+      version: '4.0.3',
+    },
     sourcePath: `${repo}/rust`,
-    summary:
-      'A Cargo package and Rust binding are present in source; this site does not assert a crates.io release.',
-    requirements: 'Rust 1.70 or later',
-    editionNote:
-      'Registry publication and Fourth Edition certification are pending.',
+    summary: 'Install the Rust reference kernel and facade from crates.io.',
+    requirements:
+      'Rust 1.75+. Supported reference implementation scope covers Windows and Linux x86-64.',
+    install: 'cargo add strling@=4.0.3',
   },
   {
     slug: 'swift',
     language: 'Swift',
-    distribution: 'Swift Package source',
-    status: 'Source available',
+    distribution: 'SwiftPM from Git',
+    status: 'Git distribution',
+    support: 'Supported',
+    package: {
+      name: 'STRling',
+      url: `${productRepository}/tree/swift-v4.0.3/bindings/swift`,
+      version: 'swift-v4.0.3',
+    },
     sourcePath: `${repo}/swift`,
     summary:
-      'The source tree includes a Swift Package with library and test targets.',
-    requirements: 'Swift 5.9 or later',
-    editionNote: 'Fourth Edition package certification is pending.',
+      'Build with swift build --package-path strling/bindings/swift or use that subtree as a local SwiftPM dependency. Supply the matching native library.',
+    requirements: 'Swift tools 5.9+ and GNU Linux x86-64.',
+    install:
+      'git clone --branch swift-v4.0.3 --single-branch https://github.com/strling-lang/strling.git',
   },
   {
     slug: 'typescript',
     language: 'TypeScript',
     distribution: 'npm',
-    status: 'Published',
-    registry: {
-      name: 'npm · @strling-lang/strling',
-      url: 'https://www.npmjs.com/package/@strling-lang/strling',
-      version: '4.0.1',
+    status: 'Registry published',
+    support: 'Preview',
+    package: {
+      name: '@strling-lang/strling',
+      url: 'https://www.npmjs.com/package/@strling-lang/strling/v/4.0.3',
+      version: '4.0.3',
     },
-    install: 'npm install @strling-lang/strling',
     sourcePath: `${repo}/typescript`,
     summary:
-      'The TypeScript Preview adapter records Simply operations and compiles them through the canonical STRling WebAssembly boundary.',
-    requirements: 'Node.js 22 (ES modules)',
-    editionNote: 'The published TypeScript adapter has Preview support.',
+      'The ESM package includes the canonical WebAssembly compiler and provides an explicit Node loader.',
+    requirements:
+      'Node.js 22 for the Node API. Browser WASM integration is Preview and requires explicit loading.',
+    install: 'npm install @strling-lang/strling@4.0.3',
   },
 ];
 

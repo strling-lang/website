@@ -19,6 +19,8 @@ related:
   ]
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 Use a character set when one position may contain one of several characters. STRling provides explicit constructors for included characters, excluded characters, and letter or digit ranges.

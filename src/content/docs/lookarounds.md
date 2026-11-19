@@ -19,6 +19,8 @@ related:
   ]
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 Lookarounds test what appears before or after the current position without consuming that text. STRling exposes positive and negative forms through named functions.

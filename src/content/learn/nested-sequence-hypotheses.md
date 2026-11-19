@@ -112,7 +112,7 @@ Read the base case even for Beta. Beta permits roots at depths one and two, and 
 
 ## Compile and recognize an exact window
 
-Run the downloadable example with Node 22.12.0 and the pinned 4.0.1 TypeScript Preview adapter. In an empty folder, save the six Frontier files in a subfolder named `frontier`, then save the two supporting files side by side in a sibling subfolder named `pattern-engineering`. The compiler loads the profile relative to its own file.
+Run the downloadable example with Node 22.12.0 and the pinned 4.0.3 TypeScript Preview adapter. In an empty folder, save the six Frontier files in a subfolder named `frontier`, then save the two supporting files side by side in a sibling subfolder named `pattern-engineering`. The compiler loads the profile relative to its own file.
 
 - <a download href="/examples/frontier/example.ts">Runnable example</a>
 - <a download href="/examples/frontier/motif-model.ts">Model and revision</a>
@@ -126,7 +126,7 @@ Run the downloadable example with Node 22.12.0 and the pinned 4.0.1 TypeScript P
 ```sh
 npm init -y
 npm pkg set type=module
-npm install --save-exact @strling-lang/strling@4.0.1
+npm install --save-exact @strling-lang/strling@4.0.3
 node --experimental-strip-types frontier/example.ts
 ```
 

@@ -15,6 +15,8 @@ related:
   ['/docs/compatibility/', '/docs/quantifiers/', '/docs/literals-and-escaping/']
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 Errors can occur at three layers: host-language API validation, STRling compilation or emission, and the target RegEx runtime. Identify the layer before acting on the message.

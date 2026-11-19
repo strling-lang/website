@@ -19,6 +19,8 @@ related:
   ]
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 Quantifiers specify how many times a Pattern may repeat. STRling uses constructor bounds, `may`, and Pattern repetition methods rather than requiring handwritten `?`, `*`, `+`, or brace syntax.

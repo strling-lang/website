@@ -5,12 +5,7 @@ interface Props {
   binding: Binding;
 }
 const { binding } = Astro.props;
-const tone =
-  binding.status === 'Published'
-    ? 'published'
-    : binding.status === 'Publication prepared'
-      ? 'prepared'
-      : 'source';
+const tone = binding.status === 'Registry published' ? 'published' : 'source';
 ---
 
 <article class="package-card">
@@ -20,8 +15,8 @@ const tone =
   </div>
   <p>{binding.summary}</p>
   <div class="package-meta">
-    {binding.distribution}{
-      binding.registry?.version ? ` · ${binding.registry.version}` : ''
+    {
+      `${binding.distribution} · ${binding.package.version} · ${binding.support}`
     }
   </div>
   <a class="text-link card-link" href={`/packages/${binding.slug}/`}

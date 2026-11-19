@@ -3,6 +3,7 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
 import CodeBlock from '@/components/CodeBlock.astro';
 import StatusBadge from '@/components/StatusBadge.astro';
+import { productRelease, releaseLabel, supportMatrix } from '@/data/release';
 import { bindings } from '@/data/bindings';
 
 export function getStaticPaths() {
@@ -13,19 +14,15 @@ export function getStaticPaths() {
 }
 const { binding } = Astro.props;
 const title = `STRling for ${binding.language}`;
-const description = `${binding.summary} Distribution status: ${binding.status}. Fourth Edition information remains provisional.`;
+const description = `${binding.summary} ${binding.distribution} ${binding.package.version}. ${binding.support} tier for ${releaseLabel}.`;
+const guide = binding.sourcePath.replace('/tree/', '/blob/') + '/README.md';
 const pathname = `/packages/${binding.slug}/`;
 const crumbs = [
   { label: 'Home', href: '/' },
   { label: 'Packages', href: '/packages/' },
   { label: binding.language, href: pathname },
 ];
-const tone =
-  binding.status === 'Published'
-    ? 'published'
-    : binding.status === 'Publication prepared'
-      ? 'prepared'
-      : 'source';
+const tone = binding.status === 'Registry published' ? 'published' : 'source';
 ---
 
 <BaseLayout
@@ -50,13 +47,10 @@ const tone =
       </div><h1>STRling for {binding.language}</h1><p>{binding.summary}</p><div
         class="cluster"
       >
-        {
-          binding.registry && (
-            <a class="button" href={binding.registry.url}>
-              Open {binding.registry.name} <span aria-hidden="true">↗</span>
-            </a>
-          )
-        }<a class="button button--secondary" href={binding.sourcePath}
+        <a class="button" href={binding.package.url}>
+          Open {binding.distribution}
+          <span aria-hidden="true">↗</span>
+        </a><a class="button button--secondary" href={binding.sourcePath}
           >View source <span aria-hidden="true">↗</span></a
         >
       </div>
@@ -70,64 +64,39 @@ const tone =
       >
         <div class="fact">
           <dt>Distribution</dt><dd>{binding.distribution}</dd>
-        </div><div class="fact"><dt>Status</dt><dd>{binding.status}</dd></div>{
-          binding.registry?.version && (
-            <div class="fact">
-              <>
-                <dt>Verified registry version</dt>
-                <dd>{binding.registry.version}</dd>
-              </>
-            </div>
-          )
-        }{
-          binding.requirements && (
-            <div class="fact">
-              <>
-                <dt>Source requirement</dt>
-                <dd>{binding.requirements}</dd>
-              </>
-            </div>
-          )
-        }
-      </dl>{
-        binding.install ? (
-          <>
-            <>
-              <h2>Install the verified public package</h2>
-              <CodeBlock
-                code={binding.install}
-                language="bash"
-                label={`${binding.language} package command`}
-              />
-              <p class="muted">
-                This is the only installation command shown because it is
-                supported by public STRling source and registry evidence.
-              </p>
-            </>
-          </>
-        ) : (
-          <div class="callout">
-            <>
-              <strong>No registry install command asserted</strong>
-              <p>
-                Use the canonical binding source and its README for the current
-                integration path. This website does not infer an install command
-                from a manifest alone.
-              </p>
-            </>
-          </div>
+        </div>
+        <div class="fact"><dt>Support tier</dt><dd>{binding.support}</dd></div>
+        <div class="fact"><dt>Package</dt><dd>{binding.package.name}</dd></div>
+        <div class="fact">
+          <dt>Version or tag</dt><dd>{binding.package.version}</dd>
+        </div>
+      </dl>
+      <h2>Install or build</h2>
+      <p>{binding.requirements}</p>
+      {
+        binding.install && (
+          <CodeBlock
+            code={binding.install}
+            language={binding.installLanguage ?? 'bash'}
+            label={`${binding.language} installation`}
+          />
         )
       }
+      <p>
+        See the <a href={guide}>binding installation guide</a> for integration steps
+        and native-library setup.
+      </p>
     </div>
   </section>
   <section class="section section--bordered">
     <div class="container reading stack">
-      <h2>Fourth Edition state</h2><p class="kicker">{binding.editionNote}</p><p
-      >
-        Package names, versions, and compatibility guarantees for the certified
-        Fourth Edition will be updated from centralized release data when the
-        edition is finalized.
-      </p><div class="cluster">
+      <h2>Release and support</h2>
+      <p>
+        <a href={productRelease}>{releaseLabel}</a> is the current product release.
+        See the <a href={supportMatrix}>product support matrix</a> for the full scope
+        of the {binding.support} tier.
+      </p>
+      <div class="cluster">
         <a class="button" href="/docs/compatibility/">Compatibility guidance</a>
       </div>
     </div>

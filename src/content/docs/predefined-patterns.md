@@ -14,6 +14,8 @@ keywords:
 related: ['/docs/character-sets/', '/docs/quantifiers/', '/docs/compatibility/']
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 Predefined patterns cover common character categories and position assertions. The canonical Python and TypeScript sources export matching positive and negative forms, with idiomatic naming.

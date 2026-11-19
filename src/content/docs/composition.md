@@ -14,6 +14,8 @@ keywords:
 related: ['/docs/core-concepts/', '/docs/groups-and-captures/', '/learn/tour/']
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 Composition turns a dense regular expression into a set of smaller values. `merge` creates a sequence, `anyOf`/`any_of` creates alternatives, and `may` makes a piece optional. The result is another Pattern value, so composition can continue at any depth.

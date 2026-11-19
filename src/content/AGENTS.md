@@ -8,8 +8,8 @@ Trace consequential claims to the appropriate public/default-branch source or
 live registry record. Do not publish private plans, Notion-only status,
 branch-only work, unadopted research recommendations, uncertified package
 availability, dates, versions, or guarantees. Distinguish exact verified output
-from conceptual output shape and keep Fourth Edition language explicitly
-provisional through the central release data.
+from conceptual output shape and use the central release data for Fourth
+Edition claims.
 
 Preserve meaningful headings, stable links, static-HTML usefulness, code
 context, target-engine assumptions, and collection metadata. Update shared data

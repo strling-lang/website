@@ -2,7 +2,7 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
 import PackageCard from '@/components/PackageCard.astro';
-import StatusBadge from '@/components/StatusBadge.astro';
+import { productRelease, releaseLabel, supportMatrix } from '@/data/release';
 import { bindings } from '@/data/bindings';
 const title = 'STRling packages and language bindings';
 const description =
@@ -11,11 +11,6 @@ const crumbs = [
   { label: 'Home', href: '/' },
   { label: 'Packages', href: '/packages/' },
 ];
-const counts = {
-  published: bindings.filter((b) => b.status === 'Published').length,
-  source: bindings.filter((b) => b.status === 'Source available').length,
-  prepared: bindings.filter((b) => b.status === 'Publication prepared').length,
-};
 ---
 
 <BaseLayout
@@ -35,33 +30,14 @@ const counts = {
       <Breadcrumbs items={crumbs} /><span class="eyebrow"
         >Binding ecosystem</span
       ><h1>STRling across 17 languages</h1><p>
-        Registry publication, prepared packaging, and source availability are
-        different states. This directory names them explicitly and only shows
-        installation commands backed by public source.
+        This directory lists package versions, installation routes, and support
+        tiers for <a href={productRelease}>{releaseLabel}</a>.
       </p>
     </div>
   </header>
   <section class="section">
     <div class="container">
-      <dl class="facts">
-        <div class="fact">
-          <dt>Published packages verified</dt><dd>{counts.published}</dd>
-        </div><div class="fact">
-          <dt>Source-available bindings</dt><dd>{counts.source}</dd>
-        </div><div class="fact">
-          <dt>Publication prepared</dt><dd>{counts.prepared}</dd>
-        </div>
-      </dl>
-    </div>
-  </section>
-  <section class="section section--bordered">
-    <div class="container stack">
-      <div class="cluster">
-        <StatusBadge label="Published" tone="published" /><StatusBadge
-          label="Source available"
-          tone="source"
-        /><StatusBadge label="Publication prepared" tone="prepared" />
-      </div><div class="package-grid">
+      <div class="package-grid">
         {bindings.map((binding) => <PackageCard {binding} />)}
       </div>
     </div>
@@ -75,8 +51,8 @@ const counts = {
           <thead
             ><tr
               ><th>Binding</th><th>Distribution</th><th>Status</th><th
-                >Verified registry version</th
-              ><th>Fourth Edition</th></tr
+                >Package version or tag</th
+              ><th>Support tier</th></tr
             ></thead
           ><tbody
             >{
@@ -90,10 +66,10 @@ const counts = {
                     </td>
                     <td data-label="Distribution">{binding.distribution}</td>
                     <td data-label="Status">{binding.status}</td>
-                    <td data-label="Registry version">
-                      {binding.registry?.version ?? 'Not asserted'}
+                    <td data-label="Version or tag">
+                      {binding.package.version}
                     </td>
-                    <td data-label="Fourth Edition">Provisional</td>
+                    <td data-label="Support tier">{binding.support}</td>
                   </>
                 </tr>
               ))
@@ -106,10 +82,10 @@ const counts = {
   <section class="section section--bordered">
     <div class="container reading callout stack-sm">
       <strong>Evidence policy</strong><p>
-        PyPI, npm, NuGet, Pub.dev, and RubyGems records listed here were
-        verified against their live registries. Missing or unverified registry
-        records are not treated as releases. Final Fourth Edition availability
-        will be synchronized with the certified release matrix.
+        Each tier applies to the runtimes and platforms in the <a
+          href={supportMatrix}>product support matrix</a
+        >. Open a binding for its verified distribution route and platform
+        requirements.
       </p>
     </div>
   </section>

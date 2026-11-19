@@ -15,6 +15,8 @@ keywords:
 related: ['/docs/lookarounds/', '/docs/anchors-and-boundaries/', '/packages/']
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 Portability has two dimensions: the STRling binding that builds the Pattern and the RegEx engine that executes the output. A familiar Simply API does not erase differences among PCRE2, Python `re`, ECMAScript `RegExp`, and other engines.
@@ -87,6 +89,6 @@ Multiline changes anchors; dot-all changes dot; Unicode modes change properties 
 5. Run shared positive and negative fixtures in every deployment runtime.
 6. Treat warnings as release blockers when semantics could change.
 
-## Current limitations
+## Fourth Edition support
 
-The Fourth Edition compatibility matrix is not yet certified. Binding source and some registry packages exist, but package publication does not by itself prove edition-wide parity. Consult [Packages](/packages/) for current distribution state.
+Use [Packages](/packages/) for the current release’s verified installation routes and governed binding tiers. Supported and Preview scopes apply to the environments listed in the product support matrix linked there. For independent findings about a specific RegEx profile, consult [RegEx Compatibility](/regex/compatibility/).

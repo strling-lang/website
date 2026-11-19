@@ -2,7 +2,12 @@ import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 import { bindings } from '@/data/bindings';
 import { learnLessonPath } from '@/data/navigation';
-import { fourthEdition } from '@/data/release';
+import {
+  fourthEdition,
+  productRelease,
+  releaseSummary,
+  supportMatrix,
+} from '@/data/release';
 import { regexCategories, regexDocs, regexFeatures } from '@/data/regexDocs';
 import { site } from '@/data/site';
 
@@ -28,7 +33,7 @@ export const GET: APIRoute = async () => {
   const packageIndex = bindings
     .map(
       (binding) =>
-        `- ${binding.language}: ${binding.status}; ${binding.distribution}. ${binding.editionNote}`,
+        `- ${binding.language}: ${binding.package.name} ${binding.package.version}; ${binding.distribution}; ${binding.status}; ${binding.support}. ${binding.requirements} ${binding.package.url}`,
     )
     .join('\n');
   const regexCategoryIndex = regexCategories
@@ -73,19 +78,17 @@ ${regexFeatureIndex}
 
 ## Binding and package state
 
-Package state is intentionally qualified. “Source available” does not mean registry-published.
+Distribution versions and tags are listed with their governed support tier.
 
 ${packageIndex}
 
 ## ${fourthEdition.name}
 
-${fourthEdition.summary}
+${releaseSummary}
 
-Verified public preparation:
-${fourthEdition.verifiedWork.map((item) => `- ${item}`).join('\n')}
-
-Still provisional:
-${fourthEdition.provisional.map((item) => `- ${item}`).join('\n')}
+- Official release: ${productRelease}
+- Independent public verification: ${fourthEdition.verificationRun}
+- Product support matrix: ${supportMatrix}
 
 ## Canonical sources
 

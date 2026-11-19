@@ -14,6 +14,8 @@ keywords:
 related: ['/docs/composition/', '/docs/lookarounds/', '/learn/from-regex/']
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 `capture` creates a numbered capture group. `group(name, ...)` creates a named capture group. Use captures when application code needs matched subtext; use plain composition when you only need matching structure.

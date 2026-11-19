@@ -5,7 +5,7 @@ surfaces. The live modules are:
 
 - `bindings.ts`: binding, package, registry, version, install, and source state;
 - `content-sources.ts`: public source catalog;
-- `release.ts`: Fourth Edition status and provisional boundaries;
+- `release.ts`: Fourth Edition release and evidence links;
 - `site.ts`: identity, origins, repository URLs, logo, and canonical URLs;
 - `navigation.ts`: primary, Docs, and Learn navigation.
 

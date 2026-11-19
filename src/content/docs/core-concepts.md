@@ -9,6 +9,8 @@ keywords:
 related: ['/docs/composition/', '/learn/quickstart/', '/docs/compatibility/']
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 The Simply API is STRling’s high-level, user-facing interface. Constructors such as `digit`, `letter`, `merge`, `may`, `capture`, and `group` return **Pattern values**. A Pattern describes matching intent; converting it to a string produces a regular expression for use with a host runtime.

@@ -1,6 +1,6 @@
 # STRling website content sources
 
-Last evidence review: 2026-08-22.
+Last release and distribution evidence review: 2026-11-19.
 
 This policy keeps public user documentation factual. Website copy may summarize observable behavior; it must not turn internal plans or incomplete code into release guarantees.
 
@@ -32,19 +32,14 @@ empirical authority merely because a claim already appears in website copy.
 
 ## Sources reviewed
 
-| Source                           | Public evidence used                                                                                                                                                                                                                                   |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `strling-lang/strling`           | 17 binding directories; Simply APIs; TypeScript and Python examples; manifests; feature registry; grammar; semantics; conformance fixtures; Apache License 2.0; distribution workflow                                                                  |
-| `strling-lang/regex-conformance` | Immutable Regex Semantic Feature Corpus snapshot; 16 canonical categories; 269 canonical features; variants, manifestations, relations, operations, and exact source bindings at the 2026-09-08 declared cutoff (semantic source rechecked 2026-10-04) |
-| `strling-lang/STRling.py`        | Established Python API/package history and PyPI identity                                                                                                                                                                                               |
-| `strling-lang/STRling.js`        | Established JavaScript API/package history                                                                                                                                                                                                             |
-| `strling-lang/.github`           | Organization identity and the remotely referenced silver bell mark                                                                                                                                                                                     |
-| PyPI                             | `STRling` public package, version 2.5.9 at review time                                                                                                                                                                                                 |
-| npm                              | `@strling-lang/strling` public package, version 3.0.0 at review time                                                                                                                                                                                   |
-| NuGet                            | `STRling` and `STRling.FSharp`, version 3.0.0 at review time                                                                                                                                                                                           |
-| Pub.dev                          | `strling`, version 3.0.0 at review time                                                                                                                                                                                                                |
-| RubyGems                         | `strling`, version 3.0.0 at review time                                                                                                                                                                                                                |
-| Packagist and MetaCPAN           | No matching verified release at review time                                                                                                                                                                                                            |
+| Source                                  | Public evidence used                                                                                                                                                                                                                                   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `strling-lang/strling`                  | 17 binding directories; Simply APIs; TypeScript and Python examples; manifests; feature registry; grammar; semantics; conformance fixtures; Apache License 2.0; distribution workflow                                                                  |
+| `strling-lang/regex-conformance`        | Immutable Regex Semantic Feature Corpus snapshot; 16 canonical categories; 269 canonical features; variants, manifestations, relations, operations, and exact source bindings at the 2026-09-08 declared cutoff (semantic source rechecked 2026-10-04) |
+| `strling-lang/STRling.py`               | Established Python API/package history and PyPI identity                                                                                                                                                                                               |
+| `strling-lang/STRling.js`               | Established JavaScript API/package history                                                                                                                                                                                                             |
+| `strling-lang/.github`                  | Organization identity and the remotely referenced silver bell mark                                                                                                                                                                                     |
+| Product release and public verification | See [Fourth Edition](#fourth-edition) for pinned product and distribution authority.                                                                                                                                                                   |
 
 Registry versions are time-sensitive evidence, not promises. Update `src/data/bindings.ts` only after rechecking the live record and repository ownership.
 
@@ -86,28 +81,51 @@ When output is shown as exact, it must come from authoritative documentation or 
 
 ## Install commands
 
-The package directory uses registry commands documented in canonical source.
-
-```text
-pip install strling
-npm install @strling-lang/strling
-```
-
-Other package pages link to source or a verified registry without inventing a command.
+The package directory uses versioned registry coordinates and source routes
+verified against public distribution evidence. It renders these facts from
+`src/data/bindings.ts`.
 
 The TypeScript Learn examples pin published package versions to keep the two
-API generations reproducible. The quickstart and tour use `3.0.0`. The
-advanced lessons use the `4.0.1` Preview adapter on Node 22 with its bundled
+API generations reproducible. The legacy quickstart uses TypeScript `3.0.0` and
+Python `2.5.9`, and the legacy tour uses TypeScript `3.0.0`. The Advanced and
+Frontier examples use the verified Fourth Edition TypeScript Preview adapter
+on Node 22 with its bundled
 canonical WebAssembly compiler. The examples use the
-[ECMAScript 2024 profile](https://github.com/strling-lang/strling/blob/2354ac924851920632d99c99f64c39ed402d158c/spec/targets/profiles/ecmascript-2024.json)
-and [profile reference](https://github.com/strling-lang/strling/blob/2354ac924851920632d99c99f64c39ed402d158c/spec/contracts/1.0/examples/compile-request/equivalence-explanation.json)
+[ECMAScript 2024 profile](https://github.com/strling-lang/strling/blob/d01ac3785736ad552c90f00b4ca13c0e2e5c9c62/spec/targets/profiles/ecmascript-2024.json)
+and [profile reference](https://github.com/strling-lang/strling/blob/d01ac3785736ad552c90f00b4ca13c0e2e5c9c62/spec/contracts/1.0/examples/compile-request/equivalence-explanation.json)
 from the same canonical revision. `tests/unit/pattern-engineering.test.mjs`
 runs the lesson fixtures against the compiler's emitted artifact. The results
 cover that exact target and runtime.
 
 ## Fourth Edition
 
-Public source supports discussion of shared binding vocabulary, specification/conformance infrastructure, target diagnostics, and distribution preparation. Final version, date, certified package matrix, complete compatibility guarantees, and migration guidance remain provisional.
+The [official release](https://github.com/strling-lang/strling/releases/tag/v4.0.3)
+identifies the certified source and links the publication receipts. The
+[independent verification run](https://github.com/strling-lang/strling/actions/runs/44580786117/attempts/1)
+verified 232 obligations across the 16 routes authorized for initial publication.
+Supported consumers were exercised in the reported platform scopes. Preview
+verification covers public artifacts and associated evidence. The C++ ConanCenter
+route was explicitly deferred. The release documents the direct CMake build.
+
+To synchronize after a release:
+
+1. Check the latest public GitHub Release, its product tag and certified source
+   commit against the upstream release policy. Review the policy, support
+   matrix, publication receipts, and final independent verification report.
+2. Check each exact registry coordinate against live metadata and artifact
+   availability. Verify governed Git tags against the certified product SHA
+   and confirm the ecosystem resolves each advertised install route.
+3. Refresh the checked-in release evidence and shared binding data first. Update
+   each package version independently of the product version. Preserve distinctions
+   between registry publication, Git distribution, and the direct C++ build.
+4. Check tutorial package pins separately. Run the compiler fixtures before
+   changing a pin. Keep historical API pins explicit. Run the website checks,
+   build, and package and discovery tests. Static builds use the checked-in
+   evidence and need no network calls for this data. The reduced review record
+   in `tests/fixtures/release-evidence.json` pins the upstream policy commit
+   and SHA-256. To check the original policy during review, set
+   `STRLING_RELEASE_POLICY_FILE` to a local copy of the exact upstream JSON bytes
+   and run `npm test`.
 
 ## Website versus owning repositories
 

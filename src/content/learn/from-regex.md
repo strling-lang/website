@@ -16,6 +16,8 @@ related:
   ['/docs/composition/', '/docs/groups-and-captures/', '/docs/lookarounds/']
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). See the [Fourth Edition walkthrough](/learn/production-event-logs/) for current compilation and execution.
+
 ## The translation model
 
 STRling does not discard regular-expression concepts. It names them. A constructor produces a Pattern, composition combines Patterns, and the emitter produces target RegEx.

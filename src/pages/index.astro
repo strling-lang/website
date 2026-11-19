@@ -7,22 +7,30 @@ import RegexComparison from '@/components/RegexComparison.astro';
 import SectionHeader from '@/components/SectionHeader.astro';
 import StatusBadge from '@/components/StatusBadge.astro';
 import { bindings } from '@/data/bindings';
-import { fourthEdition } from '@/data/release';
+import {
+  fourthEdition,
+  productRelease,
+  releaseLabel,
+  releaseSummary,
+  supportMatrix,
+} from '@/data/release';
 import { site } from '@/data/site';
 
 const title = 'STRling — Readable, composable regular expressions';
 const description =
   'STRling is The Universal Regular Expression Compiler: readable, maintainable, composable pattern APIs for Python, TypeScript, and a wider language ecosystem.';
-const phoneCode = `import { simply as s } from "@strling-lang/strling";
+const phoneCode = `import * as s from '@strling-lang/strling/simply';
 
+const digit = s.inChars(s.between('0', '9'));
+const separator = s.may(s.inChars('-', '.', ' '));
 const phone = s.merge(
   s.start(),
-  s.capture(s.digit(3)),
-  s.may(s.anyOf("-", ".", " ")),
-  s.capture(s.digit(3)),
-  s.may(s.anyOf("-", ".", " ")),
-  s.capture(s.digit(4)),
-  s.end()
+  s.capture(digit.rep(3)),
+  separator,
+  s.capture(digit.rep(3)),
+  separator,
+  s.capture(digit.rep(4)),
+  s.end(),
 );`;
 ---
 
@@ -53,9 +61,10 @@ const phone = s.merge(
           pattern code—then produces the RegEx your runtime already understands.
         </p>
         <div class="cluster">
-          <a class="button" href="/learn/quickstart/">Start the quickstart</a><a
-            class="button button--secondary"
-            href="/why-strling/">Why STRling?</a
+          <a class="button" href="/learn/production-event-logs/"
+            >Build with Fourth Edition</a
+          ><a class="button button--secondary" href="/why-strling/"
+            >Why STRling?</a
           >
         </div>
       </div>
@@ -85,11 +94,13 @@ const phone = s.merge(
         code={phoneCode}
         language="typescript"
         label="STRling input"
-        result={String.raw`^(\d{3})[-. ]?(\d{3})[-. ]?(\d{4})$`}
+        result={String.raw`/^((?:[0-9]){3})(?:[\x20\x2d.])?((?:[0-9]){3})(?:[\x20\x2d.])?((?:[0-9]){4})(?![\s\S])/u`}
       />
       <p class="muted" style="margin-top:1rem">
-        Use the generated expression with <code class="mono">RegExp</code>. The
-        same concepts appear in the Python binding with snake_case method names.
+        The compiler emits this pattern and its Unicode flag for the ECMAScript
+        2024 target profile. Follow the <a href="/learn/production-event-logs/"
+          >TypeScript compilation walkthrough</a
+        > to run it with <code class="mono">RegExp</code>.
       </p>
     </div>
   </section>
@@ -178,11 +189,12 @@ const phone = s.merge(
         <span class="eyebrow">Learn</span>
         <h2>Build your first pattern</h2>
         <p class="kicker">
-          Install a verified package, compose a phone-number pattern, turn it
-          into a native regular expression, and choose your next concept.
+          Use the legacy tutorial packages to compose a phone-number pattern,
+          turn it into a native regular expression, and choose your next
+          concept.
         </p>
         <div class="cluster">
-          <a class="button" href="/learn/quickstart/">Quickstart</a><a
+          <a class="button" href="/learn/quickstart/">Legacy quickstart</a><a
             class="text-link"
             href="/learn/tour/">Take the tour</a
           >
@@ -210,17 +222,21 @@ const phone = s.merge(
     <div class="container grid-2">
       <div class="stack">
         <StatusBadge label={fourthEdition.name} tone="edition" />
-        <h2>A coordinated edition, still under certification</h2>
-        <p class="kicker">{fourthEdition.summary}</p>
+        <h2>{releaseLabel}</h2>
+        <p class="kicker">{releaseSummary}</p>
       </div>
       <div class="stack">
-        <span class="eyebrow">Verified preparation</span>
+        <span class="eyebrow">Release resources</span>
         <ul>
-          {
-            fourthEdition.verifiedWork
-              .slice(0, 3)
-              .map((item) => <li>{item}</li>)
-          }
+          <li>
+            <a href={productRelease}>Official release and certified source</a>
+          </li>
+          <li>
+            <a href={fourthEdition.verificationRun}
+              >Independent public verification</a
+            >
+          </li>
+          <li><a href={supportMatrix}>Binding and target support scopes</a></li>
         </ul>
       </div>
     </div>

@@ -19,6 +19,8 @@ related:
   ]
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 Use `s.lit(value)` for an explicit literal Pattern. Composition constructors also accept strings and convert them to literals. Literal text is escaped for RegEx output so punctuation such as `.` keeps its textual meaning.

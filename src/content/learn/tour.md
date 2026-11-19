@@ -17,8 +17,7 @@ related: ['/docs/core-concepts/', '/docs/compatibility/', '/packages/']
 
 ## 1. Patterns are values
 
-Follow the [quickstart installation](/learn/quickstart/) for the TypeScript
-version used in this tour.
+This tour uses the legacy TypeScript 3.0.0 API. Follow the [legacy quickstart](/learn/quickstart/) to reproduce it. The [Fourth Edition walkthrough](/learn/production-event-logs/) demonstrates the current compile API.
 
 Start with a small requirement: a three-letter product prefix.
 

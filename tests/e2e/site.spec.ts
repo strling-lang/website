@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
+import { bindings } from '../../src/data/bindings';
+import { fourthEdition, releaseLabel } from '../../src/data/release';
 
 const regexProjection = JSON.parse(
   readFileSync(
@@ -76,6 +78,47 @@ const requiredRoutes = [
   frontierRoute,
   '/project/',
 ];
+
+test('package cards and detail pages display the same distribution and support', async ({
+  page,
+  request,
+}) => {
+  await page.goto('/packages/');
+  await expect(page.locator('.package-card')).toHaveCount(bindings.length);
+  for (const binding of bindings) {
+    const route = `/packages/${binding.slug}/`;
+    const card = page
+      .locator('.package-card')
+      .filter({ has: page.locator(`a[href="${route}"]`) });
+    await expect(card.locator('.package-meta')).toContainText(
+      binding.package.version,
+    );
+    await expect(card.locator('.package-meta')).toContainText(binding.support);
+    const row = page
+      .getByRole('row')
+      .filter({ has: page.locator(`a[href="${route}"]`) });
+    await expect(row).toContainText(binding.status);
+    await expect(row).toContainText(binding.package.version);
+    await expect(row).toContainText(binding.support);
+    const detail = await request.get(route);
+    expect(detail.ok(), route).toBe(true);
+    expect(await detail.text(), route).toContain(binding.package.url);
+  }
+  await page.getByRole('link', { name: 'View Go binding' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'STRling for Go' }),
+  ).toBeVisible();
+  await expect(page.locator('main pre code')).toHaveText(
+    bindings.find((b) => b.slug === 'go')!.install!,
+  );
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    ),
+  ).toBeLessThanOrEqual(1);
+});
 
 test.describe('routes', () => {
   for (const route of requiredRoutes) {
@@ -533,7 +576,7 @@ test.describe('metadata and discoverability', () => {
       expect((await response.text()).length, route).toBeGreaterThan(50);
     }
     expect(await (await request.get('/llms.txt')).text()).toContain(
-      'Fourth Edition: final version and date are not certified',
+      `Fourth Edition: ${releaseLabel}, released ${fourthEdition.releaseDate}`,
     );
     const sitemap = await (await request.get('/sitemap.xml')).text();
     const llms = await (await request.get('/llms-full.txt')).text();

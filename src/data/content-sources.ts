@@ -1,4 +1,31 @@
+import {
+  fourthEdition,
+  productRelease,
+  releasePolicy,
+  supportMatrix,
+} from './release.ts';
+
 export const contentSources = [
+  {
+    label: 'Official Fourth Edition release',
+    url: productRelease,
+    use: 'Public release identity, date, certified source, and certification closure.',
+  },
+  {
+    label: 'Release policy',
+    url: releasePolicy,
+    use: 'Authoritative product version and versioning rules at the certification closure.',
+  },
+  {
+    label: 'Product support matrix',
+    url: supportMatrix,
+    use: 'Governed binding tiers, runtime scopes, and native prerequisites.',
+  },
+  {
+    label: 'Independent public distribution verification',
+    url: fourthEdition.verificationRun,
+    use: 'Artifact and consumer evidence for the owner-approved initial publication routes.',
+  },
   {
     label: 'Canonical compiler and bindings',
     url: 'https://github.com/strling-lang/strling',
@@ -27,6 +54,6 @@ export const contentSources = [
   {
     label: 'Live registries',
     url: '/packages/',
-    use: 'Current availability was checked against PyPI, npm, NuGet, Pub.dev, RubyGems, Packagist, and MetaCPAN during the site build.',
+    use: 'The binding directory links reviewed public registries and authenticated Git distribution routes.',
   },
 ] as const;

@@ -2,6 +2,7 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
 import { contentSources } from '@/data/content-sources';
+import { releaseSummary } from '@/data/release';
 import { site } from '@/data/site';
 const title = 'The STRling open-source project';
 const description =
@@ -145,11 +146,9 @@ const crumbs = [
   <section class="section section--bordered">
     <div class="container reading stack">
       <span class="eyebrow">Fourth Edition context</span><h2>
-        Public facts move together
+        The stable release
       </h2><p class="kicker">
-        The final edition version, date, package matrix, compatibility claims,
-        and migration guidance will be updated from shared release data after
-        certification—not guessed independently across pages.
+        {releaseSummary}
       </p>
     </div>
   </section>

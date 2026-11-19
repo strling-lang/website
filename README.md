@@ -75,12 +75,10 @@ Do not infer install commands, registry publication, compatibility guarantees, r
 
 ## Fourth Edition content rules
 
-Fourth Edition information is centralized in `src/data/release.ts`. Until certification:
-
-- publish no final version or date;
-- distinguish current registry records from edition certification;
-- mark migration guidance and binding-by-binding guarantees provisional;
-- update shared data before changing page-specific copy.
+The product release and evidence links live in `src/data/release.ts`. Binding
+coordinates, installation routes and support scopes live in `src/data/bindings.ts`.
+Follow the [release synchronization procedure](docs/CONTENT_SOURCES.md#fourth-edition)
+when auditing a new release.
 
 ## Logo policy
 

@@ -1,7 +1,7 @@
 ---
 title: 'STRling quickstart'
 description: 'Install a verified STRling package, build a readable phone-number pattern, generate RegEx, and use it in TypeScript or Python.'
-summary: 'Go from package install to a working, anchored phone-number Pattern using public TypeScript and Python APIs.'
+summary: 'Build and match an anchored phone-number Pattern using the legacy TypeScript and Python APIs.'
 order: 1
 time: '10 minutes'
 difficulty: beginner
@@ -15,22 +15,26 @@ keywords:
 related: ['/docs/core-concepts/', '/learn/tour/', '/packages/']
 ---
 
-## Choose a verified package
+## Install the legacy tutorial versions
 
-The TypeScript examples in this lesson use the published 3.0.0 API. Install the
-matching version to follow the examples.
+This lesson teaches the legacy TypeScript 3.0.0 and Python 2.5.9 APIs for
+readers maintaining earlier code. For new work, see the [current package
+directory](/packages/) and the [Fourth Edition TypeScript compilation
+walkthrough](/learn/production-event-logs/).
+
+Use the matching TypeScript release to reproduce the examples.
 
 ```bash
 npm install @strling-lang/strling@3.0.0
 ```
 
-The established Python package is published on PyPI:
+Use the matching legacy Python release from PyPI.
 
 ```bash
-pip install strling
+python -m pip install STRling==2.5.9
 ```
 
-The public Python registry line and the newer canonical multi-binding source are not yet presented as one certified Fourth Edition release. Check [Python package status](/packages/python/) before migration-sensitive work.
+For Fourth Edition Python installation and the current compiler API, follow the [Python binding guide](/packages/python/).
 
 ## Build your first TypeScript Pattern
 

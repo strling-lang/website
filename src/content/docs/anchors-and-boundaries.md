@@ -14,6 +14,8 @@ keywords:
 related: ['/docs/lookarounds/', '/docs/compatibility/', '/docs/core-concepts/']
 ---
 
+The Simply snippets use the [legacy tutorial APIs](/learn/quickstart/). For the Fourth Edition compile API, see the [current walkthrough](/learn/production-event-logs/).
+
 ## Summary
 
 `start()` and `end()` represent line anchors. `bound()` and `notBound()`/`not_bound()` represent word-boundary and non-boundary assertions. They consume no character.

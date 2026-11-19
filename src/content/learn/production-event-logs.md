@@ -155,9 +155,9 @@ leaves `durationMs` undefined and consumes no separator.
 
 ## 5. Compile for ECMAScript and run in Node
 
-Run this example with Node.js 22 and the published STRling 4.0.1 TypeScript
+Run this example with Node.js 22 and the published STRling 4.0.3 TypeScript
 Preview adapter. In a new npm project with `"type": "module"` in `package.json`,
-install `@strling-lang/strling@4.0.1`. Save the <a href="/examples/pattern-engineering/production-event-logs.ts" download>log source</a>,
+install `@strling-lang/strling@4.0.3`. Save the <a href="/examples/pattern-engineering/production-event-logs.ts" download>log source</a>,
 <a href="/examples/pattern-engineering/lexical.ts" download>lexical module</a>,
 <a href="/examples/pattern-engineering/compiler.ts" download>compiler helper</a>, and
 <a href="/examples/pattern-engineering/ecmascript-2024.json" download>target profile</a> beside an
@@ -200,8 +200,8 @@ boundaries in the compiler helper.
    The projection supplies the fixture's canonical profile digest, and the
    third argument supplies the full verified profile. The helper checks the
    canonical `compile_result.outcome` before reading the artifact. See the
-   [adapter source](https://github.com/strling-lang/strling/tree/2354ac924851920632d99c99f64c39ed402d158c/bindings/typescript)
-   and [target reference fixture](https://github.com/strling-lang/strling/blob/2354ac924851920632d99c99f64c39ed402d158c/spec/contracts/1.0/examples/compile-request/equivalence-explanation.json).
+   [adapter source](https://github.com/strling-lang/strling/tree/d01ac3785736ad552c90f00b4ca13c0e2e5c9c62/bindings/typescript)
+   and [target reference fixture](https://github.com/strling-lang/strling/blob/d01ac3785736ad552c90f00b4ca13c0e2e5c9c62/spec/contracts/1.0/examples/compile-request/equivalence-explanation.json).
 3. The helper constructs `new RegExp` from `compile_result.artifact.pattern.text`
    and `pattern.flags.join('')` on the same emitted object. Node owns the
    `regex.exec(line)` call and its named capture results. The example prints

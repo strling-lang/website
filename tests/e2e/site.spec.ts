@@ -16,6 +16,29 @@ const regexFeatureRoutes = regexProjection.features.map(
 );
 const sampleRegexCategory = '/regex/docs/character-classes/';
 const sampleRegexFeature = '/regex/docs/character-classes/word-class/';
+const fundamentals = [
+  '/learn/quickstart/',
+  '/learn/from-regex/',
+  '/learn/tour/',
+];
+const advancedLessons = [
+  {
+    route: '/learn/production-event-logs/',
+    title: 'Production event logs',
+    time: '30 minutes',
+  },
+  {
+    route: '/learn/versioned-api-routes/',
+    title: 'Versioned API routes',
+    time: '35 minutes',
+  },
+  {
+    route: '/learn/policy-driven-import-records/',
+    title: 'Policy-driven import records',
+    time: '40 minutes',
+  },
+];
+const advancedRoutes = advancedLessons.map(({ route }) => route);
 const knownMojibakeSequences = [
   '\u00e2\u2020\u2019',
   '\u00e2\u20ac\u201d',
@@ -47,9 +70,8 @@ const requiredRoutes = [
   '/regex/lab/',
   '/regex/compatibility/',
   '/learn/',
-  '/learn/quickstart/',
-  '/learn/from-regex/',
-  '/learn/tour/',
+  ...fundamentals,
+  ...advancedRoutes,
   '/project/',
 ];
 
@@ -283,12 +305,126 @@ test.describe('routes', () => {
   });
 });
 
+test.describe('advanced learning', () => {
+  test('groups all six lessons into ordered learning sections', async ({
+    page,
+  }) => {
+    await page.goto('/learn/');
+    const fundamentalSection = page.getByRole('region', {
+      name: 'Learn the fundamentals',
+    });
+    const advancedSection = page.getByRole('region', {
+      name: 'Compose patterns for real systems',
+    });
+    for (const [section, expected] of [
+      [fundamentalSection, fundamentals],
+      [advancedSection, advancedRoutes],
+    ] as const) {
+      const cards = section.locator('.package-card');
+      await expect(cards).toHaveCount(3);
+      expect(
+        await cards
+          .getByRole('link')
+          .evaluateAll((links) =>
+            links.map((link) => link.getAttribute('href')),
+          ),
+      ).toEqual(expected);
+    }
+    for (const [index, { title, time }] of advancedLessons.entries()) {
+      const card = advancedSection.locator('.package-card').nth(index);
+      await expect(card.locator('.feature-number')).toHaveText(`0${index + 4}`);
+      await expect(card.getByText(`${time} · Advanced`)).toBeVisible();
+      await expect(
+        card.getByRole('link', { name: `Begin ${title}` }),
+      ).toBeVisible();
+    }
+    await advancedSection
+      .getByRole('link', { name: 'Begin Production event logs' })
+      .click();
+    await expect(page).toHaveURL(/\/learn\/production-event-logs\/$/);
+  });
+
+  for (const { route, title } of advancedLessons) {
+    test(`${title} has exact metadata and usable learning links`, async ({
+      page,
+      request,
+    }) => {
+      await page.goto(route);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+        'href',
+        `https://strling-lang.netlify.app${route}`,
+      );
+      const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+      await expect(
+        breadcrumb.getByRole('link', { name: 'Learn' }),
+      ).toHaveAttribute('href', '/learn/');
+      await expect(breadcrumb.locator('[aria-current="page"]')).toHaveText(
+        title,
+      );
+
+      const related = page
+        .getByRole('navigation', { name: 'Related pages' })
+        .getByRole('link');
+      expect(await related.count()).toBeGreaterThanOrEqual(3);
+      for (const href of await related.evaluateAll((links) =>
+        links.map((link) => link.getAttribute('href') ?? ''),
+      )) {
+        expect((await request.get(href)).status(), href).toBe(200);
+      }
+
+      const toc = page.locator('.docs-toc');
+      const anchors = toc.locator('a');
+      expect(await anchors.count()).toBeGreaterThanOrEqual(6);
+      for (const id of await anchors.evaluateAll((links) =>
+        links.map((link) => link.getAttribute('href')?.slice(1)),
+      )) {
+        await expect(page.locator(`main [id="${id}"]`)).toHaveCount(1);
+      }
+      if (await toc.isVisible()) {
+        const link = anchors.first();
+        await link.focus();
+        await expect(link).toBeFocused();
+        expect(
+          await link.evaluate(
+            (element) => getComputedStyle(element).outlineStyle,
+          ),
+        ).toBe('solid');
+        await link.press('Enter');
+        expect(new URL(page.url()).hash).toBe(await link.getAttribute('href'));
+      }
+
+      const code = page.locator('.prose pre');
+      expect(await code.count()).toBeGreaterThanOrEqual(4);
+      const sourcePath = `/examples/pattern-engineering/${route.split('/')[2]}.ts`;
+      await expect(
+        page.locator(`a[download][href="${sourcePath}"]`).first(),
+      ).toBeVisible();
+      expect((await request.get(sourcePath)).status()).toBe(200);
+      expect(
+        await code.evaluateAll((blocks) =>
+          blocks.every((block) => {
+            const { left, right } = block.getBoundingClientRect();
+            return (
+              left >= 0 &&
+              right <= document.documentElement.clientWidth + 1 &&
+              getComputedStyle(block).overflowX === 'auto'
+            );
+          }),
+        ),
+      ).toBe(true);
+    });
+  }
+});
+
 test.describe('metadata and discoverability', () => {
   for (const route of [
     '/',
+    '/learn/',
     '/docs/composition/',
     sampleRegexFeature,
     '/packages/typescript/',
+    ...advancedRoutes,
   ]) {
     test(`${route} has complete metadata`, async ({ page }) => {
       await page.goto(route);
@@ -334,6 +470,13 @@ test.describe('metadata and discoverability', () => {
       'Fourth Edition: final version and date are not certified',
     );
     const sitemap = await (await request.get('/sitemap.xml')).text();
+    const llms = await (await request.get('/llms-full.txt')).text();
+    for (const route of advancedRoutes) {
+      expect(sitemap).toContain(
+        `<loc>https://strling-lang.netlify.app${route}</loc>`,
+      );
+      expect(llms).toContain(`https://strling-lang.netlify.app${route}`);
+    }
     expect(sitemap).toContain('/regex/');
     expect(sitemap).toContain(sampleRegexCategory);
     expect(sitemap).toContain(sampleRegexFeature);
@@ -638,6 +781,8 @@ test.describe('responsive interaction', () => {
     '/packages/',
     '/docs/composition/',
     '/learn/tour/',
+    '/learn/',
+    ...advancedRoutes,
     '/lab/',
     '/regex/',
     '/regex/docs/',
@@ -743,6 +888,8 @@ test.describe('accessibility', () => {
     '/packages/',
     '/docs/core-concepts/',
     '/learn/quickstart/',
+    '/learn/',
+    ...advancedRoutes,
     '/regex/',
     '/lab/',
     '/regex/docs/',

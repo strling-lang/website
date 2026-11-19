@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 import { bindings } from '@/data/bindings';
+import { learnLessonPath } from '@/data/navigation';
 import { fourthEdition } from '@/data/release';
 import { regexCategories, regexDocs, regexFeatures } from '@/data/regexDocs';
 import { site } from '@/data/site';
@@ -21,7 +22,7 @@ export const GET: APIRoute = async () => {
   const learnIndex = learn
     .map(
       (entry) =>
-        `- [${entry.data.title}](${site.origin}/learn/${entry.id.replace(/\.(md|mdx)$/i, '')}/): ${entry.data.summary}`,
+        `- [${entry.data.title}](${site.origin}${learnLessonPath(entry.id)}): ${entry.data.summary}`,
     )
     .join('\n');
   const packageIndex = bindings

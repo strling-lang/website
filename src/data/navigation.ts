@@ -33,8 +33,6 @@ export const docsNavigation = [
   { href: '/docs/compatibility/', label: 'Compatibility' },
 ] as const;
 
-export const learnNavigation = [
-  { href: '/learn/quickstart/', label: 'Quickstart' },
-  { href: '/learn/from-regex/', label: 'From RegEx' },
-  { href: '/learn/tour/', label: 'Guided tour' },
-] as const;
+export function learnLessonPath(id: string) {
+  return `/learn/${id.replace(/\.(md|mdx)$/i, '')}/`;
+}

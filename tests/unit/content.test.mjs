@@ -4,6 +4,14 @@ import test from 'node:test';
 
 const root = new URL('../../', import.meta.url);
 const fromRoot = (path) => new URL(path, root);
+const lessons = [
+  ['quickstart', 1, '10 minutes', 'fundamentals'],
+  ['from-regex', 2, '15 minutes', 'fundamentals'],
+  ['tour', 3, '25 minutes', 'fundamentals'],
+  ['production-event-logs', 4, '30 minutes', 'advanced'],
+  ['versioned-api-routes', 5, '35 minutes', 'advanced'],
+  ['policy-driven-import-records', 6, '40 minutes', 'advanced'],
+];
 
 test('required documentation and learning topics exist', async () => {
   const docs = (await readdir(fromRoot('src/content/docs/'))).filter((name) =>
@@ -25,7 +33,39 @@ test('required documentation and learning topics exist', async () => {
     'predefined-patterns.md',
     'quantifiers.md',
   ]);
-  assert.deepEqual(learn.sort(), ['from-regex.md', 'quickstart.md', 'tour.md']);
+  assert.deepEqual(learn.sort(), lessons.map(([slug]) => `${slug}.md`).sort());
+});
+
+test('Learn pages define six distinct ordered lessons and complete advanced metadata', async () => {
+  const orders = new Set();
+  for (const [slug, order, time, difficulty] of lessons) {
+    const source = await readFile(
+      fromRoot(`src/content/learn/${slug}.md`),
+      'utf8',
+    );
+    const frontmatter = source.split(/^---\s*$/m)[1];
+    assert.ok(frontmatter, slug);
+    const actualOrder = Number(frontmatter.match(/^order:\s+(\d+)$/m)?.[1]);
+    assert.equal(actualOrder, order, slug);
+    assert.ok(
+      !orders.has(actualOrder),
+      `${slug} repeats lesson order ${actualOrder}`,
+    );
+    orders.add(actualOrder);
+    assert.ok(frontmatter.includes(`time: '${time}'`), slug);
+    if (difficulty === 'advanced') {
+      assert.match(frontmatter, /^difficulty: advanced$/m);
+      for (const field of [
+        'title',
+        'description',
+        'summary',
+        'keywords',
+        'related',
+      ]) {
+        assert.match(frontmatter, new RegExp(`^${field}:\\s+\\S`, 'm'));
+      }
+    }
+  }
 });
 
 test('binding data represents exactly the 17 authoritative source directories', async () => {

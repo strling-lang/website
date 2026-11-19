@@ -86,7 +86,7 @@ When output is shown as exact, it must come from authoritative documentation or 
 
 ## Install commands
 
-Only two registry commands are currently displayed because they are explicitly documented in canonical source:
+The package directory uses registry commands documented in canonical source.
 
 ```text
 pip install strling
@@ -94,6 +94,16 @@ npm install @strling-lang/strling
 ```
 
 Other package pages link to source or a verified registry without inventing a command.
+
+The TypeScript Learn examples pin published package versions to keep the two
+API generations reproducible. The quickstart and tour use `3.0.0`. The
+advanced lessons use the `4.0.1` Preview adapter on Node 22 with its bundled
+canonical WebAssembly compiler. The examples use the
+[ECMAScript 2024 profile](https://github.com/strling-lang/strling/blob/2354ac924851920632d99c99f64c39ed402d158c/spec/targets/profiles/ecmascript-2024.json)
+and [profile reference](https://github.com/strling-lang/strling/blob/2354ac924851920632d99c99f64c39ed402d158c/spec/contracts/1.0/examples/compile-request/equivalence-explanation.json)
+from the same canonical revision. `tests/unit/pattern-engineering.test.mjs`
+runs the lesson fixtures against the compiler's emitted artifact. The results
+cover that exact target and runtime.
 
 ## Fourth Edition
 

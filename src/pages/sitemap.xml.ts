@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 import { bindings } from '@/data/bindings';
+import { learnLessonPath } from '@/data/navigation';
 import { regexCategories, regexFeatures } from '@/data/regexDocs';
 import { canonicalUrl } from '@/data/site';
 import { regexSurfaces, strlingSurfaces } from '@/data/surfaces';
@@ -28,7 +29,7 @@ export const GET: APIRoute = async () => {
     ...regexCategories.map((category) => category.route),
     ...regexFeatures.map((feature) => feature.route),
     ...docs.map((entry) => `/docs/${entry.id.replace(/\.(md|mdx)$/i, '')}/`),
-    ...learn.map((entry) => `/learn/${entry.id.replace(/\.(md|mdx)$/i, '')}/`),
+    ...learn.map(({ id }) => learnLessonPath(id)),
   ];
   const body = paths
     .map((path) => `<url><loc>${canonicalUrl(path)}</loc></url>`)

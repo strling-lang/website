@@ -2,13 +2,28 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import { learnLessonPath } from '@/data/navigation';
 
 const lessons = (await getCollection('learn')).sort(
   (a, b) => a.data.order - b.data.order,
 );
 const title = 'Learn STRling';
 const description =
-  'Learn readable regex with STRling through a source-confirmed quickstart, a RegEx translation guide, and a progressive tour.';
+  'Learn readable RegEx with STRling, from a quickstart and guided tour to advanced tutorials on production logs, versioned APIs, and configurable imports.';
+const sections = [
+  {
+    difficulty: 'fundamentals',
+    title: 'Learn the fundamentals',
+    intro:
+      'Start with core concepts, translate familiar RegEx expressions, and build your first reusable patterns.',
+  },
+  {
+    difficulty: 'advanced',
+    title: 'Compose patterns for real systems',
+    intro:
+      'Build maintainable pattern systems for production logs, versioned APIs, and configurable data formats.',
+  },
+] as const;
 const crumbs = [
   { label: 'Home', href: '/' },
   { label: 'Learn', href: '/learn/' },
@@ -33,30 +48,44 @@ const crumbs = [
       </p>
     </div>
   </header>
-  <section class="section">
-    <div class="container grid-3">
-      {
-        lessons.map((entry, index) => (
-          <article class="package-card">
-            <div class="cluster">
-              <>
-                <span class="feature-number">
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <span class="mono muted">{entry.data.time}</span>
-              </>
-            </div>
-            <h2 style="font-size:1.55rem">{entry.data.title}</h2>
-            <p>{entry.data.summary}</p>
-            <a
-              class="text-link card-link"
-              href={`/learn/${entry.id.replace(/\.(md|mdx)$/i, '')}/`}
-            >
-              Begin {entry.data.title}
-            </a>
-          </article>
-        ))
-      }
-    </div>
-  </section>
+  {
+    sections.map(({ difficulty, title: heading, intro }) => (
+      <section
+        class:list={[
+          'section',
+          { 'section--bordered': difficulty === 'advanced' },
+        ]}
+        aria-labelledby={`${difficulty}-lessons`}
+      >
+        <div class="container">
+          <div class="section-heading">
+            <h2 id={`${difficulty}-lessons`}>{heading}</h2>
+            <p>{intro}</p>
+          </div>
+          <div class="grid-3">
+            {lessons
+              .filter(({ data }) => data.difficulty === difficulty)
+              .map(({ id, data }) => (
+                <article class="package-card">
+                  <div class="cluster">
+                    <span class="feature-number">
+                      {String(data.order).padStart(2, '0')}
+                    </span>
+                    <span class="mono muted">
+                      {data.time}
+                      {difficulty === 'advanced' && ' · Advanced'}
+                    </span>
+                  </div>
+                  <h3 style="font-size:1.55rem">{data.title}</h3>
+                  <p>{data.summary}</p>
+                  <a class="text-link card-link" href={learnLessonPath(id)}>
+                    Begin {data.title}
+                  </a>
+                </article>
+              ))}
+          </div>
+        </div>
+      </section>
+    ))
+  }
 </BaseLayout>

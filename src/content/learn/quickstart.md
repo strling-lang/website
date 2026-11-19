@@ -16,10 +16,11 @@ related: ['/docs/core-concepts/', '/learn/tour/', '/packages/']
 
 ## Choose a verified package
 
-The TypeScript package is published under the STRling organization scope:
+The TypeScript examples in this lesson use the published 3.0.0 API. Install the
+matching version to follow the examples.
 
 ```bash
-npm install @strling-lang/strling
+npm install @strling-lang/strling@3.0.0
 ```
 
 The established Python package is published on PyPI:
@@ -70,10 +71,10 @@ console.assert(regex.test('555 123 4567'));
 console.assert(!regex.test('call 555-123-4567 now'));
 ```
 
-The documented generated RegEx is:
+The published 3.0.0 adapter emits this RegEx.
 
 ```regex
-^(\d{3})[-. ]?(\d{3})[-. ]?(\d{4})$
+^(\d{3})(?:(?:-|\.|\ ))?(\d{3})(?:(?:-|\.|\ ))?(\d{4})$
 ```
 
 The anchors explain the third assertion: this Pattern validates the entire string rather than searching inside it.

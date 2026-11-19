@@ -1,12 +1,17 @@
 ---
-import { docsNavigation, learnNavigation } from '@/data/navigation';
+import { getCollection } from 'astro:content';
+import { docsNavigation, learnLessonPath } from '@/data/navigation';
 interface Props {
   links: string[];
 }
 const { links } = Astro.props;
+const lessons = await getCollection('learn');
 const all = [
   ...docsNavigation,
-  ...learnNavigation,
+  ...lessons.map(({ id, data }) => ({
+    href: learnLessonPath(id),
+    label: data.title,
+  })),
   { href: '/packages/', label: 'Packages' },
 ];
 const selected = links.map(

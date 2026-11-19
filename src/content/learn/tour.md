@@ -16,6 +16,9 @@ related: ['/docs/core-concepts/', '/docs/compatibility/', '/packages/']
 
 ## 1. Patterns are values
 
+Follow the [quickstart installation](/learn/quickstart/) for the TypeScript
+version used in this tour.
+
 Start with a small requirement: a three-letter product prefix.
 
 ```typescript
@@ -168,3 +171,4 @@ Before sharing a Pattern across targets:
 - Deepen your understanding of [Groups and captures](/docs/groups-and-captures/).
 - Review [Errors and diagnostics](/docs/errors-and-diagnostics/).
 - Choose a binding from [Packages](/packages/).
+- Build and compile a larger pattern with the Fourth Edition TypeScript Preview adapter in [Production event logs](/learn/production-event-logs/).

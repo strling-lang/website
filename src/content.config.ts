@@ -18,7 +18,10 @@ const docs = defineCollection({
 
 const learn = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/learn' }),
-  schema: sharedSchema.extend({ time: z.string() }),
+  schema: sharedSchema.extend({
+    time: z.string(),
+    difficulty: z.enum(['fundamentals', 'advanced']).default('fundamentals'),
+  }),
 });
 
 export const collections = { docs, learn };

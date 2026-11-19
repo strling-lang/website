@@ -237,15 +237,14 @@ export const bindings: Binding[] = [
     registry: {
       name: 'npm · @strling-lang/strling',
       url: 'https://www.npmjs.com/package/@strling-lang/strling',
-      version: '3.0.0',
+      version: '4.0.1',
     },
     install: 'npm install @strling-lang/strling',
     sourcePath: `${repo}/typescript`,
     summary:
-      'The TypeScript binding is published on npm and provides the reference Simply API.',
-    requirements: 'Modern Node.js/TypeScript toolchain',
-    editionNote:
-      'Published package verified; Fourth Edition certification remains provisional.',
+      'The TypeScript Preview adapter records Simply operations and compiles them through the canonical STRling WebAssembly boundary.',
+    requirements: 'Node.js 22 (ES modules)',
+    editionNote: 'The published TypeScript adapter has Preview support.',
   },
 ];
 

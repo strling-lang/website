@@ -2,7 +2,7 @@
 
 ## `llms.txt` design
 
-`/llms.txt` is a concise, plain-text orientation file. It defines STRling, names the canonical website and GitHub sources, links Learn, Docs, Packages, Fourth Edition, Why STRling, and Project, and states the pre-release qualifier.
+`/llms.txt` is a concise, plain-text orientation file. It defines STRling, names the canonical website and GitHub sources, links Learn, Docs, Packages, Why STRling, and Project, and states the Fourth Edition pre-release qualifier.
 
 ## `llms-full.txt` generation
 

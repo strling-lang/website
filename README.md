@@ -1,6 +1,6 @@
 # STRling website
 
-The canonical public website, user documentation, learning hub, package directory, and pre-release center for [STRling](https://github.com/strling-lang)—The Universal Regular Expression Compiler.
+The canonical public website, user documentation, learning hub, and package directory for [STRling](https://github.com/strling-lang)—The Universal Regular Expression Compiler.
 
 This repository is the **user surface**. Website implementation, content,
 accessibility, SEO/discoverability, browser behavior, deployment, and

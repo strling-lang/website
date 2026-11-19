@@ -89,12 +89,7 @@ test('primary navigation contains only real routes', async () => {
     navigation.indexOf('docsNavigation'),
   );
   assert.equal(primaryBlock.includes("href: '#"), false);
-  for (const route of [
-    '/learn/',
-    '/packages/',
-    '/fourth-edition/',
-    '/why-strling/',
-  ])
+  for (const route of ['/learn/', '/packages/', '/why-strling/'])
     assert.ok(primaryBlock.includes(route));
   assert.ok(primaryBlock.includes('surfaces.strlingDocs'));
   assert.ok(primaryBlock.includes('surfaces.strlingLab'));

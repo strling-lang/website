@@ -11,7 +11,6 @@ export const primaryNavigation = [
     label: surfaces.strlingLab.navigationLabel,
   },
   { href: '/packages/', label: 'Packages' },
-  { href: '/fourth-edition/', label: 'Fourth Edition' },
   { href: '/why-strling/', label: 'Why STRling' },
 ] as const;
 

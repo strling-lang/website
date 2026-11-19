@@ -89,4 +89,4 @@ Multiline changes anchors; dot-all changes dot; Unicode modes change properties 
 
 ## Current limitations
 
-The Fourth Edition compatibility matrix is not yet certified. Binding source and some registry packages exist, but package publication does not by itself prove edition-wide parity. Consult [Packages](/packages/) for current distribution state and the [Fourth Edition center](/fourth-edition/) for provisional status.
+The Fourth Edition compatibility matrix is not yet certified. Binding source and some registry packages exist, but package publication does not by itself prove edition-wide parity. Consult [Packages](/packages/) for current distribution state.

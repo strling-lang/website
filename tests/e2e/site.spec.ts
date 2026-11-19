@@ -50,7 +50,6 @@ const requiredRoutes = [
   '/learn/quickstart/',
   '/learn/from-regex/',
   '/learn/tour/',
-  '/fourth-edition/',
   '/project/',
 ];
 
@@ -71,6 +70,11 @@ test.describe('routes', () => {
     await expect(page.getByRole('heading', { level: 1 })).toContainText(
       'pattern did not match',
     );
+  });
+
+  test('the Fourth Edition route returns 404', async ({ request }) => {
+    const response = await request.get('/fourth-edition/');
+    expect(response.status()).toBe(404);
   });
 
   test('STRling Docs remains available documentation', async ({ page }) => {
@@ -285,7 +289,6 @@ test.describe('metadata and discoverability', () => {
     '/docs/composition/',
     sampleRegexFeature,
     '/packages/typescript/',
-    '/fourth-edition/',
   ]) {
     test(`${route} has complete metadata`, async ({ page }) => {
       await page.goto(route);
@@ -369,7 +372,7 @@ test.describe('responsive interaction', () => {
     expect(hrefs).toContain('/docs/');
     expect(hrefs).toContain('/lab/');
     expect(hrefs).toContain('/packages/');
-    expect(hrefs).toContain('/fourth-edition/');
+    expect(hrefs).not.toContain('/fourth-edition/');
     expect(hrefs).toContain('/why-strling/');
     expect(hrefs.some((href) => href?.startsWith('#'))).toBe(false);
 
@@ -635,7 +638,6 @@ test.describe('responsive interaction', () => {
     '/packages/',
     '/docs/composition/',
     '/learn/tour/',
-    '/fourth-edition/',
     '/lab/',
     '/regex/',
     '/regex/docs/',
@@ -741,7 +743,6 @@ test.describe('accessibility', () => {
     '/packages/',
     '/docs/core-concepts/',
     '/learn/quickstart/',
-    '/fourth-edition/',
     '/regex/',
     '/lab/',
     '/regex/docs/',

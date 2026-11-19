@@ -14,7 +14,7 @@ export const GET: APIRoute = () =>
 - RegEx resources hub: ${site.origin}/regex/
 - Regex Feature Catalog: ${site.origin}/regex/docs/ — canonical generic regex semantics; compatibility evidence is separate
 - Packages and bindings: ${site.origin}/packages/
-- Fourth Edition: ${site.origin}/fourth-edition/ — ${fourthEdition.status}; final version and date are not certified
+- Fourth Edition: ${fourthEdition.status}; final version and date are not certified
 - Why STRling: ${site.origin}/why-strling/
 - Open-source project: ${site.origin}/project/
 - GitHub organization: ${site.organizationUrl}

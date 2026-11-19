@@ -168,4 +168,3 @@ Before sharing a Pattern across targets:
 - Deepen your understanding of [Groups and captures](/docs/groups-and-captures/).
 - Review [Errors and diagnostics](/docs/errors-and-diagnostics/).
 - Choose a binding from [Packages](/packages/).
-- Track certified release details in the [Fourth Edition center](/fourth-edition/).

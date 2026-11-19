@@ -11,7 +11,6 @@ const fixed = [
   '/packages/',
   '/learn/',
   '/regex/',
-  '/fourth-edition/',
   '/project/',
 ];
 

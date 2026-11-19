@@ -4,6 +4,7 @@ description: 'Install a verified STRling package, build a readable phone-number 
 summary: 'Go from package install to a working, anchored phone-number Pattern using public TypeScript and Python APIs.'
 order: 1
 time: '10 minutes'
+difficulty: beginner
 keywords:
   [
     'STRling quickstart',

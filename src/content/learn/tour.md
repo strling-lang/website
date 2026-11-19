@@ -4,6 +4,7 @@ description: 'Tour STRling Pattern values, building blocks, composition, choices
 summary: 'Build one pattern progressively and learn the mental model that transfers across STRling language bindings.'
 order: 3
 time: '25 minutes'
+difficulty: beginner
 keywords:
   [
     'STRling tutorial',

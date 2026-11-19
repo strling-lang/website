@@ -5,12 +5,13 @@ import test from 'node:test';
 const root = new URL('../../', import.meta.url);
 const fromRoot = (path) => new URL(path, root);
 const lessons = [
-  ['quickstart', 1, '10 minutes', 'fundamentals'],
-  ['from-regex', 2, '15 minutes', 'fundamentals'],
-  ['tour', 3, '25 minutes', 'fundamentals'],
+  ['quickstart', 1, '10 minutes', 'beginner'],
+  ['from-regex', 2, '15 minutes', 'beginner'],
+  ['tour', 3, '25 minutes', 'beginner'],
   ['production-event-logs', 4, '30 minutes', 'advanced'],
   ['versioned-api-routes', 5, '35 minutes', 'advanced'],
   ['policy-driven-import-records', 6, '40 minutes', 'advanced'],
+  ['nested-sequence-hypotheses', 7, '60 minutes', 'frontier'],
 ];
 
 test('required documentation and learning topics exist', async () => {
@@ -36,7 +37,7 @@ test('required documentation and learning topics exist', async () => {
   assert.deepEqual(learn.sort(), lessons.map(([slug]) => `${slug}.md`).sort());
 });
 
-test('Learn pages define six distinct ordered lessons and complete advanced metadata', async () => {
+test('Learn pages define seven explicitly classified lessons in order', async () => {
   const orders = new Set();
   for (const [slug, order, time, difficulty] of lessons) {
     const source = await readFile(
@@ -53,17 +54,15 @@ test('Learn pages define six distinct ordered lessons and complete advanced meta
     );
     orders.add(actualOrder);
     assert.ok(frontmatter.includes(`time: '${time}'`), slug);
-    if (difficulty === 'advanced') {
-      assert.match(frontmatter, /^difficulty: advanced$/m);
-      for (const field of [
-        'title',
-        'description',
-        'summary',
-        'keywords',
-        'related',
-      ]) {
-        assert.match(frontmatter, new RegExp(`^${field}:\\s+\\S`, 'm'));
-      }
+    assert.match(frontmatter, new RegExp(`^difficulty: ${difficulty}$`, 'm'));
+    for (const field of [
+      'title',
+      'description',
+      'summary',
+      'keywords',
+      'related',
+    ]) {
+      assert.match(frontmatter, new RegExp(`^${field}:\\s+\\S`, 'm'));
     }
   }
 });

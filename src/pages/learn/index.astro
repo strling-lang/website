@@ -1,5 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
+import { difficultyLabels } from '@/data/learn';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
 import { learnLessonPath } from '@/data/navigation';
@@ -9,19 +10,28 @@ const lessons = (await getCollection('learn')).sort(
 );
 const title = 'Learn STRling';
 const description =
-  'Learn readable RegEx with STRling, from a quickstart and guided tour to advanced tutorials on production logs, versioned APIs, and configurable imports.';
+  'Learn STRling fundamentals, build maintainable patterns for real systems, and communicate a nested sequence hypothesis with executable examples.';
 const sections = [
   {
-    difficulty: 'fundamentals',
+    difficulty: 'beginner',
+    anchor: 'fundamentals-lessons',
     title: 'Learn the fundamentals',
     intro:
       'Start with core concepts, translate familiar RegEx expressions, and build your first reusable patterns.',
   },
   {
     difficulty: 'advanced',
+    anchor: 'advanced-lessons',
     title: 'Compose patterns for real systems',
     intro:
       'Build maintainable pattern systems for production logs, versioned APIs, and configurable data formats.',
+  },
+  {
+    difficulty: 'frontier',
+    anchor: 'frontier-lessons',
+    title: 'Make complex patterns communicable',
+    intro:
+      'Express intricate pattern families as readable, executable hypotheses. Make their structure, contextual rules, and assumptions clear enough for someone else to inspect, test, and revise.',
   },
 ] as const;
 const crumbs = [
@@ -44,25 +54,26 @@ const crumbs = [
       <h1>Learn STRling by building patterns</h1>
       <p>
         Choose a short installation path, translate concepts you already know,
-        or take the complete guided tour.
+        build patterns for production systems, or model and explain a nested
+        sequence hypothesis.
       </p>
     </div>
   </header>
   {
-    sections.map(({ difficulty, title: heading, intro }) => (
+    sections.map(({ difficulty, anchor, title: heading, intro }) => (
       <section
         class:list={[
           'section',
-          { 'section--bordered': difficulty === 'advanced' },
+          { 'section--bordered': difficulty !== 'beginner' },
         ]}
-        aria-labelledby={`${difficulty}-lessons`}
+        aria-labelledby={anchor}
       >
         <div class="container">
           <div class="section-heading">
-            <h2 id={`${difficulty}-lessons`}>{heading}</h2>
+            <h2 id={anchor}>{heading}</h2>
             <p>{intro}</p>
           </div>
-          <div class="grid-3">
+          <div class:list={[difficulty === 'frontier' ? 'reading' : 'grid-3']}>
             {lessons
               .filter(({ data }) => data.difficulty === difficulty)
               .map(({ id, data }) => (
@@ -72,8 +83,7 @@ const crumbs = [
                       {String(data.order).padStart(2, '0')}
                     </span>
                     <span class="mono muted">
-                      {data.time}
-                      {difficulty === 'advanced' && ' · Advanced'}
+                      {data.time} · {difficultyLabels[difficulty]}
                     </span>
                   </div>
                   <h3 style="font-size:1.55rem">{data.title}</h3>

@@ -38,6 +38,7 @@ const advancedLessons = [
     time: '40 minutes',
   },
 ];
+const frontierRoute = '/learn/nested-sequence-hypotheses/';
 const advancedRoutes = advancedLessons.map(({ route }) => route);
 const knownMojibakeSequences = [
   '\u00e2\u2020\u2019',
@@ -72,6 +73,7 @@ const requiredRoutes = [
   '/learn/',
   ...fundamentals,
   ...advancedRoutes,
+  frontierRoute,
   '/project/',
 ];
 
@@ -306,7 +308,7 @@ test.describe('routes', () => {
 });
 
 test.describe('advanced learning', () => {
-  test('groups all six lessons into ordered learning sections', async ({
+  test('groups all seven lessons into ordered learning sections', async ({
     page,
   }) => {
     await page.goto('/learn/');
@@ -319,9 +321,15 @@ test.describe('advanced learning', () => {
     for (const [section, expected] of [
       [fundamentalSection, fundamentals],
       [advancedSection, advancedRoutes],
+      [
+        page.getByRole('region', {
+          name: 'Make complex patterns communicable',
+        }),
+        [frontierRoute],
+      ],
     ] as const) {
       const cards = section.locator('.package-card');
-      await expect(cards).toHaveCount(3);
+      await expect(cards).toHaveCount(expected.length);
       expect(
         await cards
           .getByRole('link')
@@ -342,6 +350,63 @@ test.describe('advanced learning', () => {
       .getByRole('link', { name: 'Begin Production event logs' })
       .click();
     await expect(page).toHaveURL(/\/learn\/production-event-logs\/$/);
+  });
+
+  test('cards and lesson headers share all seven classifications', async ({
+    page,
+    request,
+  }, testInfo) => {
+    for (const [route, time, label] of [
+      ...fundamentals.map((route, i) => [
+        route,
+        [10, 15, 25][i] + ' minutes',
+        'Beginner',
+      ]),
+      ...advancedLessons.map(({ route, time }) => [route, time, 'Advanced']),
+      [frontierRoute, '60 minutes', 'Frontier'],
+    ] as const) {
+      await page.goto('/learn/');
+      const card = page
+        .locator('article')
+        .filter({ has: page.locator(`a[href="${route}"]`) });
+      await expect(card.getByText(`${time} · ${label}`)).toBeVisible();
+      await card.getByRole('link').click();
+      await expect(page.locator('.doc-header')).toContainText(
+        `${time} · ${label}`,
+      );
+    }
+    await expect(page.locator('h1')).toHaveText(
+      'Communicating a nested sequence hypothesis',
+    );
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      'https://strling-lang.netlify.app' + frontierRoute,
+    );
+    const downloads = page.locator('main a[download]');
+    await expect(downloads).toHaveCount(8);
+    const links = page.locator(
+      'main a[download], main nav[aria-label="Related pages"] a',
+    );
+    for (const href of await links.evaluateAll((items) =>
+      items.map((item) => item.getAttribute('href')!),
+    )) {
+      expect((await request.get(href)).status(), href).toBe(200);
+    }
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+    await page.locator('h1').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath('frontier-lesson.png') });
+    const source = page.getByRole('link', {
+      name: 'Witness evaluator',
+      exact: true,
+    });
+    await source.focus();
+    await expect(source).toBeFocused();
   });
 
   for (const { route, title } of advancedLessons) {
@@ -425,6 +490,7 @@ test.describe('metadata and discoverability', () => {
     sampleRegexFeature,
     '/packages/typescript/',
     ...advancedRoutes,
+    frontierRoute,
   ]) {
     test(`${route} has complete metadata`, async ({ page }) => {
       await page.goto(route);
@@ -471,7 +537,7 @@ test.describe('metadata and discoverability', () => {
     );
     const sitemap = await (await request.get('/sitemap.xml')).text();
     const llms = await (await request.get('/llms-full.txt')).text();
-    for (const route of advancedRoutes) {
+    for (const route of [...advancedRoutes, frontierRoute]) {
       expect(sitemap).toContain(
         `<loc>https://strling-lang.netlify.app${route}</loc>`,
       );
@@ -783,6 +849,7 @@ test.describe('responsive interaction', () => {
     '/learn/tour/',
     '/learn/',
     ...advancedRoutes,
+    frontierRoute,
     '/lab/',
     '/regex/',
     '/regex/docs/',
@@ -890,6 +957,7 @@ test.describe('accessibility', () => {
     '/learn/quickstart/',
     '/learn/',
     ...advancedRoutes,
+    frontierRoute,
     '/regex/',
     '/lab/',
     '/regex/docs/',

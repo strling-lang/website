@@ -1,4 +1,5 @@
 ---
+import { difficultyLabels } from '@/data/learn';
 import BaseLayout from './BaseLayout.astro';
 import Breadcrumbs, { type Crumb } from '@/components/Breadcrumbs.astro';
 import DocsTOC from '@/components/DocsTOC.astro';
@@ -14,6 +15,7 @@ interface Props {
   description: string;
   summary: string;
   time: string;
+  difficulty: keyof typeof difficultyLabels;
   pathname: string;
   crumbs: Crumb[];
   headings: Heading[];
@@ -25,6 +27,7 @@ const {
   description,
   summary,
   time,
+  difficulty,
   pathname,
   crumbs,
   headings,
@@ -44,7 +47,7 @@ const {
         <Breadcrumbs items={crumbs} />
         <div class="cluster">
           <span class="eyebrow">Guided learning</span><span class="mono muted"
-            >{time}</span
+            >{time} · {difficultyLabels[difficulty]}</span
           >
         </div>
         <h1>{title}</h1>

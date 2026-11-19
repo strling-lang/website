@@ -4,6 +4,7 @@ description: 'Translate literals, character classes, sequencing, alternatives, o
 summary: 'Keep the RegEx concepts you already know and express them through readable Pattern constructors instead of dense punctuation.'
 order: 2
 time: '15 minutes'
+difficulty: beginner
 keywords:
   [
     'RegEx vs STRling',

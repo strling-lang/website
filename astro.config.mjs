@@ -73,11 +73,21 @@ export default defineConfig({
       },
     },
     resolve: {
-      alias: {
-        picomatch: fileURLToPath(
-          new URL('./scripts/picomatch-esm-bridge.mjs', import.meta.url),
-        ),
-      },
+      alias: [
+        {
+          find: 'picomatch',
+          replacement: fileURLToPath(
+            new URL('./scripts/picomatch-esm-bridge.mjs', import.meta.url),
+          ),
+        },
+        {
+          // Astro content sync evaluates this dependency as an ES module.
+          find: /^yaml$/,
+          replacement: fileURLToPath(
+            new URL('../browser/index.js', import.meta.resolve('yaml')),
+          ),
+        },
+      ],
     },
   },
 });

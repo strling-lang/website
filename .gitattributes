@@ -2,3 +2,4 @@ src/lib/regex-lab/wasm/PCRE2-*-LICENCE.txt text eol=lf
 src/lib/regex-lab/python-engine.py text eol=lf
 public/examples/**/*.ts text eol=lf
 public/examples/**/*.json text eol=lf
+src/content/learn/*.md text eol=lf

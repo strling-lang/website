@@ -61,7 +61,9 @@ if (cert && key) {
             ...headers,
             'Content-Type': types[extname(file)] ?? 'application/octet-stream',
             'Content-Length': body.length,
-            ...(path.startsWith('/_astro/') ? { 'Cache-Control': cache } : {}),
+            ...(path.startsWith('/_astro/') || path.startsWith('/_strling-lab/')
+              ? { 'Cache-Control': cache }
+              : {}),
           })
           .end(request.method === 'HEAD' ? undefined : body);
       } catch {

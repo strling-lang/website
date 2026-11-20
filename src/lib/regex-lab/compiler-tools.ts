@@ -1,13 +1,15 @@
 import type { JsonObject, JsonValue } from '@strling-lang/strling';
 import { jsonObject } from './compiler.ts';
 
-export const toolsIdentity = {
-  protocol: 'strling.lab-compiler-tools@1.0.0-rc.1',
-  version: '0.1.0-rc.3',
-  baseRevision: '4e58730bbf67eaff683268e285e7084ccda5fadd',
-  candidateSha256: import.meta.env.PUBLIC_LAB_TOOLS_CANDIDATE_SHA256 || '',
+export const toolsIdentity = import.meta.env.PUBLIC_LAB_TOOLS_IDENTITY as {
+  protocol: string;
+  version: string;
+  baseRevision: string;
+  sourceRevision: string;
+  sha256: string;
+  size: number;
 };
-export const toolsPath = '/_strling-lab/compiler-tools-0.1.0-rc.3.wasm';
+export const toolsPath: string = import.meta.env.PUBLIC_LAB_TOOLS_PATH;
 
 export type Destination = 'semantic_strling' | 'simply_builder';
 export type ToolRequest =

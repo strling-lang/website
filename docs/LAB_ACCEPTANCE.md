@@ -529,6 +529,45 @@ lockfile audit returned zero findings. These results establish website
 source acceptance for the isolated and sealed configurations. A production
 build with an authorized distribution adapter requires its own acceptance.
 
+### Final packaging recheck
+
+The exact-source rebuild exposed different rendered bytes under Git's two
+checkout line-ending settings. The guide now emits stable same-origin
+PCRE2 license downloads. Checkout attributes stabilize the emitted example
+files, rendered learning Markdown, and Python source embedded in both worker
+variants. The real-browser guide test checks the three notice links and
+response bytes. [Vite static asset handling](https://vite.dev/guide/assets.html#explicit-inline-handling).
+
+An isolated mobile Chromium rerun also caught the sticky header intercepting
+the Stop button. The run controls now reserve header clearance when scrolled
+into view. The cancellation case checks the button's viewport position, clicks
+it, confirms that the worker terminates, and runs a fresh request.
+
+The runtime source evaluated for these changes is
+`ea7a235684f6e75585fd68aefb0a6ab1a4f0c4f3`. The sealed build reproduced all 434
+files byte for byte between the independent LF and CRLF-configured
+checkouts. Its SHA-256 inventory digest is
+`7452211ed80f71a73ca10793352d21ce62c731ea0a6629d4627b7d4c40ba589d`.
+The isolated build added the verified rc.3 adapter. Its 435-file inventory
+digest is `a41e414b3e9bf039da20072c410ad017c6d7d724a9be1e9b599b0035bf46dbfd`.
+Both builds contain 333 rendered pages. The unchanged Netlify `npm run build`
+script reproduced all 434 sealed files in a local Windows PowerShell harness.
+
+| Final scope                                                               | Passed | Failed | Skipped |
+| ------------------------------------------------------------------------- | -----: | -----: | ------: |
+| Unit suite                                                                |    105 |      0 |       0 |
+| Isolated Chromium, 119 desktop and 116 mobile                             |    235 |      0 |      11 |
+| Sealed Chromium, 117 desktop and 114 mobile, including all 16 smoke cases |    231 |      0 |      15 |
+| Isolated Firefox and WebKit, ten focused cases in each                    |     20 |      0 |       0 |
+| Sealed Firefox and WebKit, five focused cases in each                     |     10 |      0 |       0 |
+| Mobile Chromium cancellation and recovery, three additional contexts      |      3 |      0 |       0 |
+
+Under concurrent browser runs,
+the sealed desktop Chromium suite reported one compiler-start assertion
+timeout. Firefox reported one action timeout and two context teardown
+timeouts. Both scopes passed their sequential reruns with fresh HTTPS previews
+and separate browser batches. Reports and traces retain both attempts.
+
 ## Remaining release gate
 
 ### Distribution record for owner review
@@ -541,17 +580,21 @@ pipeline and signed 4.0.3 closure cover their registered artifacts. The
 adapter has no production distribution entry in that artifact set.
 
 The previously qualified bytes passed a fresh run of the compiler's
-artifact verifier against the locked 4.0.3 package. Two fresh Windows
+artifact verifier against the locked 4.0.3 package. Two fresh, locked
+Windows builds from the preserved checkouts of reviewed source
+`156a0b54186e1d457fd47696d9f088e2c8b23360` reproduced the qualified digest.
+Both freshly compiled modules passed the verifier. Two fresh Windows
 offline rebuilds from compiler `main` both produced SHA-256
 `6df19a4a0c402cc4b88b98abaf3fcca23940276064ec9a0fcb02b5e73a0ee715`,
 including a rebuild with the reviewed task-local Cargo cache. They had
 the same size as the recorded rc.3 artifact. The current pin rejected them.
-A fresh Windows checkout of the originally reviewed source
-`156a0b54186e1d457fd47696d9f088e2c8b23360` produced a third digest,
+A separate Windows checkout of the same reviewed commit produced
 `4acdb6413c9c494fdf7f5b4bc90bd5d79030bf414b0f14a08ec34d008b06445b`.
-The compiler release must reconcile reproducibility on its chosen exact
-distribution source and pin the independently reproduced output. The
-website retains the earlier qualified bytes for isolated testing.
+The mismatched modules omitted absolute Windows source paths, and the
+tracked adapter and kernel input bytes matched across the compared
+checkouts. The compiler release must reconcile reproducibility on its
+chosen exact distribution source and pin the independently reproduced
+output. The website retains the qualified digest for isolated testing.
 
 The proposed distribution is a separate versioned WASM release asset under
 the compiler repository. A new coordinate such as `strling-lab-wasm 0.1.0`
@@ -567,7 +610,7 @@ new record.
 The compiler owner must admit the independent artifact to the production
 evidence scope and authorize an exact source and version. A trusted
 certifier must sign the same-source Full and independent no-reuse Release
-evidence that includes those exact bytes. The protected publication
+evidence that includes those exact bytes. The protected P20-T05 publication
 authorization must name the certified source, artifact, destination and run.
 The website can then consume that immutable coordinate through a clean CI
 build. [Compiler release policy](https://github.com/strling-lang/strling/blob/1cf698751e04d5b2130b0c2500358499657709fc/docs/release-policy.md) ·
@@ -606,7 +649,17 @@ checks passed at that revision. The merged rc.3 supersedes that failing build fo
 
 The canonical Full profile and clean no-reuse Release aggregate were
 launched separately at compiler source `1cf698751e04d5b2130b0c2500358499657709fc`
-as unsigned diagnostics. That source still registers the Lab adapter for
+as unsigned diagnostics. The initial Full run failed at
+`generated_integrity@repository` because the isolated runner lacked the
+locked formatter. The retry installed the compiler lockfile's Prettier
+3.3.3, passed the formatter check, and stopped at the missing generated Lua
+rockspec. The retry's retained stage output has SHA-256
+`5c2141abb3f5e47f4aff522566721eaf9dc4b78d13ef222a190127e690ad6c4c`.
+A further diagnostic uses the registered Lua materialization command.
+The independent Release
+attempt uses run ID `1cf698751e04-20261120T212212Z` and reached generated
+artifact preparation after locked setup and the interop build. The runs
+produced no signed evidence for these Labs. The source registers the adapter for
 isolated qualification only. A profile result from this source cannot
 certify an adapter distribution. There is no signed Full or Release
 evidence covering a production Lab adapter, and no shipping adapter
@@ -615,9 +668,15 @@ coordinate for website CI to consume.
 ## Source integration without deployment
 
 Review commits and the PR title carry `[skip netlify]`. A source-only merge
-must put `[skip netlify]` in the actual merge commit message as well. Confirm
-the current production deployment's commit after merging. The next unmarked
-push can include all skipped changes and requires separate release approval.
+must put `[skip netlify]` in the actual merge commit message as well.
+[Website PR #2](https://github.com/strling-lang/website/pull/2) merged the
+candidate into `main` at `9d720d09cfbc5b5e1747c2fedeee3ae4b94a4900`. The
+remote tree matched reviewed source, strict Git integrity passed, and
+Netlify still reported the preceding published deployment after the merge.
+The final packaging and cancellation fixes and their acceptance evidence
+follow through the same source-only workflow. [Website PR #3](https://github.com/strling-lang/website/pull/3).
+The next unmarked push can include all skipped changes and requires
+separate release approval.
 The build refuses the private adapter on Netlify. Ordinary builds remain
 available with the sealed compiler and report canonical tools unavailable.
 [Netlify deploy controls](https://docs.netlify.com/deploy/manage-deploys/manage-deploys-overview/#skip-a-deploy) ·

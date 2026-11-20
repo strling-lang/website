@@ -65,6 +65,12 @@ Keep the currently deployed compiler's sealed 4.0.3 compatibility path.
 The [release and rollback checklist](LAB_ACCEPTANCE.md#production-preparation-and-rollback)
 records the deployment boundary and required public verification.
 
+The Lab guide serves the PCRE2 license texts as same-origin static
+downloads. Git pins these files to LF and each import disables inlining,
+so the downloads and guide HTML are reproducible across checkout settings.
+The embedded Python engine source and downloadable example sources also use
+LF so their bytes and the generated worker and page identities stay stable.
+
 Formatting uses a canonical source document and byte-position diagnostics.
 Conversion reads accepted Semantic IR and can apply only exact output with
 matching reconstruction fingerprints. Partial output can be inspected and

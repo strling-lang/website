@@ -232,6 +232,26 @@ const tabs = [
         </div>
         <p class="workbench-note" data-output="provenance" hidden></p>
         <div data-output="matches"><p>Run a pattern to see the result.</p></div>
+        <details data-output="continuation-tools" hidden>
+          <summary>Scan continuation</summary>
+          <div
+            class="workbench-inline"
+            data-output="checkpoint-controls"
+            hidden
+          >
+            <label
+              >Continue after match <select data-field="checkpoint-match"
+              ></select></label
+            >
+            <button type="button" data-action="record-cursor"
+              >Keep this boundary</button
+            >
+          </div>
+          <p class="workbench-note" data-output="continuation-status"></p>
+          <button type="button" data-action="resume-scan" hidden
+            >Resume saved scan</button
+          >
+        </details>
         <details data-output="extraction" hidden>
           <summary>Extract matches or captures</summary>
           <div class="workbench-inline">
@@ -296,6 +316,9 @@ const tabs = [
               </button>
               <button data-action="open-artifact" type="button" disabled>
                 Open in RegEx Lab
+              </button>
+              <button data-action="open-with-cursor" type="button" hidden>
+                Open with sample and cursor in RegEx Lab
               </button>
             </div>
             <div data-output="artifact" />
@@ -531,6 +554,9 @@ const tabs = [
           <legend>Include in downloaded session</legend>
           <div class="workbench-inline">
             <label class="workbench-check"
+              ><input type="checkbox" data-field="share-active-source" /> Active source</label
+            >
+            <label class="workbench-check"
               ><input type="checkbox" data-field="share-samples" /> Sample data</label
             >
             <label class="workbench-check"
@@ -544,11 +570,16 @@ const tabs = [
               ><input type="checkbox" data-field="share-source" /> Original STRling
               source of generated patterns</label
             >
+            <label class="workbench-check"
+              ><input type="checkbox" data-field="share-continuation" /> Saved scan
+              cursor</label
+            >
           </div>
           <p class="workbench-note">
-            The download always contains the active source and configuration.
-            Tests and recorded outputs may also contain subject text. Links
-            carry only settings and open with blank source and subject.
+            A cursor needs active source, sample data, and original source for a
+            transferred artifact. Tests and recorded outputs may also contain
+            subject or source text. Links carry only settings and open with
+            blank source and subject.
           </p>
           <div class="workbench-inline">
             <button data-action="share" type="button">Copy settings link</button

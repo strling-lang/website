@@ -121,10 +121,18 @@ const expectations = [
     <h2>Inspect structure and step through execution</h2>
     <p>
       Structure parses ECMAScript syntax and links constructs to pattern ranges.
+      For PCRE2, Inspect native structure lists capture definitions and the
+      compiled items PCRE2 exposes, with links to their pattern ranges.
+      Inspection is partial because the engine exposes selected ranges and
+      capture metadata. For Python, the same control shows CPython's optimized
+      parser instructions and links compile diagnostics to the source where the
+      native position has a valid editor location.
+    </p>
+    <p>
       Debugger records PCRE2 interpreter callouts for a search. The instrumented
       run disables start optimizations and automatic possessification. It
-      displays positions and capture state exposed by PCRE2. JavaScript and
-      Python steps are unavailable.
+      displays positions and capture state exposed by PCRE2. Interpreter
+      stepping is available for PCRE2.
     </p>
 
     <h2 id="test-expectations">Test expectations</h2>
@@ -159,17 +167,23 @@ const expectations = [
       Save revision stores a snapshot in this browser. Use Sessions to restore,
       duplicate, or delete saved work. Settings links carry selections such as
       runtime, target, and operation. The source and subject are blank when the
-      recipient opens one. To share your source, download a session file. Sample
-      data, tests, recorded outputs, and original STRling source for a
-      transferred artifact each require opt-in. Tests and recorded outputs may
-      contain subject text even if the sample data box is cleared. Imported or
-      shared material waits for an explicit action before executing.
+      recipient opens one. In a session download, select which data to include.
+      The active source, sample data, tests, recorded outputs, original STRling
+      source, and saved scan cursor each have a separate control. Tests and
+      recorded outputs may include sample text. Imported or shared material
+      waits for an explicit action before executing.
     </p>
     <p>
-      Restoring a revision lets you inspect its recorded outputs. Run creates a
-      separate observation using the current runtime and inputs. Operations
-      start from fresh runtime state. Saved revisions do not resume a matching
-      cursor or an in-progress scan.
+      Restoring a revision lets you inspect its recorded outputs. Run starts a
+      fresh observation using the current runtime and inputs. In a completed
+      PCRE2 global scan, open Scan continuation and choose a consuming match
+      with another match following it. Keep this boundary, then save the
+      revision or export it with the source, sample and cursor. With a generated
+      PCRE2 pattern, Open with sample and cursor in RegEx Lab carries the bound
+      data through the current browser tab. Resume saved scan verifies the
+      original source, engine build, options and subject, then returns the
+      matches that follow the saved boundary. A changed input or runtime
+      requires a fresh run.
     </p>
     <p>
       The Labs use local workers and load engine assets from this site. Python

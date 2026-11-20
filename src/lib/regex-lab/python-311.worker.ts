@@ -4,6 +4,7 @@ import binaryUrl from 'pyodide311/pyodide.asm.wasm?url';
 import libraryUrl from 'pyodide311/python_stdlib.zip?url';
 import lockUrl from 'pyodide311/pyodide-lock.json?url';
 import type { LabExecutionResult } from './contracts.ts';
+import { inspection, type PatternInspection } from './inspection.ts';
 import type { WorkerInput } from './execution.worker';
 import {
   executionResult,
@@ -16,7 +17,7 @@ import { serveWorker } from './worker-client';
 
 let python: ReturnType<typeof bindPython>;
 
-serveWorker<WorkerInput, LabExecutionResult>(
+serveWorker<WorkerInput, LabExecutionResult | PatternInspection>(
   async () => {
     if (python) return;
     // This pinned distribution ships a classic Emscripten worker bridge.
@@ -43,7 +44,7 @@ serveWorker<WorkerInput, LabExecutionResult>(
     });
     python = bindPython(api, '3.11');
   },
-  ({ request }) => {
+  ({ request, inspect }) => {
     const runtime = runtimeFor(request);
     if (runtime !== 'python311' && runtime !== 'python311bytes') {
       return executionResult(request, {
@@ -52,6 +53,25 @@ serveWorker<WorkerInput, LabExecutionResult>(
       });
     }
     const options = validateExecution(request, runtime);
+    if (inspect) {
+      const body =
+        'status' in options
+          ? options
+          : python.inspect(
+              request.pattern,
+              options.flags,
+              runtime === 'python311bytes',
+            );
+      return 'status' in body
+        ? inspection(
+            request,
+            runtime,
+            python.version,
+            { disposition: 'rejected' },
+            executionResult(request, body),
+          )
+        : inspection(request, runtime, python.version, body);
+    }
     const result =
       'status' in options
         ? options

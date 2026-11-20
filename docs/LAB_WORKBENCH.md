@@ -97,13 +97,31 @@ instrumented first search with auto-possessification and start optimizations
 disabled. These changes can make the trace differ from an ordinary optimized
 search. [PCRE2 callouts](https://www.pcre.org/current/doc/html/pcre2callout.html).
 
+Native structure inspection is a separate worker operation. It accepts a
+pattern and its runtime options and compiles without a sample. PCRE2 checks
+normal syntax first, reads the compiled name table, and enumerates native
+automatic and explicit callouts in a separately instrumented compile. The
+structure is marked partial because these compiled items omit directives and
+some nesting and relationships. Python checks the pattern with the active
+CPython `re.compile`, then projects the bundled `re._parser` instructions.
+These are optimized parser instructions. Compile errors retain native
+coordinates and individual tree nodes have no claimed source range.
+Unrecognized instructions and truncation produce partial output. A missing
+parser produces an unavailable result. The workers cap PCRE2 at 512 items
+and Python at 510 projected instructions and 24 nesting levels. The host
+verifies shape, request, selected version, authority and coordinate ranges.
+[PCRE2 callouts](https://www.pcre.org/current/doc/html/pcre2callout.html) ·
+[CPython 3.11 parser](https://github.com/python/cpython/blob/3.11/Lib/re/_parser.py) ·
+[CPython 3.14 parser](https://github.com/python/cpython/blob/3.14/Lib/re/_parser.py).
+
 ## Isolation and limits
 
 The sealed compiler, compiler tools, and execution provider each have one worker
 lane. A newer task, an
 aborted task, a crash, or a timeout terminates the relevant worker before it
-can be reused. Initialization has a 15-second deadline. Compiler execution has
-a 3-second deadline and regex execution has a 1.5-second deadline. The
+can be reused. Initialization has a 15-second deadline, with up to 30 seconds
+for the larger pinned Python runtime assets. Compiler execution has a 3-second
+deadline and regex execution has a 1.5-second deadline. The
 workbench also caps a suite, comparison, or timing action at 30 seconds.
 Main-thread parsing of ECMAScript structure is capped at 8,192 editor units,
 2,048 rendered constructs, and 100 hierarchy levels.
@@ -143,9 +161,11 @@ trigger automatic execution. [Site security policy](../SECURITY.md).
 
 The archive caps total serialized content at 2,000,000 UTF-16 units, with up
 to 12 sessions and 12 revisions per session. Downloaded session files have the
-same text limit. Downloads contain the active source and configuration. The
-sample, test, recording and source-origin controls opt into additional data
-for that file only. A settings URL uses an allowlist of source format, runtime,
+same text limit. Active source, sample data, tests, recordings, original
+compiler source, and the saved cursor require explicit opt-in for each file.
+A bundle includes a saved cursor only with the active source, the sample and
+any original compiler source needed for verification. A settings URL uses an
+allowlist of source format, runtime,
 target, and operation selections. It excludes authored source, flags,
 replacement text, user-defined labels, subjects, tests, and recordings.
 Legacy fragments are size-limited and scrubbed from the address bar before
@@ -153,27 +173,49 @@ parsing. Imported files and links wait for explicit execution. Cross-Lab
 imports refuse the other Lab's source format. An explicit artifact transfer
 preserves the compiler origin in same-tab storage for a fresh RegEx run.
 
-Restore makes historical observations visible. Run uses the current provider
-and fresh operation state. The request and session contracts do not encode a
-resumable cursor, so exact cursor resumption and cross-provider replay are
-outside the verified scope. This includes the cursor-resumption variant of
-the Research Intelligence T8 task.
+Restore makes historical observations visible. Run starts a fresh operation.
+`strling-lab-continuation-v1` is an optional extension to session v2 for a
+completed PCRE2 scan. It records the exact profile, runtime and provider
+versions, Wasm digest, operation, match and output limits, native UTF-8
+consuming-match boundary, and progression policy. Source, emitted pattern,
+subject, effective options and compiler provenance are bound by SHA-256.
+The browser checks these claims and the worker reconstructs the bounded prefix
+using the same bridge as a fresh PCRE2 scan. Version 10.49 calls
+`pcre2_next_match`. For 10.42 and 10.43 the bridge uses the native match
+offsets and the engine's anchored, nonempty retry for empty matches. It
+verifies that the saved match consumed input and that progression resumes
+at its end with ordinary next-match options. It returns the suffix with native positions in the
+original subject. The original request limits also apply to replay. The
+same-tab STRling-to-RegEx transfer can explicitly preserve a checked boundary.
+Changes to the subject bytes, selected provider or bound options cause a
+refusal. Empty, final, partial, timed-out and cancelled scans provide no
+eligible boundary at that point. JavaScript and Python offer fresh reruns
+and recorded observations. [PCRE2 global matching](https://www.pcre.org/current/doc/html/pcre2_next_match.html).
 
 ## Build, qualification, and troubleshooting
 
 1. Use the Node version in `.nvmrc` and install the locked dependencies with
-   npm. The lock needs Node 22.19 or later, and the released compiler package
+   npm. The lock needs Node 22.23.4 or later, and the released compiler package
    declares Node 22.
 2. Run npm run check, npm run lint, npm run format:check, npm test, and
    npm run test:e2e. The unit suite loads the published compiler and the real
    PCRE2 binaries. The Chromium suite checks both routes on desktop and mobile.
    Playwright owns its foreground preview lifecycle. Set
    `STRLING_WEBSITE_PREVIEW_PORT` to a free loopback port when another preview is
-   running. The suite refuses to reuse an already running server.
+   running. The suite refuses to reuse an already running server. Set
+   `STRLING_WEBSITE_EXTRA_BROWSERS=1` to add Firefox and WebKit. For
+   an HTTPS preview, set `STRLING_WEBSITE_PREVIEW_CERT` and
+   `STRLING_WEBSITE_PREVIEW_KEY` to a local loopback certificate and key.
+   The local TLS preview applies the checked-in hosting CSP and accepts
+   the test certificate in the local Playwright context. It serves the
+   versioned assets with the configured immutable cache policy.
+   `STRLING_WEBSITE_PREVIEW_OUT_DIR` selects a separately built static
+   directory. Use it to keep sealed and qualification outputs separate.
 3. If changing PCRE2, download the selected GitHub release-tag source archive.
    Invoke the following with Python 3.12 or later and Zig 0.14.0-dev.2456.
    The script validates the source SHA-256, rebuilds the interpreter and
-   copies its upstream notice.
+   copies its upstream notice. Pin the resulting WASM SHA-256 in
+   `execution.worker.ts`.
 
        python scripts/build-lab-pcre2.py pcre2-10.42.tar.gz --version 10.42
        python scripts/build-lab-pcre2.py pcre2-10.43.tar.gz --version 10.43

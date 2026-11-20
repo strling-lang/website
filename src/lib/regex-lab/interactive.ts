@@ -16,6 +16,7 @@ export const limits = {
   executeMs: 1_500,
   compilerMs: 3_000,
   initializationMs: 15_000,
+  pythonInitializationMs: 30_000,
 } as const;
 
 export const operations = {

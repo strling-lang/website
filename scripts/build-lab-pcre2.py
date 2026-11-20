@@ -30,6 +30,15 @@ def main():
 
     with TemporaryDirectory(dir=args.work_dir) as directory:
         with tarfile.open(args.archive, "r:gz") as archive:
+            notice = next(
+                member for member in archive.getmembers()
+                if member.isfile()
+                and member.name in {
+                    f"pcre2-pcre2-{args.version}/LICENCE.md",
+                    f"pcre2-pcre2-{args.version}/LICENCE",
+                }
+            )
+            notice_bytes = archive.extractfile(notice).read()
             archive.extractall(directory, filter="data")
         source = Path(directory) / f"pcre2-pcre2-{args.version}"
         src = source / "src"
@@ -52,8 +61,7 @@ def main():
             *map(str, files), str(ROOT / "scripts/lab-pcre2.c"),
             "-o", str(DESTINATION / f"pcre2-{args.version}.wasm"),
         ], check=True)
-        notice = next(source / name for name in ("LICENCE.md", "LICENCE") if (source / name).is_file())
-        (DESTINATION / f"PCRE2-{args.version}-LICENCE.txt").write_bytes(notice.read_bytes())
+        (DESTINATION / f"PCRE2-{args.version}-LICENCE.txt").write_bytes(notice_bytes)
 
 
 if __name__ == "__main__":

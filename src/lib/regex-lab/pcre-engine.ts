@@ -8,6 +8,9 @@ import {
   type RunOptions,
 } from './interactive.ts';
 import type { TraceEvent, TraceObservation } from './trace.ts';
+import type { NativeStructure } from './inspection.ts';
+import type { StructureNode } from './structure.ts';
+import type { ScanAnchor } from './continuation.ts';
 
 interface Bridge {
   memory: WebAssembly.Memory;
@@ -38,6 +41,9 @@ interface Bridge {
   next_start(): number;
   next_options(): number;
   capture_count(): number;
+  inspect_items(): number;
+  item_buffer(): number;
+  item_count(): number;
 }
 
 const encoder = new TextEncoder();
@@ -64,7 +70,31 @@ const REPLACE_GLOBAL = 0x100;
 const REPLACE_LITERAL = 0x8000;
 const UNSET = 0xffffffff;
 
-export async function createPCRE2(source: ArrayBuffer) {
+function itemLabel(text: string) {
+  if (text === '|') return 'Alternative separator';
+  if (text === ')') return 'Group end';
+  if (text.startsWith('[')) return 'Character class item';
+  if (
+    text.startsWith('(?=') ||
+    text.startsWith('(?!') ||
+    text.startsWith('(?<=') ||
+    text.startsWith('(?<!')
+  )
+    return 'Lookaround start';
+  if (text.startsWith('(')) return 'Group or directive item';
+  if (text.startsWith('\\')) return 'Escape item';
+  if (text === '^' || text === '$') return 'Anchor';
+  return 'Native pattern item';
+}
+
+export async function createPCRE2(source: ArrayBuffer, expectedBuild?: string) {
+  const build = Array.from(
+    new Uint8Array(await crypto.subtle.digest('SHA-256', source)),
+    (value) => value.toString(16).padStart(2, '0'),
+  ).join('');
+  if (expectedBuild !== undefined && build !== expectedBuild) {
+    throw new Error('The loaded PCRE2 engine did not match the pinned digest.');
+  }
   let events: TraceEvent[] = [];
   const { instance } = await WebAssembly.instantiate(source, {
     lab: {
@@ -176,10 +206,95 @@ export async function createPCRE2(source: ArrayBuffer) {
     return names;
   }
 
+  function compile(source: Uint8Array, options: RunOptions, trace: boolean) {
+    write(bridge.pattern_buffer(), source);
+    return bridge.compile(
+      source.length,
+      [...options.flags].reduce((bits, flag) => bits | flags[flag]!, 0),
+      Number(trace),
+      Number(options.pcreNewline === 'any'),
+    );
+  }
+
+  function inspect(
+    pattern: string,
+    options: RunOptions,
+  ): NativeStructure | EngineResult {
+    const source = encoder.encode(pattern);
+    try {
+      const rejection = compile(source, options, false);
+      if (rejection) return failure(rejection, rejection > 0);
+      const names = groupNames();
+      const captureCount = bridge.capture_count();
+      const children: StructureNode[] = [
+        {
+          label: 'Capture definitions · ' + captureCount,
+          children: Array.from({ length: captureCount }, (_, index) => {
+            const name = names.get(index + 1);
+            return {
+              label: 'Group ' + (index + 1) + (name ? ' · ' + name : ''),
+              children: [],
+            };
+          }),
+        },
+      ];
+      const instrumented = compile(source, options, true);
+      if (!instrumented) {
+        const limited = bridge.inspect_items() !== 0;
+        const table = new Uint32Array(
+          bridge.memory.buffer,
+          bridge.item_buffer(),
+          bridge.item_count() * 4,
+        );
+        const seen = new Set<string>();
+        const items: StructureNode[] = [];
+        for (let row = 0; row < table.length; row += 4) {
+          const start = table[row]!;
+          const end = start + table[row + 1]!;
+          const callout = table[row + 2]!;
+          const isStringCallout = table[row + 3] !== 0;
+          const key = [start, end, callout, isStringCallout].join('/');
+          if (start > source.length || end > source.length || seen.has(key))
+            continue;
+          seen.add(key);
+          const text = decoder.decode(source.subarray(start, end));
+          items.push({
+            label:
+              isStringCallout || callout !== 255
+                ? 'Explicit callout · following position'
+                : text.length
+                  ? itemLabel(text) + ' · ' + JSON.stringify(text.slice(0, 88))
+                  : 'End of pattern',
+            range: span(start, end),
+            children: [],
+          });
+        }
+        children.push({
+          label: limited
+            ? 'Native item ranges · limit reached'
+            : 'Native item ranges',
+          children: items,
+        });
+      } else {
+        children.push({
+          label: 'Native item ranges unavailable for this compiled pattern',
+          children: [],
+        });
+      }
+      return {
+        disposition: 'partial',
+        tree: { label: 'PCRE2 compiled structure', children },
+      };
+    } finally {
+      bridge.reset();
+    }
+  }
+
   function execute(
     subject: Uint8Array,
     options: RunOptions,
     trace: boolean,
+    resume?: ScanAnchor,
   ): EngineResult {
     const { operation, replacementSyntax } = options;
     const length = subject.length;
@@ -215,6 +330,7 @@ export async function createPCRE2(source: ArrayBuffer) {
     let splitStart = 0;
     let count = 0;
     let size = 0;
+    let anchored = false;
     while (result > 0) {
       if (++count > limits.matches) throw new OutputLimitError();
       const offsets = new Uint32Array(
@@ -223,6 +339,27 @@ export async function createPCRE2(source: ArrayBuffer) {
         (bridge.capture_count() + 1) * 2,
       );
       const [start, end] = offsets as unknown as [number, number];
+      if (resume && count === resume.ordinal) {
+        const next = bridge.next();
+        if (
+          start !== resume.start ||
+          end !== resume.end ||
+          start >= end ||
+          !next ||
+          bridge.next_start() !== end ||
+          bridge.next_options() !== 0
+        ) {
+          return {
+            status: 'unsupported-operation',
+            error: {
+              message:
+                'The saved cursor does not match a consuming PCRE2 scan boundary.',
+            },
+          };
+        }
+        anchored = true;
+      }
+      const inPrefix = resume !== undefined && count <= resume.ordinal;
       const id = 'match-' + count;
       const value =
         start > end ? '' : decoder.decode(subject.subarray(start, end));
@@ -271,7 +408,16 @@ export async function createPCRE2(source: ArrayBuffer) {
           captures,
         };
         size += JSON.stringify(item).length;
-        matches.push(item);
+        if (!inPrefix) {
+          if (resume) {
+            item.ordinal = matches.length + 1;
+            item.matchId = 'match-' + item.ordinal;
+            for (const capture of captures) {
+              capture.captureId = item.matchId + '-' + capture.index;
+            }
+          }
+          matches.push(item);
+        }
       }
       if (size > limits.output) throw new OutputLimitError();
       if (operation === 'first' || operation === 'fullmatch' || !bridge.next())
@@ -279,6 +425,14 @@ export async function createPCRE2(source: ArrayBuffer) {
       result = bridge.match(length, bridge.next_start(), bridge.next_options());
     }
     if (result < -1) return failure(result, false);
+    if (resume && (!anchored || !matches.length))
+      return {
+        status: 'unsupported-operation',
+        error: {
+          message:
+            'The saved cursor must precede another match in a complete PCRE2 scan.',
+        },
+      };
     if (operation === 'split')
       return {
         status: 'completed',
@@ -291,18 +445,20 @@ export async function createPCRE2(source: ArrayBuffer) {
 
   return {
     version,
-    run(pattern: string, subject: string, options: RunOptions, trace = false) {
+    build,
+    inspect,
+    run(
+      pattern: string,
+      subject: string,
+      options: RunOptions,
+      trace = false,
+      resume?: ScanAnchor,
+    ) {
       const active = performance.now();
       events = [];
       const source = encoder.encode(pattern);
       try {
-        write(bridge.pattern_buffer(), source);
-        const code = bridge.compile(
-          source.length,
-          [...options.flags].reduce((bits, flag) => bits | flags[flag]!, 0),
-          Number(trace),
-          Number(options.pcreNewline === 'any'),
-        );
+        const code = compile(source, options, trace);
         const compileMs = performance.now() - active;
         if (code) {
           const result = failure(code, code > 0);
@@ -318,7 +474,7 @@ export async function createPCRE2(source: ArrayBuffer) {
         const started = performance.now();
         let result: EngineResult;
         try {
-          result = execute(encoder.encode(subject), options, trace);
+          result = execute(encoder.encode(subject), options, trace, resume);
           checkOutput(result);
         } catch (error) {
           result = runtimeFailure(error);
@@ -330,6 +486,14 @@ export async function createPCRE2(source: ArrayBuffer) {
         return {
           result: {
             ...result,
+            engineNativeMetadata: {
+              ...result.engineNativeMetadata,
+              providerBuild: build,
+              ...(resume &&
+              (result.status === 'matched' || result.status === 'no-match')
+                ? { resumedFrom: resume.end }
+                : {}),
+            },
             compileMs,
             executionMs: performance.now() - started,
           },

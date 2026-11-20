@@ -149,3 +149,107 @@ def _run(request):
 
 def run_lab(payload):
     return json.dumps(_run(json.loads(payload)), ensure_ascii=True)
+
+
+def _inspect(request):
+    source = request["pattern"]
+    byte_mode = request["bytes"]
+    if byte_mode:
+        source = source.encode("utf-8")
+    flags = sum((_FLAGS[flag] for flag in request["flags"]), re.NOFLAG)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            compiled = re.compile(source, flags)
+        except (re.error, OverflowError, RecursionError) as error:
+            return {"status": "compile-rejection", "error": {
+                "message": str(error),
+                **({"offset": error.pos, "offsetUnit": "utf8-bytes" if byte_mode else "unicode-code-points"}
+                   if isinstance(error, re.error) and error.pos is not None else {}),
+            }}
+        try:
+            parsed = re._parser.parse(source, flags)
+        except (AttributeError, TypeError, ValueError, OverflowError, RecursionError, re.error):
+            return {"disposition": "unavailable"}
+
+    names = {index: name for name, index in compiled.groupindex.items()}
+    remaining = 510
+    partial = False
+
+    def group_label(index):
+        nonlocal partial
+        name = names.get(index)
+        if name and len(name) > 192:
+            name = name[:192] + "…"
+            partial = True
+        return f"Group {index}" + (f" · {name}" if name else "")
+
+    def project(label, instructions, depth):
+        nonlocal partial
+        children = []
+        for opcode, value in instructions:
+            if remaining <= 0 or depth >= 24:
+                partial = True
+                break
+            children.append(item(str(opcode), value, depth + 1))
+        return {"label": label, "children": children}
+
+    def item(opcode, value, depth):
+        nonlocal remaining, partial
+        remaining -= 1
+        if opcode in ("LITERAL", "NOT_LITERAL"):
+            label = "Exclude" if opcode == "NOT_LITERAL" else "Literal"
+            return {"label": f"{label} · {ascii(chr(value))}", "children": []}
+        if opcode == "SUBPATTERN":
+            index, added, removed, body = value
+            label = group_label(index) if index else "Scoped group"
+            if added or removed:
+                label += f" · add {re.RegexFlag(added)} · remove {re.RegexFlag(removed)}"
+            return project(label, body, depth)
+        if opcode == "ATOMIC_GROUP":
+            return project("Atomic group", value, depth)
+        if opcode == "IN":
+            return project("Character set", value, depth)
+        if opcode == "BRANCH":
+            branches = []
+            for index, body in enumerate(value[1], 1):
+                if remaining <= 0 or depth >= 24:
+                    partial = True
+                    break
+                remaining -= 1
+                branches.append(project(f"Alternative {index}", body, depth + 1))
+            return {"label": "Choice", "children": branches}
+        repetitions = {"MAX_REPEAT": "Greedy", "MIN_REPEAT": "Lazy", "POSSESSIVE_REPEAT": "Possessive"}
+        if opcode in repetitions:
+            minimum, maximum, body = value
+            return project(f"{repetitions[opcode]} repetition · {minimum} to {maximum}", body, depth)
+        if opcode in ("ASSERT", "ASSERT_NOT"):
+            direction, body = value
+            return project(("Positive" if opcode == "ASSERT" else "Negative") +
+                           (" lookahead" if direction > 0 else " lookbehind"), body, depth)
+        if opcode == "GROUPREF_EXISTS":
+            index, yes, no = value
+            remaining -= 2
+            branches = [project("Participated", yes, depth + 1)]
+            if no is not None:
+                branches.append(project("Did not participate", no, depth + 1))
+            return {"label": "Conditional · " + group_label(index), "children": branches}
+        if opcode == "GROUPREF":
+            return {"label": "Backreference · " + group_label(value), "children": []}
+        if opcode == "RANGE":
+            return {"label": f"Range · {ascii(chr(value[0]))} to {ascii(chr(value[1]))}", "children": []}
+        if opcode in ("AT", "CATEGORY", "NEGATE", "ANY"):
+            labels = {"AT": f"Position · {value}", "CATEGORY": f"Category · {value}",
+                      "NEGATE": "Negated set", "ANY": "Any character"}
+            return {"label": labels[opcode], "children": []}
+        partial = True
+        return {"label": f"Uninterpreted CPython instruction · {opcode}", "children": []}
+
+    tree = project("CPython re parser structure", parsed, 0)
+    if partial:
+        tree["children"].append({"label": "Some parser details are unavailable or exceeded the inspection limit", "children": []})
+    return {"disposition": "partial" if partial else "parsed", "tree": tree}
+
+
+def inspect_lab(payload):
+    return json.dumps(_inspect(json.loads(payload)), ensure_ascii=True)

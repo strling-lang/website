@@ -4,7 +4,6 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { loadBundledWasm } from '@strling-lang/strling/node';
-
 import { labCompilerTools } from '../../scripts/lab-compiler-tools.mjs';
 import {
   compile,
@@ -15,6 +14,15 @@ import {
   targets,
 } from '../../src/lib/regex-lab/compiler.ts';
 import { runtimeExample } from '../../src/lib/regex-lab/codegen.ts';
+import {
+  createContinuation,
+  readContinuation,
+  verifyContinuation,
+} from '../../src/lib/regex-lab/continuation.ts';
+import {
+  inspection,
+  verifyInspection,
+} from '../../src/lib/regex-lab/inspection.ts';
 import {
   assess,
   compareObservations,
@@ -47,6 +55,7 @@ import {
 import { explainRegex } from '../../src/lib/regex-lab/structure.ts';
 
 const saveAll = {
+  source: true,
   samples: true,
   tests: true,
   observations: true,
@@ -91,6 +100,174 @@ const redact = {
   observations: false,
   sourceOrigin: false,
 };
+
+test('PCRE2 resumes a complete scan only after its exact consuming boundary', async () => {
+  const bytes = await readFile(
+    new URL('../../src/lib/regex-lab/wasm/pcre2-10.43.wasm', import.meta.url),
+  );
+  const pcre = await createPCRE2(Uint8Array.from(bytes).buffer);
+  await assert.rejects(
+    createPCRE2(Uint8Array.from(bytes).buffer, '0'.repeat(64)),
+    /pinned digest/,
+  );
+  const options = { ...defaultOptions, operation: 'scan' };
+  const pattern = '(?<word>é)|x';
+  const input = 'é😀xé';
+  const provenance = { format: 'regex', source: pattern };
+  const request = runRequest('pcre243', pattern, input, options);
+  const native = pcre.run(pattern, input, options).result;
+  const result = {
+    ...executionResult(request, native, observation('pcre243', pcre.version)),
+    engineNativeMetadata: { providerBuild: pcre.build },
+  };
+  const cursor = await createContinuation(request, result, provenance, 1);
+  assert.deepEqual(cursor.after, { ordinal: 1, start: 0, end: 2 });
+  await verifyContinuation(cursor, request, provenance);
+  assert.deepEqual(
+    pcre
+      .run(pattern, input, options, false, cursor.after)
+      .result.matches.map(({ span }) => [span.start, span.end]),
+    [
+      [6, 7],
+      [7, 9],
+    ],
+  );
+  for (const mismatch of [
+    runRequest('pcre243', pattern, 'é–xé', options),
+    runRequest('pcre243', pattern, input, { ...options, flags: 'i' }),
+    runRequest('pcre2', pattern, input, options),
+    runRequest('pcre243', pattern, input, { ...options, operation: 'first' }),
+  ]) {
+    await assert.rejects(
+      verifyContinuation(cursor, mismatch, provenance),
+      /differs/,
+    );
+  }
+  await assert.rejects(
+    verifyContinuation(cursor, request, { ...provenance, compiler: 'changed' }),
+    /provenance differs/,
+  );
+  await assert.rejects(
+    verifyContinuation(
+      { ...cursor, after: { ...cursor.after, end: 1 } },
+      request,
+      provenance,
+    ),
+    /outside a UTF-8 boundary/,
+  );
+  assert.throws(
+    () => readContinuation({ ...cursor, state: 'cancelled' }),
+    /Invalid saved/,
+  );
+  for (const after of [
+    { ordinal: 2, start: 0, end: 2 },
+    { ordinal: 3, start: 7, end: 9 },
+  ]) {
+    assert.equal(
+      pcre.run(pattern, input, options, false, after).result.status,
+      'unsupported-operation',
+    );
+  }
+  const overLimit = pcre.run(
+    '(?=(.{2000})).',
+    'a'.repeat(3000),
+    options,
+    false,
+    {
+      ordinal: 1,
+      start: 0,
+      end: 1,
+    },
+  ).result;
+  assert.equal(overLimit.status, 'resource-terminated');
+  assert.equal(overLimit.error.termination, 'output-limit');
+  assert.equal(
+    await createContinuation(
+      request,
+      { ...result, status: 'output-limited' },
+      provenance,
+      1,
+    ),
+    undefined,
+  );
+  assert.equal(
+    await createContinuation(request, result, provenance, 3),
+    undefined,
+  );
+  const empty = executionResult(
+    request,
+    pcre.run('(?=é)|x', input, options).result,
+    observation('pcre243', pcre.version),
+  );
+  assert.equal(
+    await createContinuation(
+      request,
+      { ...result, matches: empty.matches },
+      provenance,
+      1,
+    ),
+    undefined,
+  );
+
+  const session = {
+    ...initialSession('regex'),
+    source: pattern,
+    runtime: 'pcre243',
+    datasets: [{ name: 'Synthetic', text: input }],
+    continuation: cursor,
+  };
+  const full = bundleSession(session, {
+    ...saveAll,
+    source: true,
+    continuation: true,
+  });
+  assert.deepEqual(importBundle(full).continuation, cursor);
+  const excluded = importBundle(
+    bundleSession(session, { ...redact, source: false, continuation: true }),
+  );
+  assert.equal(excluded.continuation, undefined);
+  assert.equal(excluded.source, '');
+  assert.equal(excluded.datasets[0].text, '');
+  const fragment = importFragment('#lab=' + encodeURIComponent(full));
+  assert.equal(fragment.continuation, undefined);
+  assert.equal(fragment.source, '');
+  assert.equal(fragment.datasets[0].text, '');
+});
+
+test('native pattern inspection rejects a wrong request, authority, version, and coordinate', () => {
+  const request = runRequest('pcre2', 'éx', '', defaultOptions);
+  const result = inspection(request, 'pcre2', '10.49', {
+    disposition: 'partial',
+    tree: {
+      label: 'Native ranges',
+      children: [
+        {
+          label: 'é',
+          children: [],
+          range: { start: 0, end: 2, unit: 'utf8-bytes' },
+        },
+      ],
+    },
+  });
+  assert.ok(verifyInspection(result, request, 'pcre2'));
+  for (const fields of [
+    { requestId: 'late revision' },
+    { profileReleaseId: 'different profile' },
+    { authority: 'cpython-re-parser' },
+    { version: '10.43' },
+    {
+      tree: {
+        label: 'é',
+        children: [],
+        range: { start: 0, end: 1, unit: 'utf8-bytes' },
+      },
+    },
+  ])
+    assert.equal(
+      verifyInspection({ ...result, ...fields }, request, 'pcre2'),
+      false,
+    );
+});
 
 test('browser result validation rejects cross-request, operation, provider, profile and coordinate mismatches', () => {
   const options = { ...defaultOptions, flags: 'u' };

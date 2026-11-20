@@ -10,12 +10,13 @@ evaluated scope. All interactive results here are local observations.
 
 ## Revisions and compiler decision
 
-| Component              | Evaluated identity                                                                                                                                                                                                                                                                        |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Website                | `dev` at `3187d307e1d4707d706b1a7508f0cc5c067cadac`, with the imported Lab tree on `codex/three-gap-labs-review`, followed by isolated qualification fixes                                                                                                                                |
-| Published compiler     | `@strling-lang/strling@4.0.3`, source `d01ac3785736ad552c90f00b4ca13c0e2e5c9c62`, packaged WASM SHA-256 `6a24a334d5d7e78b17c09e6d9a62d33299d65ac79e52212c4f8db130250656d7`                                                                                                                |
-| Historical adapter     | `strling-lab-wasm 0.1.0-rc.1`, source `3f1cf5faef7b6177e67adbe10147470cba47be8d`, based on `4e58730bbf67eaff683268e285e7084ccda5fadd`. WASM SHA-256 `640fd5c4c205cff8c69ca46c7933f1351194e3861306cef137d67e1354ea5d72`. Retained as earlier local evidence.                               |
-| Pinned private adapter | `strling-lab-wasm 0.1.0-rc.2`, source `8ba008b048d46c0ab209c5b15ca82fb2aaaeb110`, same compiler base and protocol `strling.lab-compiler-tools@1.0.0-rc.1`. Two relocated builds reproduced 2,549,360 bytes at SHA-256 `283ff9d319b4a28220aeac8b187834b12fc6634c9ad1beb9be3be4d4247cc04b`. |
+| Component              | Evaluated identity                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Website                | `dev` at `3187d307e1d4707d706b1a7508f0cc5c067cadac`, with the imported Lab tree on `codex/three-gap-labs-review`, followed by isolated qualification fixes                                                                                                                                                                                              |
+| Published compiler     | `@strling-lang/strling@4.0.3`, source `d01ac3785736ad552c90f00b4ca13c0e2e5c9c62`, packaged WASM SHA-256 `6a24a334d5d7e78b17c09e6d9a62d33299d65ac79e52212c4f8db130250656d7`                                                                                                                                                                              |
+| Historical adapter     | `strling-lab-wasm 0.1.0-rc.1`, source `3f1cf5faef7b6177e67adbe10147470cba47be8d`, based on `4e58730bbf67eaff683268e285e7084ccda5fadd`. WASM SHA-256 `640fd5c4c205cff8c69ca46c7933f1351194e3861306cef137d67e1354ea5d72`. Retained as earlier local evidence.                                                                                             |
+| Historical adapter     | `strling-lab-wasm 0.1.0-rc.2`, source `8ba008b048d46c0ab209c5b15ca82fb2aaaeb110`, same compiler base and protocol `strling.lab-compiler-tools@1.0.0-rc.1`. Two local relocated builds produced the same SHA-256 `283ff9d319b4a28220aeac8b187834b12fc6634c9ad1beb9be3be4d4247cc04b`. The independent hosted Windows rebuild failed the digest assertion. |
+| Pinned private adapter | `strling-lab-wasm 0.1.0-rc.3`, source `156a0b54186e1d457fd47696d9f088e2c8b23360`, same compiler base and protocol. Independent workspaces and named versus stable Rust 1.97.1 toolchains produced 2,548,656 bytes at SHA-256 `3da8047dbbc6402885634b4eb49475ad06cdf894c1eced13fee62b400e23cc81`.                                                        |
 
 The sealed `strling.interop@1.0.0` descriptor exposes only `describe`,
 `compile`, `target_profile.inspect`, and `simply.compile`. Neither its
@@ -26,8 +27,18 @@ bounded evaluator. The kernel change supplies a monotonic clock in WASM
 while retaining the native clock and the existing budget policy. The website
 passes verified compile output to the adapter and presents the result.
 The candidate has its own lock, descriptor, digest, worker, and asset path.
+The hosted Windows rebuild of rc.2 found an artifact identity mismatch.
+The successor extends path remapping to the Rust toolchain so embedded
+panic locations are stable across build hosts.
+Both hosted source matrices passed for rc.3. Compiler PR #151 admitted the
+verified artifact for isolated Website qualification and merged into compiler
+`main` at `d7808c59a50af3700914efabc24c7cd8ac43e109`.
 [Released compiler source](https://github.com/strling-lang/strling/tree/d01ac3785736ad552c90f00b4ca13c0e2e5c9c62)
-· [Pinned adapter qualification inputs](https://github.com/strling-lang/strling/blob/8ba008b048d46c0ab209c5b15ca82fb2aaaeb110/bindings/lab-wasm/qualification.json)
+· [Historical rc.2 digest check](https://github.com/strling-lang/strling/actions/runs/44801504660/job/136514535893)
+· [Historical rc.2 browser evidence](https://github.com/strling-lang/website/blob/dc7317cedbfe87243a3ebd5fbc0e801d92dd2c23/docs/LAB_ACCEPTANCE.md#main-only-integration-qualification)
+· [Pinned adapter qualification inputs](https://github.com/strling-lang/strling/blob/156a0b54186e1d457fd47696d9f088e2c8b23360/bindings/lab-wasm/qualification.json)
+· [Independent hosted compiler qualification](https://github.com/strling-lang/strling/actions/runs/44803798988)
+· [Compiler source admission](https://github.com/strling-lang/strling/commit/d7808c59a50af3700914efabc24c7cd8ac43e109)
 · [Developer details](LAB_WORKBENCH.md).
 
 ## Feature and behavior matrix
@@ -280,36 +291,41 @@ Against fresh loopback previews, Playwright 1.62.1 and Chromium
 151.0.7922.34 passed 225 desktop and mobile cases with 11 unchanged
 applicability skips and no failures on the private candidate. The sealed
 build passed all 10 smoke cases, including the six original cases and four
-fresh replay checks. Each suite used a different empty port. Managed Windows
+fresh replay checks. An occupied port prevented the first rc.3 preview from
+producing test results. The complete rerun used an OS-selected free port. Managed Windows
 left the verified preview process open after the assertions. Terminating
 only that test process allowed Playwright to return its result.
 
 The isolated static build emitted the compiler adapter byte for byte. Its
 asset manifest, covering the two Lab pages, their shared workbench, workers,
 and native runtime assets, had SHA-256
-`6b40fed6d86479eb97ae61598acfe718264334596d5aca42a2f574e038a68f8b`.
+`068a37215ab6ceba6cf65996362288bb189f2eb6081633d6efe224a858937683`.
+The compiler's standalone verifier passed against those Website-built bytes
+and the sealed 4.0.3 npm package. It checked 12 formatter cases, 31 diagnostic
+cases, three exact reconstructions, two non-exact conversions, and 17
+no-match cases, including privacy, elapsed refusal, memory, and path identity.
 Earlier and current builds emitted identical PCRE2, Pyodide, and sealed
 compiler WASM digests. The selected current asset hashes are below.
 
 | Asset                               | SHA-256                                                            |
 | ----------------------------------- | ------------------------------------------------------------------ |
-| Private compiler adapter 0.1.0-rc.2 | `283ff9d319b4a28220aeac8b187834b12fc6634c9ad1beb9be3be4d4247cc04b` |
+| Private compiler adapter 0.1.0-rc.3 | `3da8047dbbc6402885634b4eb49475ad06cdf894c1eced13fee62b400e23cc81` |
 | Released 4.0.3 compiler             | `6a24a334d5d7e78b17c09e6d9a62d33299d65ac79e52212c4f8db130250656d7` |
-| Canonical compiler tools worker     | `3e8aeff7efcaca406371975ca58ff92012cc4874bb2cab2482604e9d2d044424` |
+| Canonical compiler tools worker     | `0bf2cc13ff75892b750a9d19455154ff09cd9d579591823a643cb6922e18d504` |
 | Browser execution worker            | `0b625be839f11bca9d0101a77905bc1f4c5415d3000a009d9bab28e6ac006fc7` |
-| Shared workbench browser script     | `94f0355d38945c0227d5d45f2ab4e46727c6458bf589332c4ad78d7b7eae33f5` |
+| Shared workbench browser script     | `6d111871c329ce4f57a42e71a201121a27e770c22cb52e03a4ad21ff9cfbe426` |
 
 ## Remaining release gate
 
 | Owner                  | Required action                                                                                                                                                                                      |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Compiler release owner | Record exact-source scoped admission for the private digest. Any separately distributed compiler release requires its own certification and publication authorization.                               |
+| Compiler release owner | The exact-source admission for isolated Website qualification is recorded. A separately distributed compiler release requires its own certification and publication authorization.                   |
 | Website release owner  | Approve an explicit production adapter supply and Website release after reviewing qualification on the immutable candidate. Exact cursor resumption and raw dialect syntax trees remain unavailable. |
 
 The existing 4.0.3 registry coordinate and interop contract remain intact.
 The compiler's scoped qualification runs against the exact private artifact.
 Production builds follow their own release policy.
-[Compiler candidate record](https://github.com/strling-lang/strling/blob/8ba008b048d46c0ab209c5b15ca82fb2aaaeb110/docs/migration/records/lab-compiler-tools-candidate.yaml).
+[Compiler candidate record](https://github.com/strling-lang/strling/blob/156a0b54186e1d457fd47696d9f088e2c8b23360/docs/migration/records/lab-compiler-tools-candidate.yaml).
 
 ## Source integration without deployment
 

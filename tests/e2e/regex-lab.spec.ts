@@ -476,7 +476,7 @@ test('requires an approved adapter and exercises the configured canonical tools 
   ).toBe(true);
   expect(
     requests.some(({ url }) =>
-      url.endsWith('/_strling-lab/compiler-tools-0.1.0-rc.2.wasm'),
+      url.endsWith('/_strling-lab/compiler-tools-0.1.0-rc.3.wasm'),
     ),
   ).toBe(true);
   expect(JSON.stringify(requests)).not.toContain(privateText);
@@ -542,7 +542,7 @@ test('preserves canonical partial, unsupported, likely, unknown and unavailable 
   await page.goto('/lab/');
   const results = await page.evaluate(async () => {
     const response = await fetch(
-      '/_strling-lab/compiler-tools-0.1.0-rc.2.wasm',
+      '/_strling-lab/compiler-tools-0.1.0-rc.3.wasm',
     );
     expectSuccess(response.ok);
     const module = await WebAssembly.compile(await response.arrayBuffer());

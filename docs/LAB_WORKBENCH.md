@@ -24,7 +24,7 @@ profiles through its own inspection entrypoint. Semantic Specification
 ## Canonical compiler tools candidate
 
 STRling 4.0.3's sealed interop interface exposes only its four registered
-operations. The separate local adapter `strling-lab-wasm 0.1.0-rc.2` uses
+operations. The separate local adapter `strling-lab-wasm 0.1.0-rc.3` uses
 `strling.lab-compiler-tools@1.0.0-rc.1` and base source
 `4e58730bbf67eaff683268e285e7084ccda5fadd`. It calls Rust implementations of
 Semantic STRling formatting, semantic conversion, semantic explanation, and
@@ -35,7 +35,7 @@ its deterministic work limits.
 For a local qualification build, use the exact compiler candidate recorded in
 the [acceptance report](LAB_ACCEPTANCE.md) and its locked `bindings/lab-wasm`
 instructions. Supply the file path. The website build and worker verify
-SHA-256 `283ff9d319b4a28220aeac8b187834b12fc6634c9ad1beb9be3be4d4247cc04b`
+SHA-256 `3da8047dbbc6402885634b4eb49475ad06cdf894c1eced13fee62b400e23cc81`
 against the checked-in pin.
 
 ```powershell

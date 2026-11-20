@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 const directory = '_strling-lab/';
-const filename = 'compiler-tools-0.1.0-rc.2.wasm';
+const filename = 'compiler-tools-0.1.0-rc.3.wasm';
 const digest =
-  '283ff9d319b4a28220aeac8b187834b12fc6634c9ad1beb9be3be4d4247cc04b';
+  '3da8047dbbc6402885634b4eb49475ad06cdf894c1eced13fee62b400e23cc81';
 
 export function labCompilerTools(environment = process.env) {
   const path = environment.STRLING_LAB_TOOLS_CANDIDATE;

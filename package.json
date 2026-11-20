@@ -20,9 +20,21 @@
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.2.2",
+    "@codemirror/autocomplete": "6.20.4",
+    "@codemirror/lang-json": "6.0.2",
+    "@codemirror/language": "6.13.1",
+    "@codemirror/lint": "6.9.8",
+    "@codemirror/search": "6.7.2",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.15",
+    "@eslint-community/regexpp": "4.12.3",
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/ibm-plex-sans": "^5.2.7",
-    "astro": "^7.2.4"
+    "@lezer/highlight": "1.2.5",
+    "astro": "^7.2.4",
+    "codemirror": "6.0.2",
+    "pyodide": "314.0.8",
+    "pyodide311": "npm:pyodide@0.25.1"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.5",
@@ -40,6 +52,6 @@
     "typescript-eslint": "^8.42.0"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.23.4 <23"
   }
 }

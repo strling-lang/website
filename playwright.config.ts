@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const port = Number(process.env.STRLING_WEBSITE_PREVIEW_PORT ?? 4321);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error('Set STRLING_WEBSITE_PREVIEW_PORT to an available TCP port.');
+}
+const preview = `http://127.0.0.1:${port}`;
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -7,13 +13,14 @@ export default defineConfig({
   retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:4321',
+    baseURL: preview,
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: `"${process.execPath}" node_modules/astro/bin/astro.mjs preview --host 127.0.0.1 --port 4321`,
-    url: 'http://127.0.0.1:4321',
-    reuseExistingServer: true,
+    // Use the foreground API so Playwright owns the preview's lifetime.
+    command: `"${process.execPath}" --input-type=module -e "import { preview } from 'astro'; await preview({ server: { host: '127.0.0.1', port: ${port} } });"`,
+    url: preview,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
   projects: [

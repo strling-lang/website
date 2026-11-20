@@ -1,0 +1,640 @@
+---
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import type { Crumb } from '@/components/Breadcrumbs.astro';
+import { operations, runtimes, limits } from '@/lib/regex-lab/interactive';
+import { targets } from '@/lib/regex-lab/compiler';
+import type { LabMode } from '@/lib/regex-lab/session';
+import '@/styles/workbench.css';
+
+interface Props {
+  mode: LabMode;
+  crumbs: Crumb[];
+  title: string;
+}
+
+const { mode, crumbs, title } = Astro.props;
+const isStrling = mode === 'strling';
+const tabs = [
+  ['results', 'Results'],
+  ['structure', isStrling ? 'Compiler' : 'Structure'],
+  ...(isStrling
+    ? [
+        ['artifact', 'Artifact'],
+        ['compiler-tools', 'Semantic tools'],
+      ]
+    : []),
+  ['tests', 'Tests'],
+  ['trace', 'Debugger'],
+  ['compare', 'Compare'],
+  ['performance', 'Timing'],
+  ['sessions', 'Sessions'],
+];
+---
+
+<lab-workbench data-mode={mode}>
+  <header class="container workbench-intro">
+    <Breadcrumbs items={crumbs} />
+    <div class="workbench-heading">
+      <div>
+        <h1>{title}</h1>
+        <p>
+          {
+            isStrling
+              ? 'Compile semantic source and test the emitted pattern against your data.'
+              : 'Run regular expressions, inspect captures, and compare results across engines.'
+          }
+        </p>
+      </div>
+      <a class="workbench-link" href="/lab/guide/"
+        >Lab guide <span aria-hidden="true">↗</span></a
+      >
+    </div>
+  </header>
+  <noscript
+    ><p class="container">
+      Enable JavaScript to start the local editor and runtime workers.
+    </p></noscript
+  >
+  <section
+    class="container workbench"
+    aria-label={title + ' workbench'}
+    data-workbench
+  >
+    <div class="workbench-bar">
+      <div class="workbench-config">
+        {
+          isStrling ? (
+            <>
+              <label>
+                Source format
+                <select data-field="format" aria-label="Source format">
+                  <option value="semantic">Semantic STRling 1.0</option>
+                  <option value="simply">Simply builder JSON</option>
+                </select>
+              </label>
+              <label>
+                Compiler target
+                <select data-field="target" aria-label="Compiler target">
+                  {Object.entries(targets).map(([id, target]) => (
+                    <option value={id}>{target.label}</option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : (
+            <>
+              <label>
+                Runtime
+                <select data-field="runtime" aria-label="Runtime">
+                  {Object.entries(runtimes).map(([id, runtime]) => (
+                    <option value={id}>{runtime.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Flags
+                <input
+                  data-field="flags"
+                  type="text"
+                  maxlength="16"
+                  spellcheck="false"
+                  autocomplete="off"
+                  aria-describedby="workbench-flag-help"
+                />
+              </label>
+            </>
+          )
+        }
+        <label
+          >Operation
+          <select data-field="operation" aria-label="Operation">
+            {
+              Object.entries(operations).map(([id, label]) => (
+                <option value={id}>{label}</option>
+              ))
+            }
+          </select>
+        </label>
+      </div>
+      <div class="workbench-actions">
+        <label class="workbench-check"
+          ><input data-field="live" type="checkbox" /> Live</label
+        >
+        <button type="button" data-action="stop" disabled>Stop</button>
+        <button type="button" class="workbench-primary" data-action="run"
+          >Run <kbd>Ctrl/⌘ ↵</kbd></button
+        >
+      </div>
+    </div>
+    {
+      !isStrling && (
+        <p
+          id="workbench-flag-help"
+          class="workbench-note"
+          data-output="flags"
+        />
+      )
+    }
+    <div class="workbench-replacement" data-output="replacement" hidden>
+      <label
+        >Replacement
+        <textarea
+          data-field="replacement"
+          rows="2"
+          maxlength={limits.replacement}
+          spellcheck="false"></textarea>
+      </label>
+      <label
+        >Replacement syntax
+        <select data-field="replacementSyntax" aria-label="Replacement syntax">
+          <option value="literal">Literal text</option>
+          <option value="native">Runtime template</option>
+        </select>
+      </label>
+    </div>
+    <div class="workbench-editors">
+      <section aria-labelledby="lab-source-heading" class="workbench-card">
+        <header>
+          <h2 id="lab-source-heading">{isStrling ? 'Source' : 'Pattern'}</h2>
+          <div class="workbench-inline">
+            <button type="button" data-action="find">Find / replace</button>
+            <button type="button" data-action="format" hidden
+              >Format JSON</button
+            >
+            <button type="button" data-action="copy-source">Copy</button>
+            <button
+              type="button"
+              data-action="resize-source"
+              aria-label="Tall source editor"
+              aria-pressed="false">Tall</button
+            >
+          </div>
+        </header>
+        <div class="workbench-editor" data-editor="source"></div>
+        <footer data-output="source-meta"></footer>
+      </section>
+      <section aria-labelledby="lab-subject-heading" class="workbench-card">
+        <header>
+          <h2 id="lab-subject-heading">Subject</h2>
+          <div class="workbench-inline">
+            <select data-field="dataset" aria-label="Dataset"></select>
+            <button type="button" data-action="add-dataset">Add</button>
+            <button type="button" data-action="rename-dataset">Rename</button>
+            <button type="button" data-action="remove-dataset">Remove</button>
+            <button
+              type="button"
+              data-action="resize-subject"
+              aria-label="Tall subject editor"
+              aria-pressed="false">Tall</button
+            >
+          </div>
+        </header>
+        <div class="workbench-editor" data-editor="subject"></div>
+        <footer data-output="subject-meta"></footer>
+      </section>
+    </div>
+    <div class="workbench-status" role="status" data-output="status">
+      Loading the workbench…
+    </div>
+
+    <div class="workbench-investigation">
+      <div class="workbench-tabs" role="tablist" aria-label="Workbench tools">
+        {
+          tabs.map(([id, label], index) => (
+            <button
+              id={'lab-tab-' + id}
+              type="button"
+              role="tab"
+              aria-controls={'lab-panel-' + id}
+              aria-selected={index === 0 ? 'true' : 'false'}
+              tabindex={index === 0 ? 0 : -1}
+              data-tab={id}
+            >
+              {label}
+            </button>
+          ))
+        }
+      </div>
+      <section
+        id="lab-panel-results"
+        role="tabpanel"
+        tabindex="0"
+        aria-labelledby="lab-tab-results"
+        data-panel="results"
+      >
+        <div class="workbench-inline">
+          <button data-action="copy-result" type="button" disabled
+            >Copy result</button
+          >
+          <button data-action="export-result" type="button" disabled
+            >Download result</button
+          >
+        </div>
+        <p class="workbench-note" data-output="provenance" hidden></p>
+        <div data-output="matches"><p>Run a pattern to see the result.</p></div>
+        <details data-output="extraction" hidden>
+          <summary>Extract matches or captures</summary>
+          <div class="workbench-inline">
+            <label>
+              Value to extract
+              <select data-field="extraction-value"></select>
+            </label>
+            <button data-action="export-extraction" type="button">
+              Download extracted JSON
+            </button>
+          </div>
+          <p class="workbench-note">
+            Values follow match order. Null marks a group that did not
+            participate and an empty string marks a participating empty group.
+          </p>
+          <pre tabindex="0" data-output="extracted-values"></pre>
+        </details>
+        <details data-output="result-details" hidden>
+          <summary>Structured result</summary>
+          <div data-output="result-tree"></div>
+          <details>
+            <summary>Raw JSON</summary><pre
+              data-output="result-json"
+              tabindex="0">
+            </pre>
+          </details>
+        </details>
+        <details data-output="origin-details" hidden>
+          <summary>Generated pattern origin</summary>
+          <pre data-output="origin-json" tabindex="0"></pre>
+        </details>
+      </section>
+      <section
+        id="lab-panel-structure"
+        role="tabpanel"
+        tabindex="0"
+        aria-labelledby="lab-tab-structure"
+        data-panel="structure"
+        hidden
+      >
+        <div data-output="structure"></div>
+      </section>
+      {
+        isStrling && (
+          <section
+            id="lab-panel-artifact"
+            role="tabpanel"
+            tabindex="0"
+            aria-labelledby="lab-tab-artifact"
+            data-panel="artifact"
+            hidden
+          >
+            <div class="workbench-inline">
+              <button data-action="run-artifact" type="button" disabled>
+                Run artifact
+              </button>
+              <button data-action="copy-artifact" type="button" disabled>
+                Copy pattern
+              </button>
+              <button data-action="export-artifact" type="button" disabled>
+                Download artifact
+              </button>
+              <button data-action="open-artifact" type="button" disabled>
+                Open in RegEx Lab
+              </button>
+            </div>
+            <div data-output="artifact" />
+          </section>
+        )
+      }
+      {
+        isStrling && (
+          <section
+            id="lab-panel-compiler-tools"
+            role="tabpanel"
+            tabindex="0"
+            aria-labelledby="lab-tab-compiler-tools"
+            data-panel="compiler-tools"
+            hidden
+          >
+            <p class="workbench-note" data-output="compiler-tools-status">
+              Compiler tools are loading.
+            </p>
+            <div class="workbench-inline">
+              <label>
+                Convert to
+                <select
+                  data-field="conversion-destination"
+                  aria-label="Conversion destination"
+                >
+                  <option value="simply_builder">Simply 1.0 builder</option>
+                  <option value="semantic_strling">Semantic STRling 1.0</option>
+                </select>
+              </label>
+              <button type="button" data-action="convert" disabled>
+                Convert
+              </button>
+            </div>
+            <div class="workbench-inline">
+              <label>
+                Explanation scope
+                <select
+                  data-field="explanation-scope"
+                  aria-label="Explanation scope"
+                >
+                  <option value="target">Selected target profile</option>
+                  <option value="semantic">Target-neutral semantics</option>
+                </select>
+              </label>
+              <button type="button" data-action="explain" disabled>
+                Explain current subject
+              </button>
+            </div>
+            <div data-output="compiler-tools" />
+          </section>
+        )
+      }
+      <section
+        id="lab-panel-tests"
+        role="tabpanel"
+        tabindex="0"
+        aria-labelledby="lab-tab-tests"
+        data-panel="tests"
+        hidden
+      >
+        <div class="workbench-inline">
+          <button data-action="add-test" type="button">Add test</button>
+          <button data-action="test-from-result" type="button" disabled
+            >Add from result</button
+          >
+          <button data-action="run-tests" type="button">Run all</button>
+          <button data-action="export-tests" type="button"
+            >Download tests</button
+          >
+          <label class="workbench-file"
+            >Import tests <input
+              type="file"
+              data-field="import-tests"
+              accept=".json,application/json"
+            /></label
+          >
+        </div>
+        <p class="workbench-note">
+          Tests use the current pattern, their own subject and operation, and
+          the selected runtime.
+        </p>
+        <div data-output="tests"></div>
+      </section>
+      <section
+        id="lab-panel-trace"
+        role="tabpanel"
+        tabindex="0"
+        aria-labelledby="lab-tab-trace"
+        data-panel="trace"
+        hidden
+      >
+        <p data-output="trace-help"></p>
+        <div class="workbench-inline">
+          <button data-action="trace" type="button" disabled
+            >Trace search</button
+          >
+          <button data-action="previous-event" type="button" disabled
+            >Previous step</button
+          >
+          <button data-action="next-event" type="button" disabled
+            >Next step</button
+          >
+          <button data-action="export-trace" type="button" disabled
+            >Download trace</button
+          >
+        </div>
+        <div data-output="trace"></div>
+      </section>
+      <section
+        id="lab-panel-compare"
+        role="tabpanel"
+        tabindex="0"
+        aria-labelledby="lab-tab-compare"
+        data-panel="compare"
+        hidden
+      >
+        <div class="workbench-inline">
+          <label
+            >Baseline revision <select
+              data-field="baseline"
+              aria-label="Baseline revision"></select></label
+          >
+          <button data-action="compare-revision" type="button"
+            >Compare revision</button
+          >
+          {
+            !isStrling && (
+              <label>
+                Second runtime
+                <select data-field="comparison-runtime">
+                  {Object.entries(runtimes).map(([id, runtime]) => (
+                    <option value={id}>{runtime.label}</option>
+                  ))}
+                </select>
+              </label>
+            )
+          }
+          {
+            !isStrling && (
+              <button data-action="compare-runtimes" type="button">
+                Compare runtimes
+              </button>
+            )
+          }
+          <button data-action="export-comparison" type="button" disabled
+            >Download comparison</button
+          >
+        </div>
+        <p class="workbench-note">
+          Each comparison uses current datasets and settings on both sides and
+          reports concrete differences.
+        </p>
+        <div data-output="comparison"></div>
+      </section>
+      <section
+        id="lab-panel-performance"
+        role="tabpanel"
+        tabindex="0"
+        aria-labelledby="lab-tab-performance"
+        data-panel="performance"
+        hidden
+      >
+        <div class="workbench-inline">
+          <label
+            >Repetitions <input
+              data-field="repeats"
+              type="number"
+              min="1"
+              max="8"
+              value="5"
+            /></label
+          >
+          <label
+            >Subject size <select data-field="size"
+              ><option value="1">Current</option><option value="0.5"
+                >Half prefix</option
+              ><option value="2">Doubled</option></select
+            ></label
+          >
+          <label class="workbench-check"
+            ><input type="checkbox" data-field="benchmark-baseline" /> Include baseline
+            revision</label
+          >
+          <button data-action="benchmark" type="button">Measure</button>
+          <button data-action="export-benchmark" type="button" disabled
+            >Download timings</button
+          >
+        </div>
+        <p class="workbench-note">
+          One unmeasured warmup per pattern. Worker and end-to-end timings
+          describe this browser and run.
+        </p>
+        <div data-output="performance"></div>
+      </section>
+      <section
+        id="lab-panel-sessions"
+        role="tabpanel"
+        tabindex="0"
+        aria-labelledby="lab-tab-sessions"
+        data-panel="sessions"
+        hidden
+      >
+        <div class="workbench-inline">
+          <label
+            >Session name <input
+              type="text"
+              data-field="name"
+              maxlength="80"
+            /></label
+          >
+          <button data-action="save" type="button">Save revision</button>
+          <button data-action="duplicate" type="button">Duplicate</button>
+          <button data-action="new-session" type="button">New session</button>
+        </div>
+        <div class="workbench-inline">
+          <label
+            >Saved session <select data-field="saved-session"></select></label
+          >
+          <label>Revision <select data-field="revision"></select></label>
+          <button data-action="restore" type="button">Restore</button>
+          <button data-action="delete-revision" type="button"
+            >Delete revision</button
+          >
+          <button data-action="delete-session" type="button"
+            >Delete session</button
+          >
+          <button data-action="clear-sessions" type="button"
+            >Clear local archive</button
+          >
+        </div>
+        <fieldset>
+          <legend>Include in downloaded session</legend>
+          <div class="workbench-inline">
+            <label class="workbench-check"
+              ><input type="checkbox" data-field="share-samples" /> Sample data</label
+            >
+            <label class="workbench-check"
+              ><input type="checkbox" data-field="share-tests" /> Tests</label
+            >
+            <label class="workbench-check"
+              ><input type="checkbox" data-field="share-observations" /> Recorded
+              outputs</label
+            >
+            <label class="workbench-check"
+              ><input type="checkbox" data-field="share-source" /> Original STRling
+              source of generated patterns</label
+            >
+          </div>
+          <p class="workbench-note">
+            The download always contains the active source and configuration.
+            Tests and recorded outputs may also contain subject text. Links
+            carry only settings and open with blank source and subject.
+          </p>
+          <div class="workbench-inline">
+            <button data-action="share" type="button">Copy settings link</button
+            >
+            <button data-action="export-session" type="button"
+              >Download session</button
+            >
+            <label class="workbench-file"
+              >Import session <input
+                type="file"
+                data-field="import-session"
+                accept=".json,application/json"
+              /></label
+            >
+          </div>
+          <label data-output="share" hidden
+            >Share URL <input
+              type="url"
+              data-field="share-url"
+              readonly
+            /></label
+          >
+        </fieldset>
+        <details data-output="recording" hidden>
+          <summary>Previously recorded outputs</summary>
+          <p class="workbench-note">
+            Restoring a revision makes these outputs available for inspection.
+            Run starts a new observation with the current runtime and inputs.
+          </p>
+          <pre data-output="recording-json" tabindex="0"></pre>
+        </details>
+      </section>
+    </div>
+  </section>
+  <dialog class="workbench-dialog" data-dialog="test">
+    <form data-form="test">
+      <h2>Edit test case</h2>
+      <label>Name <input name="name" required maxlength="80" /></label>
+      <label>Group <input name="group" maxlength="80" /></label>
+      <label
+        >Subject <textarea name="text" rows="4" maxlength={limits.input}
+        ></textarea></label
+      >
+      <label
+        >Operation
+        <select name="operation"
+          >{
+            Object.entries(operations).map(([id, label]) => (
+              <option value={id}>{label}</option>
+            ))
+          }</select
+        >
+      </label>
+      <label>Flags <input name="flags" maxlength="16" /></label>
+      <label
+        >Replacement <textarea
+          name="replacement"
+          maxlength={limits.replacement}
+          rows="2"></textarea></label
+      >
+      <label
+        >Replacement syntax <select name="replacementSyntax"
+          ><option value="literal">Literal text</option><option value="native"
+            >Runtime template</option
+          ></select
+        ></label
+      >
+      <label
+        >Expected result JSON <textarea
+          name="expected"
+          required
+          rows="5"
+          spellcheck="false"></textarea></label
+      >
+      <p class="workbench-note">
+        <a href="/lab/guide/#test-expectations">Test expectation formats</a>
+      </p>
+      <p role="alert" data-output="test-error"></p>
+      <div class="workbench-inline">
+        <button type="submit" class="workbench-primary">Save test</button>
+        <button type="button" data-action="cancel-test">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+</lab-workbench>
+
+<script>
+  import '@/scripts/labWorkbench';
+</script>

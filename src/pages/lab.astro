@@ -1,16 +1,20 @@
 ---
-import PendingFeaturePage from '@/components/PendingFeaturePage.astro';
+import Workbench from '@/components/lab/Workbench.astro';
 import { surfaces } from '@/data/surfaces';
+import BaseLayout from '@/layouts/BaseLayout.astro';
 
+const surface = surfaces.strlingLab;
 const crumbs = [
   { label: 'Home', href: '/' },
-  { label: 'Lab', href: surfaces.strlingLab.route },
+  { label: surface.label, href: surface.route },
 ];
 ---
 
-<PendingFeaturePage
-  surface={surfaces.strlingLab}
+<BaseLayout
+  title={surface.label}
+  description={surface.description}
+  pathname={surface.route}
   {crumbs}
-  backHref="/docs/"
-  backLabel="Browse STRling Docs"
-/>
+>
+  <Workbench mode="strling" {crumbs} title={surface.label} />
+</BaseLayout>

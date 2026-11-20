@@ -149,5 +149,5 @@ test('major product surfaces have centralized routes and availability', async ()
 
   assert.match(source, /strlingDocs:[\s\S]*status: 'available'/);
   assert.match(source, /regexDocs:[\s\S]*status: 'available'/);
-  assert.equal([...source.matchAll(/status: 'coming-soon'/g)].length, 3);
+  assert.equal([...source.matchAll(/status: 'coming-soon'/g)].length, 1);
 });

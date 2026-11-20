@@ -63,7 +63,7 @@ inventing a choice. Lab and Compatibility share this resolver, so new profile
 branches and deeper catalogs require checkpoint metadata rather than component
 changes.
 
-## Lab execution boundary
+## Lab execution and certified evidence
 
 `src/lib/regex-lab/` defines versioned request/result unions and a provider
 interface for browser-local or remote-isolated execution. Result states keep
@@ -76,10 +76,12 @@ The reactive coordinator owns debounce, abort signals, request generations,
 and stale-response rejection. The fixture provider used to certify those
 behaviors is test-only and is not imported by website source.
 
-The Lab custom element accepts normalized Lab state and an execution provider.
-Its controls are generated from checkpoint operations and options; the page has
-no runtime-specific branches. Until a certified state and real provider are
-wired at build time, the production page stays locked and `noindex`.
+The Lab and Compatibility cursors still advance only through certificate
+validation. The public workbenches use a separate browser execution register
+whose identities begin with interactive:. Its observations carry runtime
+provenance and have no checkpoint or certification identity. The existing
+certified profile resolver and consumption contracts remain available to a
+future evidence presentation. [Lab workbench](LAB_WORKBENCH.md).
 
 ## Compatibility projection
 
@@ -104,6 +106,7 @@ cursor is `null`.
 3. Validate the bundle against `regexConformanceSemanticSnapshot`.
 4. Consume Lab and Compatibility independently, enabling only the projection
    present and ready for each product.
-5. Configure eligible Lab profiles with a matching execution provider.
+5. Configure any certified observation presentation through the validated
+   checkpoint projection. Interactive workers retain their own eligibility.
 6. Run the focused contract, product, accessibility, and browser suites before
    advancing either production cursor.

@@ -1,4 +1,5 @@
 import {
+  identifiesExecution,
   infrastructureFailureResult,
   type LabExecutionProvider,
   type LabExecutionRequest,
@@ -130,11 +131,18 @@ export class ReactiveLabExecutor {
     if (
       this.#disposed ||
       controller.signal.aborted ||
-      generation !== this.#generation ||
-      result.requestId !== request.requestId ||
-      result.profileReleaseId !== request.runtime.profileReleaseId
+      generation !== this.#generation
     )
       return;
+    if (!identifiesExecution(result, request, this.#provider)) {
+      result = infrastructureFailureResult(
+        request,
+        this.#provider,
+        new Error(
+          'The executor returned a result for a different request or provider.',
+        ),
+      );
+    }
     this.#controller = null;
     this.#emit('settled', result);
   }

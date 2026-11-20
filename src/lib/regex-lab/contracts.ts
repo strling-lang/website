@@ -64,6 +64,7 @@ export interface LabExecutionError {
   message: string;
   code?: string;
   offset?: number;
+  offsetUnit?: string;
   engineNativeMetadata?: Record<string, unknown>;
 }
 
@@ -74,6 +75,15 @@ interface LabExecutionResultBase {
   operationId: string;
   provider: { providerId: string; kind: LabProviderKind };
   timing: LabTiming;
+  observation?: {
+    eligibility: 'interactive-browser-v1';
+    providerVersion: string;
+    runtime: string;
+    runtimeVersion?: string;
+    environment: string;
+    indexUnit: string;
+    observedAt: string;
+  };
   engineNativeMetadata?: Record<string, unknown>;
 }
 
@@ -100,7 +110,13 @@ export interface LabRuntimeErrorResult extends LabExecutionResultBase {
 export interface LabResourceTerminationResult extends LabExecutionResultBase {
   status: 'resource-terminated';
   error: LabExecutionError & {
-    termination: 'timeout' | 'memory' | 'step-limit' | 'other';
+    termination:
+      | 'timeout'
+      | 'memory'
+      | 'step-limit'
+      | 'output-limit'
+      | 'cancelled'
+      | 'other';
   };
 }
 
@@ -114,6 +130,11 @@ export interface LabInfrastructureFailureResult extends LabExecutionResultBase {
   error: LabExecutionError;
 }
 
+export interface LabOperationResult extends LabExecutionResultBase {
+  status: 'completed';
+  output: boolean | string | (string | null)[];
+}
+
 export type LabExecutionResult =
   | LabMatchedResult
   | LabNoMatchResult
@@ -121,7 +142,8 @@ export type LabExecutionResult =
   | LabRuntimeErrorResult
   | LabResourceTerminationResult
   | LabUnsupportedOperationResult
-  | LabInfrastructureFailureResult;
+  | LabInfrastructureFailureResult
+  | LabOperationResult;
 
 export interface LabExecutionContext {
   signal: AbortSignal;
@@ -163,4 +185,19 @@ export function infrastructureFailureResult(
       message: error instanceof Error ? error.message : 'Execution failed.',
     },
   };
+}
+
+export function identifiesExecution(
+  result: Partial<LabExecutionResult> | undefined,
+  request: LabExecutionRequest,
+  provider: Pick<LabExecutionProvider, 'providerId' | 'kind'>,
+): boolean {
+  return (
+    result?.schemaVersion === LAB_EXECUTION_RESULT_SCHEMA &&
+    result.requestId === request.requestId &&
+    result.profileReleaseId === request.runtime.profileReleaseId &&
+    result.operationId === request.operationId &&
+    result.provider?.providerId === provider.providerId &&
+    result.provider.kind === provider.kind
+  );
 }

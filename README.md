@@ -46,6 +46,10 @@ npm run test:e2e       # Playwright routes, responsive behavior, metadata, and a
 
 Install the Playwright Chromium runtime once on a new machine with `npx playwright install chromium`.
 
+See the [Lab workbench architecture](docs/LAB_WORKBENCH.md) for browser-local
+compilation and execution, and the [acceptance record](docs/LAB_ACCEPTANCE.md)
+for qualification status.
+
 ## Structure
 
 ```text

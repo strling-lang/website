@@ -3,11 +3,11 @@ import { jsonObject } from './compiler.ts';
 
 export const toolsIdentity = {
   protocol: 'strling.lab-compiler-tools@1.0.0-rc.1',
-  version: '0.1.0-rc.1',
+  version: '0.1.0-rc.2',
   baseRevision: '4e58730bbf67eaff683268e285e7084ccda5fadd',
   candidateSha256: import.meta.env.PUBLIC_LAB_TOOLS_CANDIDATE_SHA256 || '',
 };
-export const toolsPath = '/_strling-lab/compiler-tools-0.1.0-rc.1.wasm';
+export const toolsPath = '/_strling-lab/compiler-tools-0.1.0-rc.2.wasm';
 
 export type Destination = 'semantic_strling' | 'simply_builder';
 export type ToolRequest =

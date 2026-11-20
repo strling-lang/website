@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { loadBundledWasm } from '@strling-lang/strling/node';
 
+import { labCompilerTools } from '../../scripts/lab-compiler-tools.mjs';
 import {
   compile,
   generatedPattern,
@@ -50,6 +52,39 @@ const saveAll = {
   observations: true,
   sourceOrigin: true,
 };
+
+test('Netlify builds use the sealed compiler and refuse an opt-in private adapter', () => {
+  const localFile = 'local-compiler-adapter.wasm';
+  for (const context of ['production', 'deploy-preview', 'branch-deploy']) {
+    const environment = { NETLIFY: 'true', CONTEXT: context };
+    assert.equal(labCompilerTools(environment).integration, undefined);
+    assert.throws(
+      () =>
+        labCompilerTools({
+          ...environment,
+          STRLING_LAB_TOOLS_CANDIDATE: localFile,
+        }),
+      /private Lab compiler adapter is for isolated builds/,
+    );
+  }
+});
+
+test('an isolated Lab build refuses a replacement compiler artifact or digest', () => {
+  const path = fileURLToPath(new URL('../../package.json', import.meta.url));
+  const environment = { STRLING_LAB_TOOLS_CANDIDATE: path };
+  assert.throws(
+    () =>
+      labCompilerTools({
+        ...environment,
+        STRLING_LAB_TOOLS_SHA256: 'f'.repeat(64),
+      }),
+    /compiler digest differs from the pin/,
+  );
+  assert.throws(
+    () => labCompilerTools(environment),
+    /candidate has the wrong size or digest/,
+  );
+});
 const redact = {
   samples: false,
   tests: false,

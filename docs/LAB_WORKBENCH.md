@@ -24,7 +24,7 @@ profiles through its own inspection entrypoint. Semantic Specification
 ## Canonical compiler tools candidate
 
 STRling 4.0.3's sealed interop interface exposes only its four registered
-operations. The separate local adapter `strling-lab-wasm 0.1.0-rc.1` uses
+operations. The separate local adapter `strling-lab-wasm 0.1.0-rc.2` uses
 `strling.lab-compiler-tools@1.0.0-rc.1` and base source
 `4e58730bbf67eaff683268e285e7084ccda5fadd`. It calls Rust implementations of
 Semantic STRling formatting, semantic conversion, semantic explanation, and
@@ -32,20 +32,22 @@ bounded no-match evaluation. The no-match clock uses `performance.now()`
 in the worker, with the kernel retaining the 250 ms evaluator deadline and
 its deterministic work limits.
 
-For a local qualification build, build the adapter from the compiler repository
-using its locked `bindings/lab-wasm` instructions, then supply the path and pin
-the evaluated digest. The website build and worker both check the digest.
+For a local qualification build, use the exact compiler candidate recorded in
+the [acceptance report](LAB_ACCEPTANCE.md) and its locked `bindings/lab-wasm`
+instructions. Supply the file path. The website build and worker verify
+SHA-256 `283ff9d319b4a28220aeac8b187834b12fc6634c9ad1beb9be3be4d4247cc04b`
+against the checked-in pin.
 
 ```powershell
-$env:STRLING_LAB_TOOLS_CANDIDATE = 'D:/Projects/strling-lang/strling-lab-candidate/target/lab-tools/wasm32-unknown-unknown/release/strling_lab_wasm.wasm'
-$env:STRLING_LAB_TOOLS_SHA256 = '640fd5c4c205cff8c69ca46c7933f1351194e3861306cef137d67e1354ea5d72'
+$env:STRLING_LAB_TOOLS_CANDIDATE = 'path/to/strling_lab_wasm.wasm'
 npm run build
 npm run test:e2e
 ```
 
-The Astro integration emits the WASM asset only when both settings describe
-the local candidate. Without them the Lab uses released 4.0.3 and the semantic
-toolbar reports canonical tools unavailable. Preview serves the static worker
+The isolated build emits the WASM asset when the supplied file matches the
+pin. Without the file the Lab uses released 4.0.3 and the semantic toolbar
+reports canonical tools unavailable. Netlify builds refuse the private
+adapter. Astro Preview serves the static worker
 and WASM, and the development middleware serves the same opt-in asset.
 Contract-specific browser cases run when the candidate is configured.
 Consult the [acceptance report](LAB_ACCEPTANCE.md) for compiler ownership and

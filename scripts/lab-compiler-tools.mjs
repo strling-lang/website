@@ -3,16 +3,19 @@ import { readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 const directory = '_strling-lab/';
-const filename = 'compiler-tools-0.1.0-rc.1.wasm';
+const filename = 'compiler-tools-0.1.0-rc.2.wasm';
+const digest =
+  '283ff9d319b4a28220aeac8b187834b12fc6634c9ad1beb9be3be4d4247cc04b';
 
-export function labCompilerTools() {
-  const path = process.env.STRLING_LAB_TOOLS_CANDIDATE;
+export function labCompilerTools(environment = process.env) {
+  const path = environment.STRLING_LAB_TOOLS_CANDIDATE;
   if (!path) return { digest: '', integration: undefined };
-  const digest = process.env.STRLING_LAB_TOOLS_SHA256;
-  if (!digest || !/^[a-f0-9]{64}$/.test(digest)) {
-    throw new Error(
-      'Set STRLING_LAB_TOOLS_SHA256 to the exact candidate digest.',
-    );
+  if (environment.NETLIFY === 'true') {
+    throw new Error('The private Lab compiler adapter is for isolated builds.');
+  }
+  const providedDigest = environment.STRLING_LAB_TOOLS_SHA256;
+  if (providedDigest !== undefined && providedDigest !== digest) {
+    throw new Error('The configured Lab compiler digest differs from the pin.');
   }
   const bytes = readFileSync(path);
   if (

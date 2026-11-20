@@ -53,8 +53,11 @@ async function useHostingCsp(context: BrowserContext, baseURL: string) {
 }
 
 test('runs native providers, inspects captures, creates tests and records PCRE2 steps', async ({
+  baseURL,
+  context,
   page,
 }) => {
+  await useHostingCsp(context, baseURL!);
   await page.goto('/regex/lab/');
   await expect(status(page)).toHaveText('3 matches');
   const capture = page.getByRole('button', { name: /Group 1 · word.*alpha/ });
@@ -127,8 +130,11 @@ test('compiles released Semantic STRling and Simply, maps diagnostics and transf
 });
 
 test('executes and traces a STRling artifact in its exact PCRE2 target', async ({
+  baseURL,
+  context,
   page,
 }) => {
+  await useHostingCsp(context, baseURL!);
   await page.goto('/lab/');
   await page
     .getByLabel('Compiler target', { exact: true })
@@ -244,6 +250,47 @@ test('compares revisions, measures time and confines authored material to opt-in
   );
   expect(new URL(page.url()).hash).toBe('');
 });
+
+for (const [pattern, text] of [
+  ['AX', 'AXa AX AX'],
+  ['BY', 'BYb BY BY'],
+] as const) {
+  test(`restores the ${pattern} revision as history and runs a fresh first match`, async ({
+    page,
+  }) => {
+    await page.goto('/regex/lab/');
+    await expect(status(page)).toHaveText('3 matches');
+    await page.getByLabel('Live', { exact: true }).uncheck();
+    await page.getByLabel('Operation', { exact: true }).selectOption('first');
+    await source(page).fill(pattern);
+    await subject(page).fill(text);
+    await run(page);
+    const firstMatch = page.getByRole('button', {
+      name: `Match 1 · "${pattern}" · [0, 2) utf16-code-units`,
+    });
+    await expect(firstMatch).toBeVisible();
+
+    await tab(page, 'Sessions');
+    await page.getByRole('button', { name: 'Save revision' }).click();
+    await expect(status(page)).toHaveText('Revision saved in this browser.');
+    await subject(page).fill('changed');
+    await page.getByRole('button', { name: 'Restore', exact: true }).click();
+    await expect(subject(page)).toHaveText(text);
+    await expect(status(page)).toHaveText(
+      'Select Run or enable Live to execute this session.',
+    );
+    await page
+      .getByText('Previously recorded outputs', { exact: true })
+      .click();
+    await expect(page.locator('[data-output="recording-json"]')).toContainText(
+      '"start": 0',
+    );
+    await tab(page, 'Results');
+    await expect(firstMatch).toHaveCount(0);
+    await run(page);
+    await expect(firstMatch).toBeVisible();
+  });
+}
 
 test('loads Python and the STRling compiler under the hosting CSP', async ({
   baseURL,
@@ -429,7 +476,7 @@ test('requires an approved adapter and exercises the configured canonical tools 
   ).toBe(true);
   expect(
     requests.some(({ url }) =>
-      url.endsWith('/_strling-lab/compiler-tools-0.1.0-rc.1.wasm'),
+      url.endsWith('/_strling-lab/compiler-tools-0.1.0-rc.2.wasm'),
     ),
   ).toBe(true);
   expect(JSON.stringify(requests)).not.toContain(privateText);
@@ -441,6 +488,18 @@ test('requires an approved adapter and exercises the configured canonical tools 
       privateText,
     ),
   ).toBe(false);
+
+  await page
+    .getByLabel('Compiler target', { exact: true })
+    .selectOption('pcre243');
+  await expect(status(page)).toContainText('Compiler succeeded');
+  await subject(page).fill('😀héllo');
+  await page.getByRole('button', { name: 'Explain current subject' }).click();
+  await expect(tools).toContainText('matched · not_applicable');
+  expect(
+    JSON.parse((await evidence.textContent())!).target.target_profile
+      .profile_id,
+  ).toBe('profile:pcre2/10.43');
 
   await page.getByLabel('Source format').selectOption('semantic');
   const invalidSource =
@@ -483,7 +542,7 @@ test('preserves canonical partial, unsupported, likely, unknown and unavailable 
   await page.goto('/lab/');
   const results = await page.evaluate(async () => {
     const response = await fetch(
-      '/_strling-lab/compiler-tools-0.1.0-rc.1.wasm',
+      '/_strling-lab/compiler-tools-0.1.0-rc.2.wasm',
     );
     expectSuccess(response.ok);
     const module = await WebAssembly.compile(await response.arrayBuffer());
@@ -585,7 +644,21 @@ test('preserves canonical partial, unsupported, likely, unknown and unavailable 
       oversized: wasm.strling_lab_run_v1(1_048_577),
     };
     simulatedTime = 0;
-    return { ...verified, unknown: explain(literal, 'b') };
+    const unknown = explain(literal, 'b');
+    const pageBytes = 65_536;
+    wasm.memory.grow(1_024 - wasm.memory.buffer.byteLength / pageBytes);
+    let refusedExtraPage = false;
+    try {
+      wasm.memory.grow(1);
+    } catch (error) {
+      refusedExtraPage = error instanceof RangeError;
+    }
+    return {
+      ...verified,
+      unknown,
+      memoryBytes: wasm.memory.buffer.byteLength,
+      refusedExtraPage,
+    };
   });
   expect(results.partial).toMatchObject({
     status: 'partial',
@@ -611,6 +684,8 @@ test('preserves canonical partial, unsupported, likely, unknown and unavailable 
   expect(results.nestedArrays).toBe('request_too_deep');
   expect(results.wrongProtocol).toBe('unsupported_protocol');
   expect(results.oversized).toBe(0);
+  expect(results.memoryBytes).toBe(64 * 1024 * 1024);
+  expect(results.refusedExtraPage).toBe(true);
 
   await expect(status(page)).toContainText('Compiler succeeded');
   await source(page).fill(

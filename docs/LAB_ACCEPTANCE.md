@@ -1,19 +1,21 @@
 # STRling Lab and RegEx Lab acceptance
 
-**Release decision — BLOCKED.** The website requires an independently
-qualified compiler artifact for canonical formatting, semantic conversion,
-and bounded no-match explanation. The isolated candidate build exercises all three using
-the canonical compiler implementation. Cursor resumption, exact historical
-replay, and raw PCRE2/Python syntax trees remain outside the qualified scope. Ordinary website builds still use the
-sealed 4.0.3 compiler and report the three operations as unavailable. All browser findings here are local observations.
+**Release decision — BLOCKED.** The isolated candidate exercises canonical
+formatting, semantic conversion, and bounded no-match explanation. Delivery
+to a production Website build requires separate release approval and an
+authorized adapter supply. Ordinary Website builds use the sealed 4.0.3
+compiler and report these three operations as unavailable. Cursor resumption,
+exact historical replay, and raw PCRE2/Python syntax trees remain outside the
+evaluated scope. All interactive results here are local observations.
 
 ## Revisions and compiler decision
 
-| Component              | Evaluated identity                                                                                                                                                                                                                                            |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Website                | `dev` at `3187d307e1d4707d706b1a7508f0cc5c067cadac`, with the imported Lab tree on `codex/three-gap-labs-review`, followed by isolated qualification fixes                                                                                                    |
-| Published compiler     | `@strling-lang/strling@4.0.3`, source `d01ac3785736ad552c90f00b4ca13c0e2e5c9c62`, packaged WASM SHA-256 `6a24a334d5d7e78b17c09e6d9a62d33299d65ac79e52212c4f8db130250656d7`                                                                                    |
-| Local compiler adapter | `strling-lab-wasm 0.1.0-rc.1` working tree based on compiler `4e58730bbf67eaff683268e285e7084ccda5fadd`. Separate candidate protocol `strling.lab-compiler-tools@1.0.0-rc.1`. WASM SHA-256 `640fd5c4c205cff8c69ca46c7933f1351194e3861306cef137d67e1354ea5d72` |
+| Component              | Evaluated identity                                                                                                                                                                                                                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Website                | `dev` at `3187d307e1d4707d706b1a7508f0cc5c067cadac`, with the imported Lab tree on `codex/three-gap-labs-review`, followed by isolated qualification fixes                                                                                                                                |
+| Published compiler     | `@strling-lang/strling@4.0.3`, source `d01ac3785736ad552c90f00b4ca13c0e2e5c9c62`, packaged WASM SHA-256 `6a24a334d5d7e78b17c09e6d9a62d33299d65ac79e52212c4f8db130250656d7`                                                                                                                |
+| Historical adapter     | `strling-lab-wasm 0.1.0-rc.1`, source `3f1cf5faef7b6177e67adbe10147470cba47be8d`, based on `4e58730bbf67eaff683268e285e7084ccda5fadd`. WASM SHA-256 `640fd5c4c205cff8c69ca46c7933f1351194e3861306cef137d67e1354ea5d72`. Retained as earlier local evidence.                               |
+| Pinned private adapter | `strling-lab-wasm 0.1.0-rc.2`, source `8ba008b048d46c0ab209c5b15ca82fb2aaaeb110`, same compiler base and protocol `strling.lab-compiler-tools@1.0.0-rc.1`. Two relocated builds reproduced 2,549,360 bytes at SHA-256 `283ff9d319b4a28220aeac8b187834b12fc6634c9ad1beb9be3be4d4247cc04b`. |
 
 The sealed `strling.interop@1.0.0` descriptor exposes only `describe`,
 `compile`, `target_profile.inspect`, and `simply.compile`. Neither its
@@ -25,6 +27,7 @@ while retaining the native clock and the existing budget policy. The website
 passes verified compile output to the adapter and presents the result.
 The candidate has its own lock, descriptor, digest, worker, and asset path.
 [Released compiler source](https://github.com/strling-lang/strling/tree/d01ac3785736ad552c90f00b4ca13c0e2e5c9c62)
+· [Pinned adapter qualification inputs](https://github.com/strling-lang/strling/blob/8ba008b048d46c0ab209c5b15ca82fb2aaaeb110/bindings/lab-wasm/qualification.json)
 · [Developer details](LAB_WORKBENCH.md).
 
 ## Feature and behavior matrix
@@ -53,9 +56,11 @@ Competitor observations are identified as live or documentation evidence.
 
 The regex101 live walkthrough used a named capture over two synthetic tokens
 and checked full-match and group ranges. Substitution changed `a,b;c` to
-`a|b|c` in the live editor. Its public editor also exposed Extraction, Unit
-Tests, and the debugger. The documentation
-supplied the free/paid debugger and benchmark limits. The Labs exercised that
+`a|b|c` in the live editor. The recorded PCRE2 debugger preview displayed nine
+steps for `(a|ab)c` on `abc` and the upgrade boundary for the full debugger.
+Extraction applied `$1` and returned `alphabeta`. The editor also linked to
+Unit Tests. Vendor documentation supplied debugger and benchmark limits.
+The Labs exercised that
 capture workflow, engine-specific coordinates, real backtracking, replacement,
 selected capture extraction, repeatable assertions, local revisions and
 timing in Chromium. The Labs' extraction selects a whole match or a numbered
@@ -78,6 +83,12 @@ The current walkthrough observed regex101 web application 14.6.2 with PCRE2
 [0, 4) and [5, 10) and named capture spans [0, 2) and [5, 7). The editor
 displayed token explanations and access to the debugger. It did not expose
 the engine patch in that view. [regex101 editor](https://regex101.com/).
+
+The consolidation walkthrough also ran both study replacement forms in
+regex101 14.6.2 with its JavaScript flavor. Replacement `$$$<id>` produced
+`$07 $19 usd` and `$05 $81 fee`. The public RegExr editor still displayed its
+maintenance page. These are comparator checks on synthetic tasks.
+[regex101 editor](https://regex101.com/) · [RegExr](https://regexr.com/).
 
 The local comparator paired reported VS Code 1.147.0 with CPython 3.13.5.
 The Python run placed two `é` captures at scalar spans [1, 2) and [3, 4)
@@ -163,7 +174,7 @@ checkpoint evidence each retain their own provenance.
   routes and semantic controls. The scope is Chromium with desktop and
   mobile emulation.
 
-## Isolated website qualification
+## Initial isolated website qualification
 
 The preserved Lab worktree was copied into its own review worktree with
 snapshot tree `cb13a6b500c4a1cdee39208affe61313e4b6b7a3`. Qualification used
@@ -217,7 +228,7 @@ SHA in [Lab workbench development](LAB_WORKBENCH.md). Run `npm run check`,
 the candidate configuration. Match each browser suite to its build and set
 `STRLING_WEBSITE_PREVIEW_PORT` when another preview is listening.
 
-### Candidate asset digest manifest
+### Initial candidate asset digest manifest
 
 This manifest describes the evaluated build. The packaged 4.0.3 WASM appears
 under two generated asset names with identical content. The separate
@@ -243,14 +254,70 @@ candidate asset never replaces either released asset.
 | `lab/index.html`                                                    | `06eb01a4e9df19687dbebf3ab0a6f1124102480f6cb9ba683fe2f56b3f781e13` |
 | `regex/lab/index.html`                                              | `56f2f28f28d312a28406fba1ae3a7714333a33039a9b75751b897b118096ebe0` |
 
+## Main-only integration qualification
+
+The Website PR uses `main` at `3187d307e1d4707d706b1a7508f0cc5c067cadac` as its
+base. The original worktree remains separate from the reviewed changes. Its
+native-provider and exact-target trace cases now also exercise the hosting
+CSP. Both study replay forms save and restore a local revision, inspect the
+historical output, and run a fresh JavaScript Find first at UTF-16 `[0, 2)`.
+The UI makes no cursor-resumption claim. In the candidate build, browser
+checks exercise canonical matched outcomes for ECMAScript 2024 and PCRE2
+10.43 and grow the adapter to 64 MiB before verifying refusal of another
+page. The sealed build still serves only the published compiler.
+
+The dependency audit found security advisories in the previous lockfile.
+The compatible lock refresh includes Astro 7.4.13 and Vite 8.3.8. Astro's
+content loader needs the YAML package's ES-module entry on this dependency
+set. The final `npm audit --ignore-scripts --json` reported zero findings,
+including development dependencies. `npm ci --ignore-scripts` installed the
+reviewed lock with Node 22.23.5 and npm 11.4.2. Both builds passed 103 unit
+tests, 333-page static rendering and link verification, CSS checks, and
+RegEx Docs coverage. Astro type checking, ESLint and Prettier passed, with
+line endings normalized for the Windows checkout.
+
+Against fresh loopback previews, Playwright 1.62.1 and Chromium
+151.0.7922.34 passed 225 desktop and mobile cases with 11 unchanged
+applicability skips and no failures on the private candidate. The sealed
+build passed all 10 smoke cases, including the six original cases and four
+fresh replay checks. Each suite used a different empty port. Managed Windows
+left the verified preview process open after the assertions. Terminating
+only that test process allowed Playwright to return its result.
+
+The isolated static build emitted the compiler adapter byte for byte. Its
+asset manifest, covering the two Lab pages, their shared workbench, workers,
+and native runtime assets, had SHA-256
+`6b40fed6d86479eb97ae61598acfe718264334596d5aca42a2f574e038a68f8b`.
+Earlier and current builds emitted identical PCRE2, Pyodide, and sealed
+compiler WASM digests. The selected current asset hashes are below.
+
+| Asset                               | SHA-256                                                            |
+| ----------------------------------- | ------------------------------------------------------------------ |
+| Private compiler adapter 0.1.0-rc.2 | `283ff9d319b4a28220aeac8b187834b12fc6634c9ad1beb9be3be4d4247cc04b` |
+| Released 4.0.3 compiler             | `6a24a334d5d7e78b17c09e6d9a62d33299d65ac79e52212c4f8db130250656d7` |
+| Canonical compiler tools worker     | `3e8aeff7efcaca406371975ca58ff92012cc4874bb2cab2482604e9d2d044424` |
+| Browser execution worker            | `0b625be839f11bca9d0101a77905bc1f4c5415d3000a009d9bab28e6ac006fc7` |
+| Shared workbench browser script     | `94f0355d38945c0227d5d45f2ab4e46727c6458bf589332c4ad78d7b7eae33f5` |
+
 ## Remaining release gate
 
-| Owner                  | Required action                                                                                                                                                                                                                                                                                                                                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Compiler release owner | Select a clean compiler base with the inherited verifier and publication-request gates resolved, admit the new adapter to the release artifact set, and run deterministic hardgates plus independent Full and no-reuse Release certification. Approve the resulting immutable artifact and digest for website consumption. A public compiler release also requires explicit publication authorization. |
-| Website release owner  | Pin the qualified digest and rerun the static-host and browser acceptance checks against that artifact. Record disposition of exact cursor resumption and raw dialect syntax trees before claiming those capabilities. Approve website release separately.                                                                                                                                             |
+| Owner                  | Required action                                                                                                                                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compiler release owner | Record exact-source scoped admission for the private digest. Any separately distributed compiler release requires its own certification and publication authorization.                               |
+| Website release owner  | Approve an explicit production adapter supply and Website release after reviewing qualification on the immutable candidate. Exact cursor resumption and raw dialect syntax trees remain unavailable. |
 
 The existing 4.0.3 registry coordinate and interop contract remain intact.
-Local tests are development evidence. The compiler release policy reserves
-the governed candidate channel for an exact, independently certified artifact.
-[Compiler release policy](https://github.com/strling-lang/strling/blob/4e58730bbf67eaff683268e285e7084ccda5fadd/docs/release-policy.md).
+The compiler's scoped qualification runs against the exact private artifact.
+Production builds follow their own release policy.
+[Compiler candidate record](https://github.com/strling-lang/strling/blob/8ba008b048d46c0ab209c5b15ca82fb2aaaeb110/docs/migration/records/lab-compiler-tools-candidate.yaml).
+
+## Source integration without deployment
+
+Review commits and the PR title carry `[skip netlify]`. A source-only merge
+must put `[skip netlify]` in the actual merge commit message as well. Confirm
+the current production deployment's commit after merging. The next unmarked
+push can include all skipped changes and requires separate release approval.
+The build refuses the private adapter on Netlify. Ordinary builds remain
+available with the sealed compiler and report canonical tools unavailable.
+[Netlify deploy controls](https://docs.netlify.com/deploy/manage-deploys/manage-deploys-overview/#skip-a-deploy) ·
+[Netlify build metadata](https://docs.netlify.com/build/configure-builds/environment-variables/#build-metadata).

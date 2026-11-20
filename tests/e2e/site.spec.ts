@@ -190,18 +190,14 @@ test.describe('routes', () => {
   for (const [route, heading] of [
     ['/lab/', 'STRling Lab'],
     ['/regex/lab/', 'RegEx Lab'],
-    ['/regex/compatibility/', 'RegEx Compatibility Check'],
   ] as const) {
-    test(`${route} is an honest coming-soon destination`, async ({ page }) => {
+    test(`${route} opens an indexed Lab workbench`, async ({ page }) => {
       await page.goto(route);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
       await expect(
-        page.getByText('Coming soon', { exact: true }),
-      ).toBeVisible();
-      await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
-        'content',
-        'noindex,follow',
-      );
+        page.getByRole('button', { name: /^Run/ }).first(),
+      ).toBeEnabled();
+      await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
     });
   }
 
@@ -620,8 +616,11 @@ test.describe('metadata and discoverability', () => {
     expect(sitemap).toContain('/regex/');
     expect(sitemap).toContain(sampleRegexCategory);
     expect(sitemap).toContain(sampleRegexFeature);
-    expect(sitemap).not.toContain('/lab/');
-    expect(sitemap).not.toContain('/regex/lab/');
+    for (const route of ['/lab/', '/regex/lab/', '/lab/guide/']) {
+      expect(sitemap).toContain(
+        '<loc>https://strling-lang.netlify.app' + route + '</loc>',
+      );
+    }
     expect(sitemap).not.toContain('/regex/compatibility/');
   });
 

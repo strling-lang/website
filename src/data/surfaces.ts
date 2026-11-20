@@ -36,16 +36,16 @@ export const surfaces = {
     label: 'STRling Lab',
     navigationLabel: 'Lab',
     route: '/lab/',
-    status: 'coming-soon',
+    status: 'available',
     description:
-      'A planned website workspace for writing STRling source and inspecting execution results.',
+      'A browser workspace for compiling STRling source, inspecting target artifacts, and testing eligible patterns.',
     capabilities: [
-      'Write STRling syntax and test it against sample text',
-      'See live matching behavior',
-      'Inspect returned matches, ranges, captures, named groups, and structured result data',
+      'Compile Semantic STRling or Simply builder requests',
+      'Inspect diagnostics, semantic IR, and generated artifacts',
+      'Run eligible artifacts and compare results across revisions',
     ],
     scopeNote:
-      'Compilation and execution are unavailable in the website Lab. Use the downloadable examples to run the published compiler locally.',
+      'Compiler output and observations from browser execution have separate provenance.',
   },
   regexDocs: {
     id: 'regex-docs',
@@ -70,16 +70,16 @@ export const surfaces = {
     label: 'RegEx Lab',
     navigationLabel: 'RegEx Lab',
     route: '/regex/lab/',
-    status: 'coming-soon',
+    status: 'available',
     description:
-      'An interface for running RegEx against sample text when a qualified execution engine and exact profile are configured.',
+      'A browser workspace for testing raw regular expressions with JavaScript, PCRE2, or Python re.',
     capabilities: [
       'Enter a regular expression and use identified engine options or flags',
       'Test against sample text and inspect matches and ranges',
       'Inspect captures, named groups, and structured or raw result information',
     ],
     scopeNote:
-      'Public execution is gated on a certified profile and an execution provider.',
+      'Each run records the selected runtime and the results observed in this browser.',
   },
   regexCompatibility: {
     id: 'regex-compatibility',

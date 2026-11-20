@@ -729,6 +729,58 @@ test('requires an approved adapter and exercises the configured canonical tools 
   ).toEqual([]);
 });
 
+test('rejects missing and substituted compiler tools before recovering with the pinned asset', async ({
+  browserName,
+  context,
+  baseURL,
+  page,
+}) => {
+  test.skip(
+    browserName !== 'chromium' || !process.env.STRLING_LAB_TOOLS_CANDIDATE,
+    'Requires Chromium worker request interception and the isolated adapter build.',
+  );
+  await useHostingCsp(context, baseURL!);
+  await page.goto('/lab/');
+  await expect(status(page)).toContainText('Compiler succeeded');
+  const original =
+    'semantic strling 1.0; case sensitive; pattern text "release check";';
+  await edit(page, source(page), original);
+  const format = page.getByRole('button', {
+    name: 'Format STRling',
+    exact: true,
+  });
+  const asset = '**/_strling-lab/compiler-tools-0.1.0-rc.3.wasm';
+
+  await context.route(asset, (route) => route.fulfill({ status: 404 }), {
+    times: 1,
+  });
+  await format.click();
+  await expect(status(page)).toContainText('WebAssembly asset is unavailable');
+  await expect(source(page)).toHaveText(original);
+
+  await context.route(
+    asset,
+    (route) =>
+      route.fulfill({
+        contentType: 'application/wasm',
+        body: Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]),
+      }),
+    { times: 1 },
+  );
+  await format.click();
+  await expect(status(page)).toContainText(
+    'WebAssembly asset failed its integrity check',
+  );
+  await expect(source(page)).toHaveText(original);
+
+  await format.click();
+  await expect(
+    page
+      .getByText('Canonical STRling source formatted.', { exact: true })
+      .first(),
+  ).toBeVisible();
+});
+
 test('preserves canonical partial, unsupported, likely, unknown and unavailable in WebAssembly', async ({
   page,
 }) => {

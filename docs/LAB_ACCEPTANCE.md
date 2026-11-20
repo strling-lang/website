@@ -486,6 +486,36 @@ to its separate governed index.
 
 ## Remaining release gate
 
+### Distribution record for owner review
+
+Compiler `main` at `1cf698751e04d5b2130b0c2500358499657709fc` records
+`strling-lab-wasm 0.1.0-rc.3` as independently versioned, private and
+unpublished. Its isolated qualification manifest binds the exact
+2,548,656-byte digest listed above. The existing complete-product Release
+pipeline and signed 4.0.3 closure cover their registered artifacts. The
+adapter has no production distribution entry in that artifact set.
+
+The proposed distribution is a separate versioned WASM release asset under
+the compiler repository. A new coordinate such as `strling-lab-wasm 0.1.0`
+requires an owner decision and a fresh reproducible build. It would carry
+the exact compiler source and toolchain revisions, adapter version, wire
+protocol, compiler-base identity, asset size and SHA-256, SBOM and provenance,
+and the exact signed evidence closure and verification run. The owner must
+register the allowed destination and artifact set before freeze. The
+existing `strling.lab-compiler-tools@1.0.0-rc.1` contract remains the website's
+tested wire version and needs an explicit compatibility disposition in the
+new record.
+
+The compiler owner must admit the independent artifact to the production
+evidence scope and authorize an exact source and version. A trusted
+certifier must sign the same-source Full and independent no-reuse Release
+evidence that includes those exact bytes. The protected publication
+authorization must name the certified source, artifact, destination and run.
+The website can then consume that immutable coordinate through a clean CI
+build. [Compiler release policy](https://github.com/strling-lang/strling/blob/1cf698751e04d5b2130b0c2500358499657709fc/docs/release-policy.md) ·
+[Certification profiles](https://github.com/strling-lang/strling/blob/1cf698751e04d5b2130b0c2500358499657709fc/governance/certification-profiles.md) ·
+[Current adapter scope](https://github.com/strling-lang/strling/blob/1cf698751e04d5b2130b0c2500358499657709fc/bindings/lab-wasm/qualification.json).
+
 | Owner                  | Required action                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Compiler release owner | Authorize and qualify a distribution artifact for production with same-source signed Full and no-reuse Release evidence. Publish or otherwise supply the authorized immutable bytes under the compiler's release policy. |
@@ -517,3 +547,33 @@ The build refuses the private adapter on Netlify. Ordinary builds remain
 available with the sealed compiler and report canonical tools unavailable.
 [Netlify deploy controls](https://docs.netlify.com/deploy/manage-deploys/manage-deploys-overview/#skip-a-deploy) ·
 [Netlify build metadata](https://docs.netlify.com/build/configure-builds/environment-variables/#build-metadata).
+
+### Production preparation and rollback
+
+Netlify reports published production deployment
+`6aff4b86748a3243796f055d` on `main` at
+`3187d307e1d4707d706b1a7508f0cc5c067cadac`. A read-only public check
+returned HTTP 200 for `/`, `/lab/` and `/regex/lab/`. Those responses
+show the prior deployment's CSP. The next deployment must use the reviewed
+`netlify.toml` headers and include the exact approved compiler adapter in
+the static output.
+
+Before asking for approval, rebuild the exact shipping commit from a fresh
+lockfile install with the authorized artifact. Retain the generated file
+manifest, the adapter producer evidence, and the test results. Check the
+Netlify production branch, resolved build command, publish directory and
+Node version against that commit. Have the release owner explicitly approve
+the actual production deploy. Then verify the published deployment record
+and compare the deployed adapter, worker and app asset digests with the
+accepted manifest. Exercise both Labs, the guide and navigation, all runtime
+families, compiler tools, safe session export, and the browser's security
+and cache headers from the public origin.
+
+If the live smoke or identity check fails, the authorized rollback is to
+republish successful deployment `6aff4b86748a3243796f055d` using **Publish
+Deploy** on that exact deployment. Confirm its published ID and commit and
+repeat the three public route checks. Keep subsequent Git-triggered
+production publishing held until the incident is resolved. No rollback or
+deployment is part of source integration.
+[Published deployment record](https://app.netlify.com/projects/strling-lang/deploys/6aff4b86748a3243796f055d) ·
+[Netlify rollback procedure](https://docs.netlify.com/deploy/manage-deploys/manage-deploys-overview/#rollbacks).

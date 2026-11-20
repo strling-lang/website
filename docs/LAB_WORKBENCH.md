@@ -53,6 +53,18 @@ Contract-specific browser cases run when the candidate is configured.
 Consult the [acceptance report](LAB_ACCEPTANCE.md) for compiler ownership and
 publication gates.
 
+For a shipping build, obtain the compiler owner's immutable distribution
+record and verify its exact signed source and artifact evidence. Check in
+the authorized adapter coordinate, size, digest and protocol identity as
+build inputs. The clean build should obtain only that exact asset from its
+authorized source, check the bytes before emitting them, and publish them at
+an identity-specific same-origin path. Browser startup must continue to
+verify the byte digest, imports, descriptor, operation set and bounds. A
+configured shipping asset that is absent or invalid must fail the build.
+Keep the currently deployed compiler's sealed 4.0.3 compatibility path.
+The [release and rollback checklist](LAB_ACCEPTANCE.md#production-preparation-and-rollback)
+records the deployment boundary and required public verification.
+
 Formatting uses a canonical source document and byte-position diagnostics.
 Conversion reads accepted Semantic IR and can apply only exact output with
 matching reconstruction fingerprints. Partial output can be inspected and

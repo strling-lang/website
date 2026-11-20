@@ -511,6 +511,7 @@ runtime and compiler assets.
 | Isolated candidate, focused Firefox and WebKit                                        |     18 |      0 |       0 |
 | Corrected Firefox case repeated in fresh contexts                                     |      3 |      0 |       0 |
 | Sealed build, full Chromium suite including all 16 smoke cases                        |    229 |      0 |      15 |
+| Sealed build, focused Firefox and WebKit                                              |      8 |      0 |       0 |
 
 The sealed run's 15 skips include the 11 inherited viewport applicability
 exclusions and four isolated-adapter-only combinations. The new Chromium
@@ -539,6 +540,19 @@ unpublished. Its isolated qualification manifest binds the exact
 pipeline and signed 4.0.3 closure cover their registered artifacts. The
 adapter has no production distribution entry in that artifact set.
 
+The previously qualified bytes passed a fresh run of the compiler's
+artifact verifier against the locked 4.0.3 package. Two fresh Windows
+offline rebuilds from compiler `main` both produced SHA-256
+`6df19a4a0c402cc4b88b98abaf3fcca23940276064ec9a0fcb02b5e73a0ee715`,
+including a rebuild with the reviewed task-local Cargo cache. They had
+the same size as the recorded rc.3 artifact. The current pin rejected them.
+A fresh Windows checkout of the originally reviewed source
+`156a0b54186e1d457fd47696d9f088e2c8b23360` produced a third digest,
+`4acdb6413c9c494fdf7f5b4bc90bd5d79030bf414b0f14a08ec34d008b06445b`.
+The compiler release must reconcile reproducibility on its chosen exact
+distribution source and pin the independently reproduced output. The
+website retains the earlier qualified bytes for isolated testing.
+
 The proposed distribution is a separate versioned WASM release asset under
 the compiler repository. A new coordinate such as `strling-lab-wasm 0.1.0`
 requires an owner decision and a fresh reproducible build. It would carry
@@ -558,7 +572,16 @@ authorization must name the certified source, artifact, destination and run.
 The website can then consume that immutable coordinate through a clean CI
 build. [Compiler release policy](https://github.com/strling-lang/strling/blob/1cf698751e04d5b2130b0c2500358499657709fc/docs/release-policy.md) ·
 [Certification profiles](https://github.com/strling-lang/strling/blob/1cf698751e04d5b2130b0c2500358499657709fc/governance/certification-profiles.md) ·
-[Current adapter scope](https://github.com/strling-lang/strling/blob/1cf698751e04d5b2130b0c2500358499657709fc/bindings/lab-wasm/qualification.json).
+[Current adapter scope](https://github.com/strling-lang/strling/blob/1cf698751e04d5b2130b0c2500358499657709fc/bindings/lab-wasm/qualification.json) ·
+[GitHub immutable release verification](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/verify-release-integrity).
+
+The current release trust policy names
+`strling-local-release-certifier-2026-01` in the
+`strling-local-certification-v1` signature namespace. The current closure
+under `tests/certification/release-candidate/1.0/current` is the historical
+product closure. A new source-bound closure covering the distribution
+adapter must be verified by the compiler's complete-product integrity
+workflow. [Compiler release trust policy](https://github.com/strling-lang/strling/blob/1cf698751e04d5b2130b0c2500358499657709fc/governance/release-candidate-certification-trust.json).
 
 | Owner                  | Required action                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -580,6 +603,14 @@ Linux source qualification and the historical certification preservation
 checks passed at that revision. The merged rc.3 supersedes that failing build for isolated qualification.
 [Hosted Windows mismatch](https://github.com/strling-lang/strling/actions/runs/44802098783) ·
 [Compiler review](https://github.com/strling-lang/strling/pull/151).
+
+The canonical Full profile and clean no-reuse Release aggregate were
+launched separately at compiler source `1cf698751e04d5b2130b0c2500358499657709fc`
+as unsigned diagnostics. That source still registers the Lab adapter for
+isolated qualification only. A profile result from this source cannot
+certify an adapter distribution. There is no signed Full or Release
+evidence covering a production Lab adapter, and no shipping adapter
+coordinate for website CI to consume.
 
 ## Source integration without deployment
 

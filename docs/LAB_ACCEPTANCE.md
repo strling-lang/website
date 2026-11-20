@@ -484,6 +484,50 @@ or critical findings. Mobile coverage uses device emulation. These interactive
 results supply application evidence and leave Regex Conformance certification
 to its separate governed index.
 
+## Release-readiness revalidation
+
+The source promotion preserves candidate
+`d0c93bb46f2cdc162382c861cd2c2483134532fd` as a direct descendant of
+the previously integrated website `main`
+`674e06a70a8f86ae9a1cb18061111be949f8e785`. The follow-up test and report
+changes leave the emitted application bytes unchanged.
+
+A fresh lockfile installation used Node 22.23.5 and npm 11.4.2. It rebuilt
+all 433 isolated qualification files byte for byte from the preserved
+manifest at SHA-256
+`3df3f554e074d061b2cf8c32a38ff28bd2e16ba2505eeff1b94e72fe8620923c`.
+It also built a clean 333-page Netlify-style sealed configuration without
+an adapter asset. Its 432-file inventory has SHA-256
+`a0e2468393ee6f7369ba1f3912c80d6133ef37ce8a143167b5918758666083c5`.
+HTTPS previews used separate loopback servers and browser
+contexts, the checked-in CSP and immutable cache policy, and the real
+runtime and compiler assets.
+
+| Scope                                                                                 | Passed | Failed | Skipped |
+| ------------------------------------------------------------------------------------- | -----: | -----: | ------: |
+| Unit suite                                                                            |    105 |      0 |       0 |
+| Isolated candidate, full Chromium baseline                                            |    231 |      0 |      11 |
+| Isolated candidate, new adapter integrity and recovery test in both Chromium projects |      2 |      0 |       0 |
+| Isolated candidate, focused Firefox and WebKit                                        |     18 |      0 |       0 |
+| Corrected Firefox case repeated in fresh contexts                                     |      3 |      0 |       0 |
+| Sealed build, full Chromium suite including all 16 smoke cases                        |    229 |      0 |      15 |
+
+The sealed run's 15 skips include the 11 inherited viewport applicability
+exclusions and four isolated-adapter-only combinations. The new Chromium
+test verified that a missing asset and a substituted WebAssembly module
+leave the source untouched, report distinct errors, and allow retry with
+the genuine pinned module. The existing browser corpus verified rejection
+of an unrelated protocol. The original Firefox fixture failure involved
+contenteditable input replacement. Its keyboard-driven correction passed
+in the focused suite and all three repeated runs. The cross-browser scope
+and mobile emulation boundaries above still apply.
+
+The fresh type, lint, formatting, CSS, 16-category and 269-feature RegEx
+Docs coverage, and 333-page link checks passed. The unchanged website
+lockfile audit returned zero findings. These results establish website
+source acceptance for the isolated and sealed configurations. A production
+build with an authorized distribution adapter requires its own acceptance.
+
 ## Remaining release gate
 
 ### Distribution record for owner review
@@ -569,7 +613,7 @@ accepted manifest. Exercise both Labs, the guide and navigation, all runtime
 families, compiler tools, safe session export, and the browser's security
 and cache headers from the public origin.
 
-If the live smoke or identity check fails, the authorized rollback is to
+If the live smoke or identity check fails and rollback is authorized,
 republish successful deployment `6aff4b86748a3243796f055d` using **Publish
 Deploy** on that exact deployment. Confirm its published ID and commit and
 repeat the three public route checks. Keep subsequent Git-triggered

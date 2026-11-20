@@ -570,6 +570,39 @@ and separate browser batches. Reports and traces retain both attempts.
 
 ## Remaining release gate
 
+### Production consumer
+
+The website now defines an explicit sealed or certified mode in
+`scripts/lab-compiler-release.json`. The committed manifest remains sealed.
+The certified path checks immutable GitHub release metadata, the exact Git
+source, asset identity and SHA-256, transport bounds, ABI, descriptor, and
+memory ceiling before emitting a content-addressed same-origin asset. The
+historical private adapter remains available only to isolated builds.
+Consumer tests exercise missing and changed assets, unsupported identities,
+and unauthorized redirects. A build using published certified bytes still
+requires the compiler admission and publication described below.
+
+The provisional transport test sent the real private RC4 Wasm through the
+certified consumer's metadata, download, ABI checks, and static emission.
+Its release metadata was a test fixture. The verification also rejected
+the same Wasm presented with a different version or kernel-base revision.
+
+| Consumer change verification          | Passed | Failed | Skipped |
+| ------------------------------------- | -----: | -----: | ------: |
+| Unit suite                            |    108 |      0 |       0 |
+| Isolated Chromium, desktop and mobile |    235 |      0 |      11 |
+| Sealed Chromium, desktop and mobile   |    231 |      0 |      15 |
+| Isolated Firefox and WebKit, focused  |     20 |      0 |       0 |
+| Sealed Firefox and WebKit, focused    |     10 |      0 |       0 |
+
+Type, lint, CSS, documentation coverage and link checks passed. The final
+sealed and isolated rebuilds reproduced the browser-tested files. The isolated
+browser runs used the historical private RC3 pin. The
+434-file sealed inventory has SHA-256
+`5b1f081f33e957d30b3174c591d5d7f2a2fca76e2475a7a651e2e34f99bd26d2`.
+The 435-file isolated inventory has SHA-256
+`b53c9cadafcb0e2067b8429f403177dff9022e7dcd1adbd5ec4e8a3ca8d5d2d4`.
+
 ### Distribution record for owner review
 
 Compiler `main` at `1cf698751e04d5b2130b0c2500358499657709fc` records

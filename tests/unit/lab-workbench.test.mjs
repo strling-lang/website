@@ -62,26 +62,26 @@ const saveAll = {
   sourceOrigin: true,
 };
 
-test('Netlify builds use the sealed compiler and refuse an opt-in private adapter', () => {
+test('Netlify uses the explicit sealed mode and refuses a private adapter', async () => {
   const localFile = 'local-compiler-adapter.wasm';
   for (const context of ['production', 'deploy-preview', 'branch-deploy']) {
     const environment = { NETLIFY: 'true', CONTEXT: context };
-    assert.equal(labCompilerTools(environment).integration, undefined);
-    assert.throws(
+    assert.equal((await labCompilerTools(environment)).integration, undefined);
+    await assert.rejects(
       () =>
         labCompilerTools({
           ...environment,
           STRLING_LAB_TOOLS_CANDIDATE: localFile,
         }),
-      /private Lab compiler adapter is for isolated builds/,
+      /private Lab compiler adapter is only allowed in isolated builds/,
     );
   }
 });
 
-test('an isolated Lab build refuses a replacement compiler artifact or digest', () => {
+test('an isolated Lab build refuses a replacement compiler artifact or digest', async () => {
   const path = fileURLToPath(new URL('../../package.json', import.meta.url));
   const environment = { STRLING_LAB_TOOLS_CANDIDATE: path };
-  assert.throws(
+  await assert.rejects(
     () =>
       labCompilerTools({
         ...environment,
@@ -89,10 +89,150 @@ test('an isolated Lab build refuses a replacement compiler artifact or digest', 
       }),
     /compiler digest differs from the pin/,
   );
-  assert.throws(
+  await assert.rejects(
     () => labCompilerTools(environment),
-    /candidate has the wrong size or digest/,
+    /artifact has the wrong size or digest/,
   );
+});
+
+const shippingArtifact = {
+  version: '0.1.0',
+  protocol: 'strling.lab-compiler-tools@1.0.0-rc.1',
+  sealedCompilerVersion: '4.0.3',
+  sourceRevision: 'a'.repeat(40),
+  baseRevision: 'b'.repeat(40),
+  certifiedClosureSha256: 'c'.repeat(64),
+  sha256: 'd'.repeat(64),
+  size: 8,
+  memoryBytes: 67_108_864,
+  stackBytes: 2_097_152,
+  url: 'https://github.com/strling-lang/strling/releases/download/lab-wasm-v0.1.0/strling_lab_wasm.wasm',
+};
+const shipping = {
+  schemaVersion: 1,
+  mode: 'certified',
+  artifact: shippingArtifact,
+};
+const { Response } = globalThis;
+const published = {
+  immutable: true,
+  draft: false,
+  tag_name: 'lab-wasm-v0.1.0',
+  assets: [
+    {
+      name: 'strling_lab_wasm.wasm',
+      browser_download_url: shippingArtifact.url,
+      size: shippingArtifact.size,
+      digest: 'sha256:' + shippingArtifact.sha256,
+      state: 'uploaded',
+    },
+  ],
+};
+
+test('shipping refuses an absent or unauthorized manifest before network access', async () => {
+  const noNetwork = () =>
+    assert.fail('Invalid configuration reached the network');
+  for (const artifact of [
+    undefined,
+    { ...shippingArtifact, protocol: 'strling.interop@1.0.0' },
+    { ...shippingArtifact, version: '0.1.0-rc.3' },
+    { ...shippingArtifact, version: 'latest' },
+    { ...shippingArtifact, certifiedClosureSha256: '' },
+  ]) {
+    await assert.rejects(
+      labCompilerTools({}, { ...shipping, artifact }, noNetwork),
+      /approved compiler tools release manifest is required/,
+    );
+  }
+  await assert.rejects(
+    labCompilerTools(
+      {},
+      {
+        ...shipping,
+        artifact: {
+          ...shippingArtifact,
+          url: 'https://example.com/compiler.wasm',
+        },
+      },
+      noNetwork,
+    ),
+    /outside the approved release coordinate/,
+  );
+  await assert.rejects(
+    labCompilerTools(
+      { STRLING_LAB_TOOLS_CANDIDATE: 'private.wasm' },
+      shipping,
+      noNetwork,
+    ),
+    /private Lab compiler adapter is only allowed in isolated builds/,
+  );
+});
+
+test('shipping requires immutable metadata for the exact source, version and bytes', async () => {
+  for (const [release, commit] of [
+    [{ ...published, immutable: false }, shippingArtifact.sourceRevision],
+    [
+      { ...published, tag_name: 'lab-wasm-v0.1.1' },
+      shippingArtifact.sourceRevision,
+    ],
+    [published, 'e'.repeat(40)],
+    [
+      {
+        ...published,
+        assets: [
+          { ...published.assets[0], digest: 'sha256:' + 'e'.repeat(64) },
+        ],
+      },
+      shippingArtifact.sourceRevision,
+    ],
+  ]) {
+    await assert.rejects(
+      labCompilerTools({}, shipping, async (url) => {
+        if (url.endsWith('/releases/tags/lab-wasm-v0.1.0'))
+          return Response.json(release);
+        if (url.endsWith('/commits/lab-wasm-v0.1.0'))
+          return Response.json({ sha: commit });
+        assert.fail('Unapproved release reached the download');
+      }),
+      /does not match its approved identity/,
+    );
+  }
+});
+
+test('shipping fails closed on a missing, redirected, oversized or replaced asset', async () => {
+  for (const [failure, message] of [
+    [new Response(null, { status: 404 }), /asset or metadata is unavailable/],
+    [
+      Response.redirect('https://example.com/substituted.wasm'),
+      /unauthorized redirect/,
+    ],
+    [
+      Response.redirect(
+        'https://release-assets.githubusercontent.com/github-production-release-asset/1/wrong',
+      ),
+      /unauthorized redirect/,
+    ],
+    [new Response(new Uint8Array(9)), /exceeds its size limit/],
+    [
+      new Response(new Uint8Array(8), { headers: { age: '120' } }),
+      /wrong size or digest/,
+    ],
+  ]) {
+    await assert.rejects(
+      labCompilerTools({}, shipping, async (url, options) => {
+        assert.equal(options.credentials, 'omit');
+        assert.equal(options.cache, 'no-store');
+        if (url.endsWith('/releases/tags/lab-wasm-v0.1.0'))
+          return Response.json(published);
+        if (url.endsWith('/commits/lab-wasm-v0.1.0'))
+          return Response.json({ sha: shippingArtifact.sourceRevision });
+        assert.equal(url, shippingArtifact.url);
+        assert.equal(options.redirect, 'manual');
+        return failure;
+      }),
+      message,
+    );
+  }
 });
 const redact = {
   samples: false,

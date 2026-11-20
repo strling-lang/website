@@ -8,7 +8,7 @@ import rehypeAccessibleTables from './src/utils/rehypeAccessibleTables.ts';
 import { labCompilerTools } from './scripts/lab-compiler-tools.mjs';
 
 const fallbackSite = 'https://strling-lang.netlify.app';
-const compilerTools = labCompilerTools();
+const compilerTools = await labCompilerTools();
 
 /** @type {import('vite').Plugin} */
 const legacyPyodideDevBridge = {
@@ -49,8 +49,11 @@ export default defineConfig({
   },
   vite: {
     define: {
-      'import.meta.env.PUBLIC_LAB_TOOLS_CANDIDATE_SHA256': JSON.stringify(
-        compilerTools.digest,
+      'import.meta.env.PUBLIC_LAB_TOOLS_IDENTITY': JSON.stringify(
+        compilerTools.identity,
+      ),
+      'import.meta.env.PUBLIC_LAB_TOOLS_PATH': JSON.stringify(
+        compilerTools.path ?? '',
       ),
     },
     plugins: [legacyPyodideDevBridge],

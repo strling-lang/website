@@ -53,15 +53,24 @@ Contract-specific browser cases run when the candidate is configured.
 Consult the [acceptance report](LAB_ACCEPTANCE.md) for compiler ownership and
 publication gates.
 
-For a shipping build, obtain the compiler owner's immutable distribution
-record and verify its exact signed source and artifact evidence. Check in
-the authorized adapter coordinate, size, digest and protocol identity as
-build inputs. The clean build should obtain only that exact asset from its
-authorized source, check the bytes before emitting them, and publish them at
-an identity-specific same-origin path. Browser startup must continue to
-verify the byte digest, imports, descriptor, operation set and bounds. A
-configured shipping asset that is absent or invalid must fail the build.
-Keep the currently deployed compiler's sealed 4.0.3 compatibility path.
+The build reads `scripts/lab-compiler-release.json`. Its current `sealed`
+mode uses the released compiler alone. To switch to `certified`, verify the
+compiler owner's signed closure and independently fetch the immutable release.
+Pin the approved adapter version, source and kernel-base commits, protocol,
+exact size and digest, closure digest, compatibility, limits, and asset URL.
+The current consumer expects a dedicated immutable GitHub release under
+`strling-lang/strling` with tag `lab-wasm-v<version>` and asset
+`strling_lab_wasm.wasm`. The release owner must approve that coordinate.
+
+Clean certified builds verify the published release's tag, immutability,
+source and asset metadata without credentials. They fetch the bounded asset
+over HTTPS, accept only the compiler repository's GitHub delivery redirect,
+check the bytes, and verify the shared Wasm ABI, descriptor and memory ceiling.
+Absent, changed or incompatible inputs fail the build. There is no local
+override in certified mode. The emitted version-and-digest path is same-origin
+and immutable. The worker independently checks its size, digest, imports,
+descriptor, operation, profile and subject binding. The 4.0.3 compiler remains
+the compilation provider and retains its own Wasm and protocol.
 The [release and rollback checklist](LAB_ACCEPTANCE.md#production-preparation-and-rollback)
 records the deployment boundary and required public verification.
 

@@ -357,8 +357,7 @@ class LabWorkbench extends HTMLElement {
   #renderSettings() {
     const { format, source, runtime, target, run } = this.#session;
     this.#action('format')!.hidden =
-      format === 'regex' ||
-      (format === 'semantic' && !toolsIdentity.candidateSha256);
+      format === 'regex' || (format === 'semantic' && !toolsIdentity.sha256);
     this.#action('format')!.textContent =
       format === 'simply' ? 'Format JSON' : 'Format STRling';
     const replacement =
@@ -389,7 +388,7 @@ class LabWorkbench extends HTMLElement {
     this.#output('subject-meta').textContent =
       this.#dataset.text.length + ' / ' + limits.input + ' UTF-16 units';
     if (this.#mode === 'strling') {
-      const enabled = Boolean(toolsIdentity.candidateSha256);
+      const enabled = Boolean(toolsIdentity.sha256);
       this.#action('convert')!.disabled = !enabled;
       this.#action('explain')!.disabled = !enabled;
       this.#output('compiler-tools-status').textContent = enabled

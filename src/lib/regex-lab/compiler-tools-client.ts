@@ -25,14 +25,16 @@ export class LabCompilerTools {
     signal: AbortSignal,
     expectedTarget?: JsonObject,
   ): Promise<ToolOutput> {
-    if (!toolsIdentity.candidateSha256)
+    if (!toolsIdentity.sha256)
       throw new Error('Compiler tools are unavailable in this build.');
     const reply = await this.#worker.run({ request, expectedTarget }, signal);
     signal.throwIfAborted();
     try {
       if (
         !reply ||
-        reply.identity?.candidateSha256 !== toolsIdentity.candidateSha256 ||
+        reply.identity?.sha256 !== toolsIdentity.sha256 ||
+        reply.identity?.size !== toolsIdentity.size ||
+        reply.identity?.sourceRevision !== toolsIdentity.sourceRevision ||
         reply.identity?.baseRevision !== toolsIdentity.baseRevision ||
         reply.identity?.version !== toolsIdentity.version ||
         reply.identity?.protocol !== toolsIdentity.protocol

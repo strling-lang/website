@@ -18,6 +18,17 @@ const tab = (page: Page, name: string) =>
 const run = (page: Page) =>
   page.getByRole('button', { name: /^Run Ctrl/ }).click();
 const executionWorker = /\/execution\.worker-[^/]+\.js$/;
+const compilerAsset =
+  /\/_strling-lab\/compiler-tools-[^/]+-[a-f0-9]{64}\.wasm$/;
+const releaseManifest = JSON.parse(
+  await readFile(
+    new URL('../../scripts/lab-compiler-release.json', import.meta.url),
+    'utf8',
+  ),
+);
+const compilerToolsEnabled =
+  releaseManifest.mode === 'certified' ||
+  Boolean(process.env.STRLING_LAB_TOOLS_CANDIDATE);
 
 async function edit(page: Page, editor: Locator, value: string) {
   if (page.context().browser()?.browserType().name() === 'firefox') {
@@ -608,7 +619,7 @@ test('requires an approved adapter and exercises the configured canonical tools 
   );
   await page.goto('/lab/');
   await expect(status(page)).toContainText('Compiler succeeded');
-  if (!process.env.STRLING_LAB_TOOLS_CANDIDATE) {
+  if (!compilerToolsEnabled) {
     await expect(
       page.getByRole('button', { name: 'Format STRling', exact: true }),
     ).toBeHidden();
@@ -695,11 +706,7 @@ test('requires an approved adapter and exercises the configured canonical tools 
       .map(({ url }) => new URL(url).origin)
       .every((origin) => origin === new URL(baseURL!).origin),
   ).toBe(true);
-  expect(
-    requests.some(({ url }) =>
-      url.endsWith('/_strling-lab/compiler-tools-0.1.0-rc.3.wasm'),
-    ),
-  ).toBe(true);
+  expect(requests.some(({ url }) => compilerAsset.test(url))).toBe(true);
   expect(JSON.stringify(requests)).not.toContain(privateText);
   expect(
     await page.evaluate(
@@ -760,8 +767,8 @@ test('rejects missing and substituted compiler tools before recovering with the 
   page,
 }) => {
   test.skip(
-    browserName !== 'chromium' || !process.env.STRLING_LAB_TOOLS_CANDIDATE,
-    'Requires Chromium worker request interception and the isolated adapter build.',
+    browserName !== 'chromium' || !compilerToolsEnabled,
+    'Requires Chromium worker request interception and a configured adapter.',
   );
   await useHostingCsp(context, baseURL!);
   await page.goto('/lab/');
@@ -773,17 +780,19 @@ test('rejects missing and substituted compiler tools before recovering with the 
     name: 'Format STRling',
     exact: true,
   });
-  const asset = '**/_strling-lab/compiler-tools-0.1.0-rc.3.wasm';
-
-  await context.route(asset, (route) => route.fulfill({ status: 404 }), {
-    times: 1,
-  });
+  await context.route(
+    compilerAsset,
+    (route) => route.fulfill({ status: 404 }),
+    {
+      times: 1,
+    },
+  );
   await format.click();
   await expect(status(page)).toContainText('WebAssembly asset is unavailable');
   await expect(source(page)).toHaveText(original);
 
   await context.route(
-    asset,
+    compilerAsset,
     (route) =>
       route.fulfill({
         contentType: 'application/wasm',
@@ -810,14 +819,18 @@ test('preserves canonical partial, unsupported, likely, unknown and unavailable 
 }) => {
   test.setTimeout(90_000);
   test.skip(
-    !process.env.STRLING_LAB_TOOLS_CANDIDATE,
-    'Canonical adapter qualification requires the opt-in candidate build.',
+    !compilerToolsEnabled,
+    'Canonical adapter qualification requires a configured adapter.',
   );
   await page.goto('/lab/');
-  const results = await page.evaluate(async () => {
-    const response = await fetch(
-      '/_strling-lab/compiler-tools-0.1.0-rc.3.wasm',
-    );
+  await expect(status(page)).toContainText('Compiler succeeded');
+  const requestedAsset = page.waitForRequest(compilerAsset);
+  await page
+    .getByRole('button', { name: 'Format STRling', exact: true })
+    .click();
+  const asset = new URL((await requestedAsset).url()).pathname;
+  const results = await page.evaluate(async (asset) => {
+    const response = await fetch(asset);
     expectSuccess(response.ok);
     const module = await WebAssembly.compile(await response.arrayBuffer());
     let simulatedTime: number | undefined;
@@ -933,7 +946,7 @@ test('preserves canonical partial, unsupported, likely, unknown and unavailable 
       memoryBytes: wasm.memory.buffer.byteLength,
       refusedExtraPage,
     };
-  });
+  }, asset);
   expect(results.partial).toMatchObject({
     status: 'partial',
     equivalence: { status: 'not_proven' },

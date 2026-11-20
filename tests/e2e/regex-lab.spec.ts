@@ -33,6 +33,30 @@ async function edit(page: Page, editor: Locator, value: string) {
   await expect(editor).toHaveText(value);
 }
 
+test('serves PCRE2 notices as same-origin downloads from the Lab guide', async ({
+  page,
+}) => {
+  await page.goto('/lab/guide/');
+
+  for (const version of ['10.42', '10.43', '10.49']) {
+    const notice = page.getByRole('link', {
+      name: `PCRE2 ${version}`,
+      exact: true,
+    });
+    await expect(notice).toHaveAttribute('download', '');
+    const href = await notice.getAttribute('href');
+    expect(href).toMatch(/^\/_astro\/[^/]+\.txt$/);
+
+    const response = await page.request.get(href!);
+    expect(response.ok()).toBe(true);
+    const source = new URL(
+      `../../src/lib/regex-lab/wasm/PCRE2-${version}-LICENCE.txt`,
+      import.meta.url,
+    );
+    expect(await response.body()).toEqual(await readFile(source));
+  }
+});
+
 test('inspects PCRE2 compiled ranges and Python parser instructions under hosting CSP', async ({
   context,
   baseURL,

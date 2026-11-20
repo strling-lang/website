@@ -16,6 +16,7 @@ static unsigned char pattern[MAX_PATTERN], subject[MAX_SUBJECT];
 static unsigned char replacement[MAX_REPLACEMENT], output[MAX_OUTPUT];
 static unsigned char message[256];
 static uint32_t offsets[(MAX_CAPTURES + 1) * 2];
+static uint32_t items[512][4], item_count;
 static PCRE2_SIZE error_offset, next_start, output_size;
 static uint32_t next_options, capture_count, trace_count, trace_slots;
 static int substitution_limit;
@@ -133,6 +134,24 @@ EXPORT("next") int next(void) {
     return 1;
 #endif
 }
+
+static int inspect_item(pcre2_callout_enumerate_block *item, void *unused) {
+    (void)unused;
+    if (item_count >= 512) return 1;
+    uint32_t *row = items[item_count++];
+    row[0] = item->pattern_position;
+    row[1] = item->next_item_length;
+    row[2] = item->callout_number;
+    row[3] = item->callout_string != NULL;
+    return 0;
+}
+
+EXPORT("inspect_items") int inspect_items(void) {
+    item_count = 0;
+    return code ? pcre2_callout_enumerate(code, inspect_item, NULL) : -1;
+}
+EXPORT("item_buffer") const void *item_buffer(void) { return items; }
+EXPORT("item_count") uint32_t get_item_count(void) { return item_count; }
 
 EXPORT("substitute") int substitute(size_t length, size_t replacement_length, uint32_t options) {
     if (length > MAX_SUBJECT || replacement_length > MAX_REPLACEMENT || !data || !context)

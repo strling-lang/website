@@ -7,6 +7,7 @@ import {
   type Target,
 } from './compiler.ts';
 import type { LabExecutionResult } from './contracts.ts';
+import { readContinuation, type ScanContinuation } from './continuation.ts';
 import {
   defaultOptions,
   limits,
@@ -96,6 +97,7 @@ export interface Session {
   tests: LabTest[];
   origin?: SourceOrigin;
   recorded?: Recording;
+  continuation?: ScanContinuation;
 }
 
 export interface Revision {
@@ -401,6 +403,7 @@ export function readSession(value: unknown): Session {
     tests: readTests(entry.tests),
     origin: readOrigin(origin),
     recorded: readRecording(recorded),
+    continuation: readContinuation(entry.continuation),
   };
 }
 
@@ -411,6 +414,8 @@ interface Bundle {
     tests: boolean;
     observations: boolean;
     sourceOrigin: boolean;
+    source?: boolean;
+    continuation?: boolean;
   };
   session: Session;
 }
@@ -419,18 +424,30 @@ export function bundleSession(
   session: Session,
   choices: Bundle['redaction'],
 ): string {
+  const includeSource = choices.source === true;
   const redacted: Session = {
     ...session,
+    source: includeSource ? session.source : '',
     datasets: choices.samples
       ? session.datasets
       : [{ name: 'Sample', text: '' }],
     selected: choices.samples ? session.selected : 0,
     tests: choices.tests ? session.tests : [],
     recorded: choices.observations ? session.recorded : undefined,
-    origin: session.origin && {
-      ...session.origin,
-      source: choices.sourceOrigin ? session.origin.source : undefined,
-    },
+    origin:
+      includeSource && session.origin
+        ? {
+            ...session.origin,
+            source: choices.sourceOrigin ? session.origin.source : undefined,
+          }
+        : undefined,
+    continuation:
+      choices.continuation &&
+      choices.samples &&
+      includeSource &&
+      (!session.origin || choices.sourceOrigin)
+        ? session.continuation
+        : undefined,
   };
   const bundle: Bundle = {
     schema: 'strling-lab-bundle-v1',
@@ -449,12 +466,25 @@ export function importBundle(text: string) {
   if (text.length > maxBundle)
     throw new Error('The file exceeds the 2 MB session limit.');
   const parsed = fields(JSON.parse(text));
-  return readSession(
+  const session = readSession(
     parsed.schema === 'strling-lab-bundle-v1' ? parsed.session : parsed,
   );
+  const choices = fields(parsed.redaction);
+  if (
+    parsed.schema === 'strling-lab-bundle-v1' &&
+    !(
+      choices.continuation === true &&
+      choices.samples === true &&
+      choices.source !== false &&
+      (!session.origin || choices.sourceOrigin === true)
+    )
+  ) {
+    session.continuation = undefined;
+  }
+  return session;
 }
 
-export function shareFragment(session: Session) {
+function settingsSession(session: Session) {
   const settings = initialSession(
     session.format === 'regex' ? 'regex' : 'strling',
   );
@@ -462,13 +492,21 @@ export function shareFragment(session: Session) {
   settings.source = '';
   settings.runtime = session.runtime;
   settings.target = session.target;
+  settings.datasets = [{ name: 'Sample', text: '' }];
+  settings.selected = 0;
   settings.run.operation = session.run.operation;
   settings.run.replacementSyntax = session.run.replacementSyntax;
   settings.run.pcreNewline = session.run.pcreNewline;
+  return settings;
+}
+
+export function shareFragment(session: Session) {
+  const settings = settingsSession(session);
   return (
     '#lab=' +
     encodeURIComponent(
       bundleSession(settings, {
+        source: false,
         samples: false,
         tests: false,
         observations: false,
@@ -482,7 +520,7 @@ export function importFragment(fragment: string) {
   if (!fragment.startsWith('#lab=')) return;
   if (fragment.length > shareLimit)
     throw new Error('The shared URL exceeds the workbench size limit.');
-  return importBundle(decodeURIComponent(fragment.slice(5)));
+  return settingsSession(importBundle(decodeURIComponent(fragment.slice(5))));
 }
 
 export class SessionArchive {

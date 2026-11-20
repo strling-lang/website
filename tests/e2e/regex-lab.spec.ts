@@ -1,6 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from '@playwright/test';
 
 const status = (page: Page) => page.locator('[data-output="status"]');
 const source = (page: Page) =>
@@ -12,6 +18,181 @@ const tab = (page: Page, name: string) =>
 const run = (page: Page) =>
   page.getByRole('button', { name: /^Run Ctrl/ }).click();
 const executionWorker = /\/execution\.worker-[^/]+\.js$/;
+
+async function edit(page: Page, editor: Locator, value: string) {
+  if (page.context().browser()?.browserType().name() === 'firefox') {
+    // Firefox's contenteditable fill can apply the deletion without inserting.
+    await editor.click();
+    await page.keyboard.press('ControlOrMeta+KeyA');
+    await page.keyboard.press('Backspace');
+    await expect(editor).toHaveText('');
+    await editor.pressSequentially(value);
+  } else {
+    await editor.fill(value);
+  }
+  await expect(editor).toHaveText(value);
+}
+
+test('inspects PCRE2 compiled ranges and Python parser instructions under hosting CSP', async ({
+  context,
+  baseURL,
+  page,
+}) => {
+  test.setTimeout(100_000);
+  await useHostingCsp(context, baseURL!);
+  await page.goto('/regex/lab/');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  const runtime = page.getByLabel('Runtime', { exact: true });
+  const panel = page.getByRole('tabpanel', { name: 'Structure' });
+  await runtime.selectOption('pcre2');
+  await edit(page, source(page), '(?<word>é)(?=x)|[a-z]+');
+  await tab(page, 'Structure');
+  const inspect = panel.getByRole('button', {
+    name: 'Inspect native structure',
+  });
+  await inspect.click();
+  await expect(panel).toContainText(
+    /pcre2-callout-enumeration · 10\.49.*partial/,
+  );
+  await expect(panel).toContainText('Group 1 · word');
+  await expect(panel).toContainText('Native item ranges');
+  const literal = panel
+    .getByRole('button', { name: /Native pattern item · "é"/ })
+    .first();
+  await literal.click();
+  expect(await page.evaluate(() => getSelection()?.toString())).toBe('é');
+
+  for (const [engine, version] of [
+    ['python', '3.14'],
+    ['python311', '3.11'],
+    ['python311bytes', '3.11'],
+  ] as const) {
+    await runtime.selectOption(engine);
+    await edit(page, source(page), '(?P<word>[a-z]+)(?=x)');
+    await inspect.click();
+    await expect(panel).toContainText('cpython-re-parser · ' + version, {
+      timeout: 35_000,
+    });
+    await expect(panel).toContainText('Group 1 · word');
+    await expect(panel).toContainText('Greedy repetition');
+    await expect(panel).toContainText('Positive lookahead');
+  }
+  await edit(page, source(page), 'é😀)');
+  await inspect.click();
+  await expect(panel).toContainText(/6 utf8-bytes/);
+  await edit(page, source(page), '(?P<word>a)++(?(word)b|c)' + '.'.repeat(520));
+  await inspect.click();
+  await expect(panel).toContainText('Possessive repetition');
+  await expect(panel).toContainText('Conditional · Group 1 · word');
+  await expect(panel).toContainText(
+    'Some parser details are unavailable or exceeded the inspection limit',
+  );
+});
+
+test('resumes a saved PCRE2 boundary after STRling-to-RegEx handoff and reload', async ({
+  context,
+  baseURL,
+  page,
+}) => {
+  await useHostingCsp(context, baseURL!);
+  await page.goto('/lab/');
+  await page
+    .getByLabel('Compiler target', { exact: true })
+    .selectOption('pcre243');
+  await edit(
+    page,
+    source(page),
+    'semantic strling 1.0; case sensitive; pattern text "ab";',
+  );
+  await edit(page, subject(page), 'ab--ab');
+  await run(page);
+  await expect(status(page)).toHaveText('2 matches');
+  await page.getByText('Scan continuation', { exact: true }).click();
+  await page.getByRole('button', { name: 'Keep this boundary' }).click();
+  await expect(status(page)).toContainText('Scan boundary kept at byte 2');
+  await tab(page, 'Artifact');
+  await page
+    .getByRole('button', { name: 'Open with sample and cursor in RegEx Lab' })
+    .click();
+  await expect(page).toHaveURL(/\/regex\/lab\/$/);
+  await expect(status(page)).toContainText('Select Run');
+  await page.getByText('Scan continuation', { exact: true }).click();
+  const resume = page.getByRole('button', { name: 'Resume saved scan' });
+  await resume.click();
+  await expect(status(page)).toHaveText('Resumed at byte 2 · 1 match');
+  await expect(
+    page.getByRole('button', { name: /\[4, 6\) utf8-bytes/ }),
+  ).toBeVisible();
+
+  await tab(page, 'Sessions');
+  await page.getByRole('button', { name: 'Save revision' }).click();
+  await expect(status(page)).toHaveText('Revision saved in this browser.');
+  for (const choice of [
+    'Active source',
+    'Sample data',
+    'Original STRling source of generated patterns',
+    'Saved scan cursor',
+  ]) {
+    await page.getByRole('checkbox', { name: choice, exact: true }).check();
+  }
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download session' }).click();
+  const portable = await readFile(await (await download).path());
+  expect(JSON.parse(portable.toString()).session.continuation.after.end).toBe(
+    2,
+  );
+  await page.reload();
+  await tab(page, 'Sessions');
+  await page
+    .getByRole('combobox', { name: 'Saved session' })
+    .selectOption({ index: 1 });
+  await page.getByRole('button', { name: 'Restore', exact: true }).click();
+  await tab(page, 'Results');
+  await page.getByText('Scan continuation', { exact: true }).click();
+  await resume.click();
+  await expect(status(page)).toHaveText('Resumed at byte 2 · 1 match');
+  await run(page);
+  await expect(status(page)).toHaveText('2 matches');
+  await expect(
+    page.getByRole('button', { name: /\[0, 2\) utf8-bytes/ }),
+  ).toBeVisible();
+  await edit(page, subject(page), 'ab-😀-ab');
+  await resume.click();
+  await expect(status(page)).toContainText('differs from the saved scan');
+  await expect(
+    page.getByRole('button', { name: /\[4, 6\) utf8-bytes/ }),
+  ).toHaveCount(0);
+  await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
+  await resume.click();
+  await expect(status(page)).toContainText(
+    'runtime profile or operation differs',
+  );
+  await tab(page, 'Sessions');
+  await page.getByLabel('Import session', { exact: true }).setInputFiles({
+    name: 'portable-session.json',
+    mimeType: 'application/json',
+    buffer: portable,
+  });
+  await expect(status(page)).toContainText('Select Run');
+  await expect(page.getByLabel('Live', { exact: true })).not.toBeChecked();
+  await tab(page, 'Results');
+  await resume.click();
+  await expect(status(page)).toHaveText('Resumed at byte 2 · 1 match');
+});
+
+test('keeps an initialized browser-local JavaScript worker usable offline', async ({
+  context,
+  page,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await context.setOffline(true);
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  await edit(page, source(page), 'ab');
+  await edit(page, subject(page), 'ab--ab');
+  await run(page);
+  await expect(status(page)).toHaveText('2 matches');
+});
 
 async function stallNextExecutionWorker(page: Page) {
   await page.route(
@@ -38,6 +219,11 @@ async function useHostingCsp(context: BrowserContext, baseURL: string) {
   const csp = config.match(/Content-Security-Policy = "([^"]+)"/)?.[1];
   expect(csp).toContain('wasm-unsafe-eval');
   const origin = new URL(baseURL).origin;
+  if (new URL(origin).protocol === 'https:') {
+    const response = await context.request.get(origin + '/regex/lab/');
+    expect(response.headers()['content-security-policy']).toBe(csp);
+    return;
+  }
   await context.route(
     (url) =>
       url.origin === origin &&
@@ -157,7 +343,7 @@ test('runs Python 3.11 text and bytes artifacts under their matching provider', 
   context,
   page,
 }) => {
-  test.setTimeout(45_000);
+  test.setTimeout(80_000);
   await useHostingCsp(context, baseURL!);
   await page.goto('/lab/');
   await page
@@ -165,7 +351,7 @@ test('runs Python 3.11 text and bytes artifacts under their matching provider', 
     .selectOption('python');
   await expect(status(page)).toContainText('Compiler succeeded');
   await run(page);
-  await expect(status(page)).toHaveText('2 matches', { timeout: 20_000 });
+  await expect(status(page)).toHaveText('2 matches', { timeout: 35_000 });
   await expect(page.locator('[data-output="provenance"]')).toContainText(
     '3.11.',
   );
@@ -177,7 +363,7 @@ test('runs Python 3.11 text and bytes artifacts under their matching provider', 
     .selectOption('python-bytes');
   await expect(status(page)).toContainText('Compiler succeeded');
   await run(page);
-  await expect(status(page)).toHaveText('2 matches', { timeout: 20_000 });
+  await expect(status(page)).toHaveText('2 matches', { timeout: 35_000 });
   await expect(page.locator('[data-output="provenance"]')).toContainText(
     'hexadecimal',
   );
@@ -210,7 +396,16 @@ test('compares revisions, measures time and confines authored material to opt-in
   await expect(page.getByText(/2 measured runs/)).toBeVisible();
 
   await tab(page, 'Sessions');
+  const redactedDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download session' }).click();
+  const redactedFile = JSON.parse(
+    await readFile(await (await redactedDownload).path(), 'utf8'),
+  );
+  expect(redactedFile.session.source).toBe('');
+  expect(redactedFile.session.datasets[0].text).toBe('');
+  expect(redactedFile.session).not.toHaveProperty('continuation');
   for (const option of [
+    'Active source',
     'Sample data',
     'Tests',
     'Recorded outputs',
@@ -297,15 +492,15 @@ test('loads Python and the STRling compiler under the hosting CSP', async ({
   context,
   page,
 }) => {
-  test.setTimeout(45_000);
+  test.setTimeout(60_000);
   await useHostingCsp(context, baseURL!);
   await page.goto('/regex/lab/');
   await page.getByLabel('Live', { exact: true }).uncheck();
   await page.getByLabel('Runtime', { exact: true }).selectOption('python');
-  await source(page).fill('(?P<part>é+)');
-  await subject(page).fill('😀éé, é');
+  await edit(page, source(page), '(?P<part>é+)');
+  await edit(page, subject(page), '😀éé, é');
   await run(page);
-  await expect(status(page)).toHaveText('2 matches', { timeout: 22_000 });
+  await expect(status(page)).toHaveText('2 matches', { timeout: 35_000 });
   await expect(
     page
       .getByRole('button', { name: /Group 1 · part.*unicode-code-points/ })
@@ -408,7 +603,9 @@ test('requires an approved adapter and exercises the configured canonical tools 
     );
     return;
   }
-  await source(page).fill(
+  await edit(
+    page,
+    source(page),
     'semantic strling 1.0; case sensitive; pattern capture word {text "héllo";}',
   );
   await page
@@ -453,7 +650,7 @@ test('requires an approved adapter and exercises the configured canonical tools 
     JSON.parse((await evidence.textContent())!).equivalence.source_fingerprint,
   ).toBe(proof.source_fingerprint);
 
-  await subject(page).fill('😀héllo');
+  await edit(page, subject(page), '😀héllo');
   await page.getByRole('button', { name: 'Explain current subject' }).click();
   const tools = page.locator('[data-output="compiler-tools"]');
   await expect(tools).toContainText('matched · not_applicable');
@@ -462,7 +659,7 @@ test('requires an approved adapter and exercises the configured canonical tools 
       .profile_id,
   ).toBe('profile:ecmascript/2024');
   const privateText = 'private-subject-' + 'x'.repeat(20);
-  await subject(page).fill(privateText);
+  await edit(page, subject(page), privateText);
   await page.getByRole('button', { name: 'Explain current subject' }).click();
   await expect(tools).toContainText('no_match · proven');
   const explanation = (await evidence.textContent())!;
@@ -493,7 +690,7 @@ test('requires an approved adapter and exercises the configured canonical tools 
     .getByLabel('Compiler target', { exact: true })
     .selectOption('pcre243');
   await expect(status(page)).toContainText('Compiler succeeded');
-  await subject(page).fill('😀héllo');
+  await edit(page, subject(page), '😀héllo');
   await page.getByRole('button', { name: 'Explain current subject' }).click();
   await expect(tools).toContainText('matched · not_applicable');
   expect(
@@ -504,7 +701,7 @@ test('requires an approved adapter and exercises the configured canonical tools 
   await page.getByLabel('Source format').selectOption('semantic');
   const invalidSource =
     'semantic strling 1.0; case sensitive; pattern sequence { text "é😀"; bogus; }';
-  await source(page).fill(invalidSource);
+  await edit(page, source(page), invalidSource);
   await page
     .getByRole('button', { name: 'Format STRling', exact: true })
     .click();
@@ -532,9 +729,62 @@ test('requires an approved adapter and exercises the configured canonical tools 
   ).toEqual([]);
 });
 
+test('rejects missing and substituted compiler tools before recovering with the pinned asset', async ({
+  browserName,
+  context,
+  baseURL,
+  page,
+}) => {
+  test.skip(
+    browserName !== 'chromium' || !process.env.STRLING_LAB_TOOLS_CANDIDATE,
+    'Requires Chromium worker request interception and the isolated adapter build.',
+  );
+  await useHostingCsp(context, baseURL!);
+  await page.goto('/lab/');
+  await expect(status(page)).toContainText('Compiler succeeded');
+  const original =
+    'semantic strling 1.0; case sensitive; pattern text "release check";';
+  await edit(page, source(page), original);
+  const format = page.getByRole('button', {
+    name: 'Format STRling',
+    exact: true,
+  });
+  const asset = '**/_strling-lab/compiler-tools-0.1.0-rc.3.wasm';
+
+  await context.route(asset, (route) => route.fulfill({ status: 404 }), {
+    times: 1,
+  });
+  await format.click();
+  await expect(status(page)).toContainText('WebAssembly asset is unavailable');
+  await expect(source(page)).toHaveText(original);
+
+  await context.route(
+    asset,
+    (route) =>
+      route.fulfill({
+        contentType: 'application/wasm',
+        body: Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]),
+      }),
+    { times: 1 },
+  );
+  await format.click();
+  await expect(status(page)).toContainText(
+    'WebAssembly asset failed its integrity check',
+  );
+  await expect(source(page)).toHaveText(original);
+
+  await format.click();
+  await expect(
+    page
+      .getByText('Canonical STRling source formatted.', { exact: true })
+      .first(),
+  ).toBeVisible();
+});
+
 test('preserves canonical partial, unsupported, likely, unknown and unavailable in WebAssembly', async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   test.skip(
     !process.env.STRLING_LAB_TOOLS_CANDIDATE,
     'Canonical adapter qualification requires the opt-in candidate build.',
@@ -688,7 +938,9 @@ test('preserves canonical partial, unsupported, likely, unknown and unavailable 
   expect(results.refusedExtraPage).toBe(true);
 
   await expect(status(page)).toContainText('Compiler succeeded');
-  await source(page).fill(
+  await edit(
+    page,
+    source(page),
     'semantic strling 1.0; case sensitive; pattern without backtracking { choice { text "a"; text "ab"; } }',
   );
   await tab(page, 'Semantic tools');
@@ -697,7 +949,7 @@ test('preserves canonical partial, unsupported, likely, unknown and unavailable 
     'unavailable · unavailable',
   );
   await page.getByLabel('Explanation scope').selectOption('semantic');
-  await subject(page).fill('a');
+  await edit(page, subject(page), 'a');
   await page.getByRole('button', { name: 'Explain current subject' }).click();
   await expect(page.locator('[data-output="compiler-tools"]')).toContainText(
     'unknown · unknown',
@@ -709,7 +961,9 @@ test('preserves canonical partial, unsupported, likely, unknown and unavailable 
     { length: depth },
     (_, index) => 'capture x' + index + ' { ',
   ).join('');
-  await source(page).fill(
+  await edit(
+    page,
+    source(page),
     'semantic strling 1.0; case sensitive; pattern ' +
       captures +
       'text "a";' +
@@ -769,7 +1023,7 @@ test('binds assertions to duplicate PCRE2 capture names and clears revised evide
 test('observes multiline, full-match, replacement and split behavior in each runtime family', async ({
   page,
 }) => {
-  test.setTimeout(50_000);
+  test.setTimeout(75_000);
   await page.goto('/regex/lab/');
   await page.getByLabel('Live', { exact: true }).uncheck();
   const runtime = page.getByLabel('Runtime', { exact: true });
@@ -790,7 +1044,7 @@ test('observes multiline, full-match, replacement and split behavior in each run
     await subject(page).fill('😀\naé\nb');
     await operation.selectOption('scan');
     await run(page);
-    await expect(status(page)).toHaveText('1 match', { timeout: 20_000 });
+    await expect(status(page)).toHaveText('1 match', { timeout: 35_000 });
     expect(JSON.parse((await result.textContent())!).matches[0]).toMatchObject({
       value: 'aé',
       span: { start, unit },

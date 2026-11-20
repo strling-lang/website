@@ -23,7 +23,14 @@ import {
   type Target,
 } from '../lib/regex-lab/compiler';
 import { runtimeExample } from '../lib/regex-lab/codegen';
-import type { LabExecutionResult } from '../lib/regex-lab/contracts';
+import type {
+  LabExecutionRequest,
+  LabExecutionResult,
+} from '../lib/regex-lab/contracts';
+import {
+  createContinuation,
+  type ScanProvenance,
+} from '../lib/regex-lab/continuation';
 import {
   assess,
   compareObservations,
@@ -104,6 +111,7 @@ class LabWorkbench extends HTMLElement {
   #tab = 'results';
   #compilation?: Compilation;
   #result?: LabExecutionResult;
+  #lastScan?: { request: LabExecutionRequest; provenance: ScanProvenance };
   #trace?: TraceObservation;
   #step = 0;
   #matches?: ReturnType<typeof renderMatches>;
@@ -510,6 +518,7 @@ class LabWorkbench extends HTMLElement {
   #update(message?: string, keepRecording = false) {
     this.#cancel();
     this.#result = undefined;
+    this.#lastScan = undefined;
     this.#compilation = undefined;
     this.#pinned = undefined;
     this.#trace = undefined;
@@ -864,7 +873,26 @@ class LabWorkbench extends HTMLElement {
     };
   }
 
-  async #run(signal: AbortSignal, execute: boolean) {
+  #scanProvenance(compilation?: Compilation): ScanProvenance {
+    const { format, source, origin } = this.#session;
+    const profile = compilation?.profile ?? origin?.profile;
+    const compiler = compilation?.identity ?? origin?.compiler;
+    return {
+      format: origin?.format ?? format,
+      source: origin?.source ?? source,
+      profile: typeof profile?.sha256 === 'string' ? profile.sha256 : undefined,
+      compiler: compiler
+        ? JSON.stringify([
+            compiler.package,
+            compiler.productVersion,
+            compiler.abi,
+            compiler.protocol,
+          ])
+        : undefined,
+    };
+  }
+
+  async #run(signal: AbortSignal, execute: boolean, resume = false) {
     if (this.#mode === 'strling' && !execute) {
       this.#say('Compiling STRling source…');
       const compilation = await this.#compile(this.#session, signal, true);
@@ -877,19 +905,42 @@ class LabWorkbench extends HTMLElement {
       );
       return;
     }
+    const continuation = resume ? this.#session.continuation : undefined;
+    if (resume && !continuation)
+      throw new Error('No verified scan boundary is saved.');
+    if (resume) {
+      this.#lastScan = undefined;
+      this.#result = undefined;
+      this.#renderResult();
+    }
     this.#say(
-      this.#mode === 'strling'
-        ? 'Compiling and running artifact…'
-        : 'Running ' + runtimes[this.#session.runtime].label + '…',
+      resume
+        ? 'Verifying and resuming saved scan…'
+        : this.#mode === 'strling'
+          ? 'Compiling and running artifact…'
+          : 'Running ' + runtimes[this.#session.runtime].label + '…',
     );
     const pattern = await this.#pattern(this.#session, signal, true);
     signal.throwIfAborted();
     const options = { ...this.#session.run, ...pattern.artifactOptions };
-    const result = await this.#provider.execute(
-      runRequest(pattern.runtime, pattern.source, this.#dataset.text, options),
-      { signal },
+    const request = runRequest(
+      pattern.runtime,
+      pattern.source,
+      this.#dataset.text,
+      options,
     );
+    const provenance = this.#scanProvenance(pattern.compilation);
+    const result = continuation
+      ? await this.#provider.resume(request, continuation, provenance, signal)
+      : await this.#provider.execute(request, { signal });
     signal.throwIfAborted();
+    this.#lastScan =
+      !resume &&
+      isPcreRuntime(pattern.runtime) &&
+      options.operation === 'scan' &&
+      result.status === 'matched'
+        ? { request, provenance }
+        : undefined;
     this.#result = result;
     if (
       'error' in result &&
@@ -914,10 +965,61 @@ class LabWorkbench extends HTMLElement {
         ]);
     }
     this.#renderResult();
-    this.#say(resultSummary(result));
+    this.#say(
+      (continuation && !('error' in result)
+        ? 'Resumed at byte ' + continuation.after.end + ' · '
+        : '') + resultSummary(result),
+    );
+  }
+
+  #cursorControls() {
+    const current = this.#session.continuation;
+    const result = this.#result;
+    const candidates =
+      this.#lastScan && result?.status === 'matched'
+        ? result.matches
+            .slice(0, -1)
+            .filter((match) => match.span.end > match.span.start)
+        : [];
+    this.#output('continuation-tools').hidden = !current && !candidates.length;
+    this.#output('checkpoint-controls').hidden = !candidates.length;
+    this.#action('resume-scan')!.hidden = !current;
+    this.#output('continuation-status').textContent = current
+      ? 'Saved boundary at byte ' +
+        current.after.end +
+        '. Resume verifies this boundary. Run starts a fresh scan.'
+      : 'Keep a consuming match boundary from this complete scan, then save a revision to retain it.';
+    selectOptions(
+      this.#field('checkpoint-match'),
+      candidates.map(({ ordinal, span }) => [
+        String(ordinal),
+        'Match ' + ordinal + ' · byte ' + span.end,
+      ]),
+    );
+  }
+
+  async #recordCursor(signal: AbortSignal) {
+    const scan = this.#lastScan;
+    if (!scan || !this.#result)
+      throw new Error('Run a complete PCRE2 scan to keep a boundary.');
+    const ordinal = Number(this.#field('checkpoint-match').value);
+    const continuation = await createContinuation(
+      scan.request,
+      this.#result,
+      scan.provenance,
+      ordinal,
+    );
+    signal.throwIfAborted();
+    if (!continuation)
+      throw new Error('This match does not provide a resumable boundary.');
+    this.#session.continuation = continuation;
+    this.#cursorControls();
+    this.#artifact();
+    this.#say('Scan boundary kept at byte ' + continuation.after.end + '.');
   }
 
   #renderResult() {
+    this.#cursorControls();
     const result = this.#result;
     const provenance = this.#output('provenance');
     provenance.hidden = !result?.observation;
@@ -1107,11 +1209,85 @@ class LabWorkbench extends HTMLElement {
     }
   }
 
+  async #inspectStructure(signal: AbortSignal) {
+    const { runtime, source, run } = this.#session;
+    this.#say('Inspecting ' + runtimes[runtime].label + '…');
+    const inspected = await this.#provider.inspect(
+      runRequest(runtime, source, '', {
+        ...run,
+        operation: 'search',
+      }),
+      signal,
+    );
+    signal.throwIfAborted();
+    const panel = this.#output('structure');
+    panel.replaceChildren(
+      node(
+        'p',
+        inspected.authority +
+          ' · ' +
+          inspected.version +
+          ' · ' +
+          inspected.disposition,
+      ),
+      button('Inspect native structure', () => {
+        void this.#perform((next) => this.#inspectStructure(next));
+      }),
+    );
+    if (inspected.authority === 'pcre2-callout-enumeration') {
+      panel.append(
+        node(
+          'p',
+          'Compiled capture definitions and native item ranges. Some directives and structural relationships are unavailable.',
+        ),
+      );
+    } else {
+      panel.append(
+        node(
+          'p',
+          'CPython exposes optimized parser instructions and native diagnostic positions. Individual nodes have no source spans.',
+        ),
+      );
+    }
+    if (inspected.tree)
+      panel.append(
+        renderStructure(inspected.tree, (range) => this.#selectSource(range)),
+      );
+    if (inspected.diagnostics && 'error' in inspected.diagnostics) {
+      const { message, offset, offsetUnit } = inspected.diagnostics.error;
+      if (offset === undefined || !offsetUnit) {
+        panel.append(node('p', message));
+      } else {
+        const label = message + ' · ' + offset + ' ' + offsetUnit;
+        const span = { start: offset, end: offset, unit: offsetUnit };
+        panel.append(
+          editorRange(span, source.length, coordinateMap(source, offsetUnit))
+            ? button(label, () => this.#selectSource(span))
+            : node('p', label),
+        );
+      }
+    }
+    this.#addCode(panel, runtime, source, run);
+    this.#say('Structure inspection · ' + inspected.disposition);
+  }
+
   #renderStructure() {
     const panel = this.#output('structure');
     const session = this.#session;
     panel.replaceChildren();
     if (session.format === 'regex') {
+      if (session.runtime !== 'javascript') {
+        panel.append(
+          node('p', 'Inspect the current pattern with the selected runtime.'),
+        );
+        panel.append(
+          button('Inspect native structure', () => {
+            void this.#perform((signal) => this.#inspectStructure(signal));
+          }),
+        );
+        this.#addCode(panel, session.runtime, session.source, session.run);
+        return;
+      }
       panel.append(node('p', 'Static interpretation · ECMAScript parser'));
       try {
         const tree = explainRegex(
@@ -1232,6 +1408,8 @@ class LabWorkbench extends HTMLElement {
     this.#action('run-artifact')!.disabled = !runnable;
     for (const name of ['copy-artifact', 'export-artifact', 'open-artifact'])
       this.#action(name)!.disabled = !generated;
+    this.#action('open-with-cursor')!.hidden =
+      !runnable || !this.#session.continuation;
     panel.replaceChildren();
     if (!generated) {
       panel.append(
@@ -1519,6 +1697,15 @@ class LabWorkbench extends HTMLElement {
         case 'open-artifact':
           this.#transferArtifact();
           return;
+        case 'open-with-cursor':
+          this.#transferArtifact(true);
+          return;
+        case 'record-cursor':
+          await this.#perform((signal) => this.#recordCursor(signal));
+          return;
+        case 'resume-scan':
+          await this.#perform((signal) => this.#run(signal, true, true));
+          return;
         case 'add-test':
         case 'test-from-result':
           this.#editTest(
@@ -1592,7 +1779,7 @@ class LabWorkbench extends HTMLElement {
     }
   }
 
-  #transferArtifact() {
+  #transferArtifact(withCursor = false) {
     const response = this.#compilation;
     const generated = generatedPattern(response);
     if (!generated || !response?.profile || this.#session.format === 'regex')
@@ -1610,6 +1797,7 @@ class LabWorkbench extends HTMLElement {
     incoming.run = { ...this.#session.run, flags: generated.flags };
     incoming.datasets = structuredClone(this.#session.datasets);
     incoming.selected = this.#session.selected;
+    incoming.continuation = withCursor ? this.#session.continuation : undefined;
     if (this.#session.target.startsWith('pcre2')) incoming.runtime = 'pcre2';
     if (this.#session.target.startsWith('python')) incoming.runtime = 'python';
     const runnable = runnableArtifact(response);
@@ -1620,10 +1808,12 @@ class LabWorkbench extends HTMLElement {
     sessionStorage.setItem(
       transferKey,
       bundleSession(incoming, {
+        source: true,
         samples: true,
         tests: false,
         observations: false,
         sourceOrigin: true,
+        continuation: withCursor,
       }),
     );
     location.assign('/regex/lab/#lab-transfer');
@@ -1745,10 +1935,12 @@ class LabWorkbench extends HTMLElement {
       }
       case 'export-session': {
         const choices = {
+          source: this.#checked('share-active-source').checked,
           samples: this.#checked('share-samples').checked,
           tests: this.#checked('share-tests').checked,
           observations: this.#checked('share-observations').checked,
           sourceOrigin: this.#checked('share-source').checked,
+          continuation: this.#checked('share-continuation').checked,
         };
         const bundle = bundleSession(
           importBundle(JSON.stringify(this.#snapshot(choices.observations))),

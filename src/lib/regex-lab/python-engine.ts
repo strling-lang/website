@@ -34,3 +34,7 @@ export function runPython(pattern: string, input: string, options: RunOptions) {
     version: python.version,
   };
 }
+
+export const pythonVersion = () => python.version;
+export const inspectPython = (pattern: string, flags: string) =>
+  python.inspect(pattern, flags);

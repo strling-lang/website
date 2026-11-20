@@ -14,6 +14,12 @@ import {
   type Runtime,
 } from './interactive.ts';
 import type { WorkerInput, WorkerOutput } from './execution.worker.ts';
+import { verifyInspection } from './inspection.ts';
+import {
+  verifyContinuation,
+  type ScanContinuation,
+  type ScanProvenance,
+} from './continuation.ts';
 import {
   browserProviderIdentity,
   validateBrowserReply,
@@ -39,6 +45,10 @@ export class BrowserLabProvider
             type: 'module',
           }),
     limits.executeMs,
+    () =>
+      this.#runtime?.startsWith('python')
+        ? limits.pythonInitializationMs
+        : limits.initializationMs,
   );
 
   supports(runtime: LabRuntimeIdentity) {
@@ -70,6 +80,39 @@ export class BrowserLabProvider
     };
   }
 
+  async inspect(request: LabExecutionRequest, signal: AbortSignal) {
+    const runtime = runtimeFor(request);
+    if (!runtime || runtime === 'javascript')
+      throw new Error(
+        'Native structure inspection is unavailable for this runtime.',
+      );
+    this.#select(runtime);
+    try {
+      const reply = await this.#worker.run({ request, inspect: true }, signal);
+      signal.throwIfAborted();
+      if (!verifyInspection(reply, request, runtime))
+        throw new Error('The worker returned a mismatched structure result.');
+      return reply;
+    } catch (error) {
+      if (!signal.aborted) this.dispose();
+      throw error;
+    }
+  }
+
+  async resume(
+    request: LabExecutionRequest,
+    saved: ScanContinuation,
+    provenance: ScanProvenance,
+    signal: AbortSignal,
+  ) {
+    await verifyContinuation(saved, request, provenance);
+    signal.throwIfAborted();
+    const result = await this.#run(request, false, signal, saved);
+    if (!('status' in result))
+      throw new Error('The worker returned an unrelated scan result.');
+    return result;
+  }
+
   dispose() {
     this.#worker.dispose();
     this.#runtime = undefined;
@@ -84,6 +127,7 @@ export class BrowserLabProvider
     request: LabExecutionRequest,
     trace: boolean,
     signal: AbortSignal,
+    continuation?: ScanContinuation,
   ): Promise<LabExecutionResult | TraceObservation> {
     const runtime = runtimeFor(request);
     if (!runtime || (trace && !isPcreRuntime(runtime))) {
@@ -97,8 +141,28 @@ export class BrowserLabProvider
     }
     this.#select(runtime);
     try {
-      const reply = await this.#worker.run({ request, trace }, signal);
-      return validateBrowserReply(reply, request, runtime, trace);
+      const reply = await this.#worker.run(
+        { request, trace, continuation },
+        signal,
+      );
+      const result = validateBrowserReply(reply, request, runtime, trace);
+      if ('status' in result) {
+        const completedScan =
+          result.status === 'matched' || result.status === 'no-match';
+        const resumedFrom = result.engineNativeMetadata?.resumedFrom;
+        if (
+          continuation && completedScan
+            ? resumedFrom !== continuation.after.end ||
+              result.engineNativeMetadata?.providerBuild !==
+                continuation.build ||
+              result.matches.some(
+                (match) => match.span.start < continuation.after.end,
+              )
+            : resumedFrom !== undefined
+        )
+          throw new Error('The worker returned a mismatched continuation.');
+      }
+      return result;
     } catch (error) {
       if (signal.aborted) throw error;
       this.dispose();

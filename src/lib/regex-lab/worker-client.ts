@@ -16,6 +16,8 @@ export class LabWorker<Input, Output> {
   constructor(
     private readonly create: () => Worker,
     private readonly timeout: number,
+    private readonly initializeTimeout: () => number = () =>
+      limits.initializationMs,
   ) {}
 
   run(input: Input, signal: AbortSignal): Promise<Output> {
@@ -50,7 +52,7 @@ export class LabWorker<Input, Output> {
         );
       let timer = setTimeout(
         expire,
-        this.#ready ? this.timeout : limits.initializationMs,
+        this.#ready ? this.timeout : this.initializeTimeout(),
       );
       this.#cancel = cancel;
       signal.addEventListener('abort', cancel, { once: true });

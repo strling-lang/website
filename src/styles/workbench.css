@@ -78,6 +78,11 @@ lab-workbench .workbench-check {
   align-self: end;
   margin-left: auto;
 }
+.workbench-actions button {
+  scroll-margin-top: calc(
+    var(--site-header-height) + var(--site-header-border-width) + var(--space-3)
+  );
+}
 .workbench-actions kbd {
   color: inherit;
   opacity: 0.8;

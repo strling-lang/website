@@ -1144,7 +1144,13 @@ test('terminates the cancelled worker and retries after initialization failure',
   );
   await run(page);
   await created;
-  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+  const stop = page.getByRole('button', { name: 'Stop', exact: true });
+  await stop.evaluate((button) => button.scrollIntoView({ block: 'start' }));
+  const header = await page.getByRole('banner').boundingBox();
+  expect((await stop.boundingBox())!.y).toBeGreaterThanOrEqual(
+    header!.y + header!.height,
+  );
+  await stop.click();
   await stalled.closed;
   await expect(status(page)).toHaveText('Stopped.');
   await run(page);

@@ -416,6 +416,7 @@ interface Bundle {
     sourceOrigin: boolean;
     source?: boolean;
     continuation?: boolean;
+    replacement?: boolean;
   };
   session: Session;
 }
@@ -428,6 +429,10 @@ export function bundleSession(
   const redacted: Session = {
     ...session,
     source: includeSource ? session.source : '',
+    run: {
+      ...session.run,
+      replacement: choices.replacement === false ? '' : session.run.replacement,
+    },
     datasets: choices.samples
       ? session.datasets
       : [{ name: 'Sample', text: '' }],
@@ -445,6 +450,7 @@ export function bundleSession(
       choices.continuation &&
       choices.samples &&
       includeSource &&
+      (choices.replacement !== false || !session.run.replacement) &&
       (!session.origin || choices.sourceOrigin)
         ? session.continuation
         : undefined,

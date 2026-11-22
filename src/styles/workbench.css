@@ -83,11 +83,34 @@ lab-workbench .workbench-check {
     var(--site-header-height) + var(--site-header-border-width) + var(--space-3)
   );
 }
-.workbench-actions kbd {
-  color: inherit;
-  opacity: 0.8;
-  margin-left: 0.3rem;
-  font-size: 0.75rem;
+lab-workbench :is(button, summary) svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.workbench-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  inline-size: 5.25rem;
+  block-size: 2.25rem;
+}
+[data-execution-state='idle'] [data-execution-icon='stop'],
+[data-execution-state='busy'] [data-execution-icon='run'] {
+  display: none;
+}
+.workbench-toolbar-button[aria-pressed='true'] {
+  color: var(--lab-accent);
+  border-color: var(--lab-accent);
+}
+.workbench-run-help {
+  margin-inline: 0.3rem;
 }
 
 lab-workbench
@@ -123,10 +146,7 @@ lab-workbench [data-field='flags'] {
   width: 8ch;
   font-family: var(--font-mono);
 }
-lab-workbench [data-field='repeats'] {
-  width: 5rem;
-}
-lab-workbench [data-field='dataset'] {
+lab-workbench :is([data-field='dataset'], [data-field='working-source']) {
   max-width: 12rem;
 }
 lab-workbench [hidden] {
@@ -151,10 +171,8 @@ lab-workbench [hidden] {
   gap: 0.8rem;
   margin-top: 0.8rem;
 }
-.workbench-card {
-  overflow: hidden;
-}
 .workbench-card header {
+  position: relative;
   padding: 0.7rem 0.8rem;
   min-height: 3.3rem;
 }
@@ -173,8 +191,42 @@ lab-workbench [hidden] {
   height: 100%;
   font-size: 0.95rem;
 }
-.workbench-editor[data-tall] {
-  height: min(28rem, 60vh);
+lab-workbench[data-tall] .workbench-editor {
+  height: min(27rem, 56vh);
+}
+.workbench-menu > summary {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  padding: 0.32rem 0.36rem;
+  cursor: pointer;
+  user-select: none;
+}
+.workbench-menu > div {
+  position: absolute;
+  z-index: 3;
+  inset-inline-end: 0.75rem;
+  top: calc(100% - 0.15rem);
+  display: grid;
+  gap: 0.35rem;
+  width: min(14rem, calc(100% - 1.5rem));
+  padding: 0.5rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--lab-line);
+  border-radius: var(--radius-sm);
+}
+.workbench-menu :is(button, select) {
+  width: 100%;
+  text-align: start;
+}
+[data-output='workspace-status'] {
+  color: var(--lab-accent);
+}
+.workbench-card footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
 }
 .workbench-editor-hint {
   padding: 0.35rem 0.6rem;
@@ -251,11 +303,31 @@ lab-workbench [hidden] {
 .workbench-investigation {
   overflow: hidden;
 }
+.workbench-tab-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  background: var(--surface-elevated);
+  border-bottom: 1px solid var(--lab-line);
+}
 .workbench-tabs {
   display: flex;
   overflow: auto;
-  background: var(--surface-elevated);
-  border-bottom: 1px solid var(--lab-line);
+}
+.workbench-tab-actions {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  border-inline-start: 1px solid var(--lab-line);
+}
+.workbench-tab-actions button {
+  display: grid;
+  place-items: center;
+  inline-size: 2.15rem;
+  block-size: 2.15rem;
+  padding: 0;
 }
 .workbench-tabs [role='tab'] {
   background: transparent;
@@ -292,12 +364,64 @@ lab-workbench [hidden] {
 }
 .workbench-investigation details {
   margin-block: 0.55rem;
+  border: 1px solid var(--lab-line);
+  border-radius: var(--radius-sm);
+  background: var(--lab-editor);
 }
 .workbench-investigation summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  list-style: none;
+  padding: 0.55rem 0.7rem;
   cursor: pointer;
+  user-select: none;
+  color: var(--text-primary);
+  background: var(--surface-elevated);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+.workbench-investigation summary::-webkit-details-marker {
+  display: none;
+}
+.workbench-investigation summary::before {
+  content: '';
+  width: 0.43rem;
+  height: 0.43rem;
+  flex: 0 0 auto;
+  align-self: center;
+  border-right: 2px solid var(--lab-accent);
+  border-bottom: 2px solid var(--lab-accent);
+  transform: rotate(-45deg);
+}
+.workbench-investigation details[open] > summary {
+  border-bottom: 1px solid var(--lab-line);
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+.workbench-investigation details[open] > summary::before {
+  transform: rotate(45deg);
+}
+.workbench-investigation details > :not(summary) {
+  margin-inline: 0.65rem;
+  user-select: text;
+}
+.workbench-investigation details > pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.workbench-investigation details details {
+  border-inline-start: 2px solid var(--lab-line);
 }
 .workbench-tree {
-  padding-inline-start: 1.2rem;
+  padding-inline-start: 0.6rem;
+}
+.workbench-investigation details .workbench-tree {
+  padding-inline-start: 0.15rem;
+}
+lab-workbench :is(summary, button):focus-visible {
+  outline: 2px solid var(--lab-accent);
+  outline-offset: -2px;
 }
 .workbench-tree button {
   text-align: left;
@@ -319,8 +443,11 @@ lab-workbench [hidden] {
 }
 .workbench-results ul {
   list-style: none;
+  margin-block: 0.5rem;
+  padding-inline-start: 0;
+}
+.workbench-results ul li + li {
   margin-block-start: 0.3rem;
-  padding-inline-start: 1rem;
 }
 .workbench-results button[data-range-id] {
   text-align: start;
@@ -373,6 +500,12 @@ lab-workbench [hidden] {
   .workbench-editor {
     height: 11.5rem;
   }
+  lab-workbench[data-tall] .workbench-editor {
+    height: min(18rem, 44vh);
+  }
+  .workbench-investigation details > :not(summary) {
+    margin-inline: 0.32rem;
+  }
   .workbench-bar {
     align-items: start;
   }
@@ -381,6 +514,12 @@ lab-workbench [hidden] {
   }
 }
 @media (forced-colors: active) {
+  .workbench-investigation summary::before {
+    border-color: ButtonText;
+  }
+  lab-workbench :is(summary, button):focus-visible {
+    outline-color: Highlight;
+  }
   .lab-mark--match {
     outline: 1px dashed;
   }

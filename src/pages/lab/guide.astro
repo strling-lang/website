@@ -40,10 +40,11 @@ const expectations = [
     <p>
       Enter pattern source without host-language quotes or regex literal
       delimiters, then set flags separately. Choose an operation and enter text
-      in Subject. Run with the button or <kbd>Ctrl</kbd> / <kbd>Command</kbd> + <kbd
-        >Enter</kbd
-      >. Live mode runs after edits. Stop terminates the current worker and
-      pauses Live mode.
+      in Sample text. Run with the button or <kbd>Ctrl</kbd> / <kbd>Command</kbd
+      > + <kbd>Enter</kbd>. Run becomes Stop while work is active. Stop
+      terminates the active worker and pauses Live. STRling compiles trusted
+      source edits automatically. Live also executes the emitted pattern. Tall
+      expands both editors together.
     </p>
     <p>
       Search returns a boolean. Full match requires the runtime to match the
@@ -96,8 +97,10 @@ const expectations = [
       Semantic IR, analysis, and portability decisions supplied by STRling
       4.0.3. Artifact shows the emitted text, flags, applicable options, and
       source mappings. Eligible ECMAScript, PCRE2, and Python 3.11 artifacts run
-      directly in STRling Lab. Open in RegEx Lab to explicitly select a
-      different environment while preserving the original artifact.
+      directly in STRling Lab. Open artifact and samples in RegEx Lab carries
+      the artifact, sample datasets, and compiler origin within the current
+      browser tab. The separate cursor action also carries a saved boundary.
+      RegEx Lab waits for explicit execution.
     </p>
     <p>
       Format JSON indents Simply builder input. In a build with the canonical
@@ -164,14 +167,31 @@ const expectations = [
 
     <h2>Save and share</h2>
     <p>
+      Working sources and their datasets autosave in this browser. Use Manage
+      sources or Manage patterns to create, rename, duplicate or delete a
+      working copy. Manage datasets can duplicate a sample or copy a dataset
+      from another working source. Copies can be edited independently. A
+      returning visit restores your selection and keeps execution paused. The
+      autosave status shows when changes are stored or when the browser refuses
+      a save.
+    </p>
+    <p>
+      Copy and Download at the right of the tab strip act on the current tab. In
+      Results, Copy places raw result JSON on the clipboard. Download adds the
+      source, run settings, and observation data. Other tabs offer their own
+      evidence when available. Disclosure headers open with a click, Enter, or
+      Space. Their expanded content remains selectable.
+    </p>
+    <p>
       Save revision stores a snapshot in this browser. Use Sessions to restore,
       duplicate, or delete saved work. Settings links carry selections such as
       runtime, target, and operation. The source and subject are blank when the
       recipient opens one. In a session download, select which data to include.
-      The active source, sample data, tests, recorded outputs, original STRling
-      source, and saved scan cursor each have a separate control. Tests and
-      recorded outputs may include sample text. Imported or shared material
-      waits for an explicit action before executing.
+      The active source, sample data, replacement text, tests, recorded outputs,
+      original STRling source, and saved scan cursor each have a separate
+      control. Tests and recorded outputs can carry sample, source, or
+      replacement text. Imported or shared material waits for an explicit action
+      before executing.
     </p>
     <p>
       Restoring a revision lets you inspect its recorded outputs. Run starts a

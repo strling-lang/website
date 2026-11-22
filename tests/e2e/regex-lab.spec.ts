@@ -16,7 +16,7 @@ const subject = (page: Page) =>
 const tab = (page: Page, name: string) =>
   page.getByRole('tab', { name, exact: true }).click();
 const run = (page: Page) =>
-  page.getByRole('button', { name: /^Run Ctrl/ }).click();
+  page.getByRole('button', { name: 'Run', exact: true }).click();
 const executionWorker = /\/execution\.worker-[^/]+\.js$/;
 const compilerAsset =
   /\/_strling-lab\/compiler-tools-[^/]+-[a-f0-9]{64}\.wasm$/;
@@ -352,7 +352,9 @@ test('compiles released Semantic STRling and Simply, maps diagnostics and transf
   await page.getByRole('button', { name: 'Run artifact' }).click();
   await expect(status(page)).toHaveText('2 matches');
   await tab(page, 'Artifact');
-  await page.getByRole('button', { name: 'Open in RegEx Lab' }).click();
+  await page
+    .getByRole('button', { name: 'Open artifact and samples in RegEx Lab' })
+    .click();
   await expect(page).toHaveURL(/\/regex\/lab\/$/);
   await expect(status(page)).toContainText('Session loaded');
   await expect(source(page)).toHaveText('hello');
@@ -437,9 +439,24 @@ test('compares revisions, measures time and confines authored material to opt-in
   await expect(page.getByText(/Sample · [1-9] differences/)).toBeVisible();
 
   await tab(page, 'Timing');
-  await page.getByLabel('Repetitions').fill('2');
+  await page
+    .getByRole('checkbox', { name: 'Include baseline revision' })
+    .check();
   await page.getByRole('button', { name: 'Measure', exact: true }).click();
-  await expect(page.getByText(/2 measured runs/)).toBeVisible();
+  await expect(
+    page.getByText('8 of 8 measured runs completed', { exact: true }),
+  ).toHaveCount(2);
+  const timings = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download timings' }).click();
+  const experiment = JSON.parse(
+    await readFile(await (await timings).path(), 'utf8'),
+  );
+  expect(experiment.status).toBe('complete');
+  expect(
+    experiment.series.map(
+      (entry: { samples: unknown[] }) => entry.samples.length,
+    ),
+  ).toEqual([8, 8]);
 
   await tab(page, 'Sessions');
   const redactedDownload = page.waitForEvent('download');
@@ -1190,4 +1207,308 @@ test('terminates the cancelled worker and retries after initialization failure',
   await expect(status(page)).toContainText('The worker could not start');
   await run(page);
   await expect(status(page)).toHaveText('1 match');
+});
+
+test('autosaves working patterns and independent dataset copies without automatic execution on return', async ({
+  page,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  await edit(page, source(page), 'original');
+  await edit(page, subject(page), 'original sample');
+  const save = page.locator('[data-output="workspace-status"]');
+  await expect(save).toHaveText('Saved in this browser');
+  const library = page.getByRole('combobox', { name: 'Saved working pattern' });
+  await page.getByText('Manage patterns', { exact: true }).click();
+  page.once('dialog', (dialog) => dialog.accept('Copy for review'));
+  await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  await expect(library.locator('option:checked')).toHaveText('Copy for review');
+  await edit(page, source(page), 'another');
+  await page.getByText('Manage datasets', { exact: true }).click();
+  await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  const datasets = page.getByRole('combobox', { name: 'Dataset', exact: true });
+  await expect(datasets.locator('option:checked')).toHaveText('Sample copy');
+  await edit(page, subject(page), 'independent');
+  await datasets.selectOption({ label: 'Sample' });
+  await expect(subject(page)).toHaveText('original sample');
+  await library.selectOption({ label: 'Sample pattern' });
+  await expect(source(page)).toHaveText('original');
+  await page.getByText('Manage datasets', { exact: true }).click();
+  await page
+    .getByRole('combobox', { name: 'Copy saved dataset' })
+    .selectOption({ label: 'Copy for review · Sample copy' });
+  await expect(subject(page)).toHaveText('independent');
+  await expect(save).toHaveText('Saved in this browser');
+  await page.reload();
+  await expect(status(page)).toContainText('Working copy restored');
+  await expect(source(page)).toHaveText('original');
+  await expect(subject(page)).toHaveText('independent');
+  await expect(page.getByLabel('Live', { exact: true })).not.toBeChecked();
+  await expect(
+    page.getByRole('button', { name: 'Download', exact: true }),
+  ).toBeDisabled();
+  await page.getByText('Manage patterns', { exact: true }).click();
+  page.once('dialog', (dialog) => dialog.accept('Renamed pattern'));
+  await page.getByRole('button', { name: 'Rename', exact: true }).click();
+  await expect(library.locator('option:checked')).toHaveText('Renamed pattern');
+  await page.getByText('Manage patterns', { exact: true }).click();
+  page.once('dialog', (dialog) => dialog.accept('Fresh pattern'));
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await expect(source(page)).toHaveText('');
+  await page.getByText('Manage patterns', { exact: true }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(
+    library.locator('option', { hasText: 'Fresh pattern' }),
+  ).toHaveCount(0);
+});
+
+test('restores separate Semantic and Simply drafts without running them', async ({
+  page,
+}) => {
+  await page.goto('/lab/');
+  await expect(status(page)).toContainText('Compiler succeeded');
+  const format = page.getByLabel('Source format', { exact: true });
+  const semantic =
+    'semantic strling 1.0; case sensitive; pattern text "draft";';
+  await edit(page, source(page), semantic);
+  await format.selectOption('simply');
+  await edit(page, source(page), '{"privateDraft":true}');
+  await expect(page.locator('[data-output="workspace-status"]')).toHaveText(
+    'Saved in this browser',
+  );
+  await page.reload();
+  await expect(status(page)).toContainText('Working copy restored');
+  await expect(format).toHaveValue('simply');
+  await expect(source(page)).toHaveText('{"privateDraft":true}');
+  await format.selectOption('semantic');
+  await expect(source(page)).toHaveText(semantic);
+  await expect(status(page)).toContainText('Select Run');
+  await format.selectOption('simply');
+  await expect(source(page)).toHaveText('{"privateDraft":true}');
+});
+
+test('keeps run controls stable, resizes both editors and exposes native selectable disclosures', async ({
+  page,
+  browserName,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  const tall = page.getByRole('button', { name: 'Tall editors', exact: true });
+  const boxes = page.locator('[data-editor]');
+  const heights = () =>
+    boxes.evaluateAll((elements) =>
+      elements.map((element) => element.getBoundingClientRect().height),
+    );
+  const before = await heights();
+  await tall.press('Enter');
+  await expect(tall).toHaveAttribute('aria-pressed', 'true');
+  const expanded = await heights();
+  expect(expanded[0]).toBe(expanded[1]);
+  expect(expanded[0]).toBeGreaterThan(before[0]!);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
+    )
+    .toBe(0);
+  await tall.click();
+  expect(await heights()).toEqual(before);
+  await page.getByText('Structured result', { exact: true }).press('Enter');
+  await page.getByText('Raw JSON', { exact: true }).press('Enter');
+  const summary = page.getByText('Raw JSON', { exact: true });
+  const json = page.locator('[data-output="result-json"]');
+  await expect(json).toBeVisible();
+  await expect(summary).toHaveCSS('user-select', 'none');
+  await expect(json).toHaveCSS('user-select', 'text');
+  if (browserName === 'chromium') {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await summary.focus();
+    await expect(summary).toHaveCSS('outline-style', 'solid');
+    await page.emulateMedia({ forcedColors: 'none' });
+  }
+  await summary.press('Enter');
+  await expect(json).toBeHidden();
+  const bar = page.getByRole('group', { name: 'Selected tab actions' });
+  await expect(bar.getByRole('button').nth(0)).toHaveAccessibleName(
+    'Copy result JSON',
+  );
+  if (browserName === 'chromium') {
+    await page
+      .context()
+      .grantPermissions(['clipboard-read', 'clipboard-write']);
+    await bar.getByRole('button').nth(0).press('Enter');
+    await expect(status(page)).toHaveText('Copied.');
+    const rawResult = JSON.parse(
+      await page.evaluate(() => navigator.clipboard.readText()),
+    );
+    expect(rawResult.status).toBe('matched');
+    expect(rawResult).not.toHaveProperty('result');
+  }
+  const downloaded = page.waitForEvent('download');
+  await bar.getByRole('button').nth(1).press('Enter');
+  const envelope = JSON.parse(
+    await readFile(await (await downloaded).path(), 'utf8'),
+  );
+  expect(envelope).toMatchObject({
+    schema: 'strling-lab-recorded-observation-v1',
+    result: { status: 'matched' },
+  });
+  await tab(page, 'Debugger');
+  await expect(bar.getByRole('button', { name: 'Download' })).toBeDisabled();
+  await tab(page, 'Structure');
+  await expect(
+    bar.getByRole('button', { name: 'Copy structure data' }),
+  ).toBeEnabled();
+  await source(page).press('ControlOrMeta+KeyF');
+  await expect(
+    page.getByRole('textbox', { name: 'Find', exact: true }),
+  ).toBeVisible();
+});
+
+test('preserves successful timing samples when a later real worker request is cancelled', async ({
+  page,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await page.evaluate(() => {
+    const send = Worker.prototype.postMessage;
+    let calls = 0;
+    Worker.prototype.postMessage = function (
+      message: { input?: { request?: unknown } },
+      ...rest: unknown[]
+    ) {
+      if (message.input?.request && ++calls === 4) return;
+      Reflect.apply(send, this, [message, ...rest]);
+    };
+  });
+  await tab(page, 'Timing');
+  await page.getByRole('button', { name: 'Measure', exact: true }).click();
+  await expect(
+    page.getByText('Measuring · 2 of 8 measured runs completed'),
+  ).toBeVisible();
+  const stop = page.getByRole('button', { name: 'Stop', exact: true });
+  const running = await stop.boundingBox();
+  await stop.click();
+  await expect(status(page)).toHaveText('Stopped.');
+  await expect(page.getByLabel('Live', { exact: true })).not.toBeChecked();
+  const idle = await page
+    .getByRole('button', { name: 'Run', exact: true })
+    .boundingBox();
+  expect(idle?.width).toBe(running?.width);
+  expect(idle?.x).toBe(running?.x);
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download timings' }).click();
+  const evidence = JSON.parse(
+    await readFile(await (await pending).path(), 'utf8'),
+  );
+  expect(evidence.status).toBe('incomplete');
+  expect(evidence.repetitions).toBe(8);
+  expect(evidence.series[0].warmup).toBeDefined();
+  expect(evidence.series[0].samples).toHaveLength(2);
+});
+
+test('requires explicit replacement inclusion and preserves native inspection across tabs', async ({
+  page,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
+  await tab(page, 'Structure');
+  await page.getByRole('button', { name: 'Inspect native structure' }).click();
+  await expect(
+    page.getByText('PCRE2 compiled structure', { exact: true }),
+  ).toBeVisible();
+  await tab(page, 'Results');
+  await tab(page, 'Structure');
+  await expect(
+    page.getByText('PCRE2 compiled structure', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Download structure data' }),
+  ).toBeEnabled();
+  await page.getByRole('textbox', { name: 'Flags', exact: true }).fill('i');
+  await expect(
+    page.getByText('PCRE2 compiled structure', { exact: true }),
+  ).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: 'Download', exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole('combobox', { name: 'Operation', exact: true })
+    .selectOption('replace-all');
+  await page
+    .getByRole('textbox', { name: 'Replacement', exact: true })
+    .fill('private template');
+  await tab(page, 'Sessions');
+  const exported = async () => {
+    const pending = page.waitForEvent('download');
+    await page
+      .getByRole('button', {
+        name: 'Download session with selected inclusions',
+      })
+      .click();
+    return JSON.parse(await readFile(await (await pending).path(), 'utf8'));
+  };
+  expect((await exported()).session.run.replacement).toBe('');
+  await page.getByRole('checkbox', { name: 'Replacement text' }).check();
+  expect((await exported()).session.run.replacement).toBe('private template');
+  await page.getByRole('button', { name: 'Copy settings link' }).click();
+  expect(
+    decodeURIComponent(await page.getByLabel('Share URL').inputValue()),
+  ).not.toContain('private template');
+});
+
+test('recovers unreadable or quota-refused working storage without modifying saved revisions', async ({
+  page,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await tab(page, 'Sessions');
+  await page.getByRole('button', { name: 'Save revision' }).click();
+  await expect(status(page)).toContainText('Revision saved');
+  const archive = await page.evaluate(() => {
+    localStorage.setItem('strling.labs.working.v1.regex', '{broken');
+    return localStorage.getItem('strling.labs.archive.v1');
+  });
+  await page.reload();
+  const save = page.locator('[data-output="workspace-status"]');
+  await expect(save).toContainText('could not be read');
+  await page.getByText('Manage patterns', { exact: true }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page
+    .getByRole('button', { name: 'Reset working storage', exact: true })
+    .click();
+  await expect(save).toHaveText('Saved in this browser');
+  await page.getByRole('checkbox', { name: 'Live', exact: true }).uncheck();
+  await page.evaluate(() => {
+    const write = Storage.prototype.setItem;
+    document.documentElement.dataset.testRefuseWorkspace = 'yes';
+    Storage.prototype.setItem = function (key, value) {
+      if (
+        key === 'strling.labs.working.v1.regex' &&
+        document.documentElement.dataset.testRefuseWorkspace
+      )
+        throw new DOMException('Test quota limit', 'QuotaExceededError');
+      write.call(this, key, value);
+    };
+  });
+  await edit(page, source(page), 'surviving working edit');
+  await expect(save).toContainText('could not save');
+  await expect(source(page)).toHaveText('surviving working edit');
+  await page.evaluate(() => {
+    delete document.documentElement.dataset.testRefuseWorkspace;
+  });
+  await page.getByText('Manage patterns', { exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Retry autosave', exact: true })
+    .click();
+  await expect(save).toHaveText('Saved in this browser');
+  expect(
+    await page.evaluate(() => localStorage.getItem('strling.labs.archive.v1')),
+  ).toEqual(archive);
+  await page.reload();
+  await expect(source(page)).toHaveText('surviving working edit');
+  await expect(status(page)).toContainText('Working copy restored');
 });

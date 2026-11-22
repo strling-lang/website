@@ -218,7 +218,12 @@ export function renderMatches(
         if (source) row.append(button('Source for ' + capture.name, source));
         list.append(row);
       }
-      card.append(list);
+      const captures = details(
+        'Captures (' + match.captures.length + ')',
+        list,
+      );
+      captures.open = true;
+      card.append(captures);
     }
     cards.append(card);
   }

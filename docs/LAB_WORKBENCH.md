@@ -186,12 +186,12 @@ trigger automatic execution. [Site security policy](../SECURITY.md).
 | strling-lab-comparison-v1                            | Runtime or revision comparison, source identity, witness inputs, native results, and normalized differences.                                                                                               |
 | strling-lab-timing-v1                                | Bounded raw measurements, warmup, environment, sample size, and distribution summary.                                                                                                                      |
 
-The archive caps total serialized content at 2,000,000 UTF-16 units, with up
+The explicit revision archive caps total serialized content at 2,000,000 UTF-16 units, with up
 to 12 sessions and 12 revisions per session. Downloaded session files have the
-same text limit. Active source, sample data, tests, recordings, original
+same text limit. Active source, sample data, replacement text, tests, recordings, original
 compiler source, and the saved cursor require explicit opt-in for each file.
 A bundle includes a saved cursor only with the active source, the sample and
-any original compiler source needed for verification. A settings URL uses an
+any original compiler source needed for verification. A cursor with nonempty replacement settings requires including that text as well. A settings URL uses an
 allowlist of source format, runtime,
 target, and operation selections. It excludes authored source, flags,
 replacement text, user-defined labels, subjects, tests, and recordings.
@@ -218,6 +218,44 @@ Changes to the subject bytes, selected provider or bound options cause a
 refusal. Empty, final, partial, timed-out and cancelled scans provide no
 eligible boundary at that point. JavaScript and Python offer fresh reruns
 and recorded observations. [PCRE2 global matching](https://www.pcre.org/current/doc/html/pcre2_next_match.html).
+
+## Working copies and interaction controls
+
+RegEx and STRling each keep a separate versioned origin-local working store.
+Changes are debounced at 380 ms and pending changes are flushed on page hide.
+A working source owns an editable session snapshot and separate Semantic/Simply
+text drafts. Its datasets can be duplicated locally or copied from a different
+working source in the same Lab. Copying creates independent editable text.
+An explicit session restore, import, settings link or artifact handoff opens a
+separate working copy. A visit that restores work leaves Live off and waits for
+explicit execution. Compiled responses, results, and investigations are not
+promoted to current observations by loading local working storage.
+
+The bounded working store uses localStorage so a small pending write can be
+flushed synchronously when the page is hidden. Each mode is capped at 12 working
+sources and 1,000,000 serialized UTF-16 units. IndexedDB would support larger
+collections and async transaction semantics. The current limits and page-hide
+flush favor the existing browser-local synchronous storage model. Failed writes
+and stale-tab conflicts preserve the current editable copy and the previously
+stored bytes. Corrupt working storage is reset only by explicit confirmation.
+The separate revision archive and artifact handoff keep their existing formats.
+
+The fixed primary Run control becomes Stop while a worker action is active.
+Stopping pauses Live. Ctrl/Command+Enter retains explicit Run. Tall changes CSS
+height for both editors without replacing either editor state. The tab strip
+scrolls independently from its Copy and Download buttons. Specialized extraction,
+integration-example, and conversion controls remain in their own panels.
+
+Timing requests eight measured samples after an unmeasured warmup per series.
+Its exported schema retains raw values and adds completion state and the sampled
+clock-resolution estimate. A stopped or failed series keeps completed samples and
+reports how many of the eight succeeded. Display precision reflects the observed
+clock tick, duration scale, variability, and successful sample count.
+
+The 8,192-unit source cap is retained. All three pinned PCRE2 reactors use
+`MAX_PATTERN (8192 * 3)` bytes. A 32,768-unit ASCII pattern already exceeds
+that buffer. Raising the shared limit would require new Wasm reactor artifacts
+and independent validation of compiler, worker, structure, and persistence bounds.
 
 ## Build, qualification, and troubleshooting
 

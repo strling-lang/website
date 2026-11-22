@@ -297,7 +297,12 @@ test('runs native providers, inspects captures, creates tests and records PCRE2 
   await capture.click();
   await expect(capture).toHaveAttribute('aria-pressed', 'true');
 
-  await tab(page, 'Structure');
+  const structure = page.getByRole('tab', { name: 'Structure', exact: true });
+  await structure.evaluate((element) =>
+    element.scrollIntoView({ block: 'center', behavior: 'instant' }),
+  );
+  await structure.click();
+  await expect(structure).toHaveAttribute('aria-selected', 'true');
   await expect(
     page.getByRole('button', { name: 'Named capture word' }),
   ).toBeVisible();
@@ -1320,6 +1325,7 @@ test('restores separate Semantic and Simply drafts without running them', async 
 test('keeps run controls stable, resizes both editors and exposes native selectable disclosures', async ({
   page,
   browserName,
+  isMobile,
 }) => {
   await page.goto('/regex/lab/');
   await expect(status(page)).toHaveText('3 matches');
@@ -1393,7 +1399,11 @@ test('keeps run controls stable, resizes both editors and exposes native selecta
   await expect(
     bar.getByRole('button', { name: 'Copy structure data' }),
   ).toBeEnabled();
-  await source(page).press('ControlOrMeta+KeyF');
+  // Playwright resolves ControlOrMeta from the host OS, while CodeMirror uses
+  // the Apple modifier for the emulated iPhone.
+  const findKey =
+    browserName === 'webkit' && isMobile ? 'Meta' : 'ControlOrMeta';
+  await source(page).press(`${findKey}+KeyF`);
   await expect(
     page.getByRole('textbox', { name: 'Find', exact: true }),
   ).toBeVisible();

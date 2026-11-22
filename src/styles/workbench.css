@@ -199,6 +199,7 @@ lab-workbench[data-tall] .workbench-editor {
   font-size: 0.82rem;
   padding: 0.32rem 0.36rem;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
 }
 .workbench-menu > div {
@@ -375,6 +376,7 @@ lab-workbench[data-tall] .workbench-editor {
   list-style: none;
   padding: 0.55rem 0.7rem;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   color: var(--text-primary);
   background: var(--surface-elevated);
@@ -404,6 +406,7 @@ lab-workbench[data-tall] .workbench-editor {
 }
 .workbench-investigation details > :not(summary) {
   margin-inline: 0.65rem;
+  -webkit-user-select: text;
   user-select: text;
 }
 .workbench-investigation details > pre {

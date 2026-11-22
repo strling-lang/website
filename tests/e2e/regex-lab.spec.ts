@@ -736,14 +736,23 @@ test('requires an approved adapter and exercises the configured canonical tools 
   ).toBe(true);
   expect(requests.some(({ url }) => compilerAsset.test(url))).toBe(true);
   expect(JSON.stringify(requests)).not.toContain(privateText);
+  await expect(page.locator('[data-output="workspace-status"]')).toHaveText(
+    'Saved in this browser',
+  );
   expect(
-    await page.evaluate(
-      (secret) =>
-        location.href.includes(secret) ||
-        Object.values(localStorage).some((value) => value.includes(secret)),
-      privateText,
-    ),
-  ).toBe(false);
+    await page.evaluate((secret) => {
+      const workingKey = 'strling.labs.working.v1.strling';
+      return {
+        editableCopy: localStorage.getItem(workingKey)?.includes(secret),
+        otherStorage:
+          Object.entries(localStorage).some(
+            ([key, text]) => key !== workingKey && text.includes(secret),
+          ) ||
+          Object.values(sessionStorage).some((text) => text.includes(secret)),
+        address: location.href.includes(secret),
+      };
+    }, privateText),
+  ).toEqual({ editableCopy: true, otherStorage: false, address: false });
 
   await page
     .getByLabel('Compiler target', { exact: true })
@@ -1319,8 +1328,10 @@ test('keeps run controls stable, resizes both editors and exposes native selecta
   const summary = page.getByText('Raw JSON', { exact: true });
   const json = page.locator('[data-output="result-json"]');
   await expect(json).toBeVisible();
-  await expect(summary).toHaveCSS('user-select', 'none');
-  await expect(json).toHaveCSS('user-select', 'text');
+  const selectionProperty =
+    browserName === 'webkit' ? '-webkit-user-select' : 'user-select';
+  await expect(summary).toHaveCSS(selectionProperty, 'none');
+  await expect(json).toHaveCSS(selectionProperty, 'text');
   if (browserName === 'chromium') {
     await page.emulateMedia({ forcedColors: 'active' });
     await summary.focus();

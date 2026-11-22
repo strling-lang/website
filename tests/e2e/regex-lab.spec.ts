@@ -31,17 +31,29 @@ const compilerToolsEnabled =
   Boolean(process.env.STRLING_LAB_TOOLS_CANDIDATE);
 
 async function edit(page: Page, editor: Locator, value: string) {
-  if (page.context().browser()?.browserType().name() === 'firefox') {
+  const lines = value.split('\n');
+  if (
+    lines.length > 1 ||
+    page.context().browser()?.browserType().name() === 'firefox'
+  ) {
     // Firefox's contenteditable fill can apply the deletion without inserting.
     await editor.click();
     await page.keyboard.press('ControlOrMeta+KeyA');
     await page.keyboard.press('Backspace');
     await expect(editor).toHaveText('');
-    await editor.pressSequentially(value);
+    await editor.pressSequentially(lines[0]);
+    for (const line of lines.slice(1)) {
+      await page.keyboard.press('Enter');
+      await editor.pressSequentially(line);
+    }
   } else {
     await editor.fill(value);
   }
-  await expect(editor).toHaveText(value);
+  if (lines.length > 1) {
+    await expect(editor.locator('.cm-line')).toHaveText(lines);
+  } else {
+    await expect(editor).toHaveText(value);
+  }
 }
 
 test('serves PCRE2 notices as same-origin downloads from the Lab guide', async ({
@@ -298,8 +310,8 @@ test('runs native providers, inspects captures, creates tests and records PCRE2 
 
   await page.getByLabel('Live', { exact: true }).uncheck();
   await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
-  await source(page).fill('(a|ab)c');
-  await subject(page).fill('😀abc');
+  await edit(page, source(page), '(a|ab)c');
+  await edit(page, subject(page), '😀abc');
   await run(page);
   await expect(status(page)).toHaveText('1 match');
   await expect(
@@ -322,7 +334,9 @@ test('compiles released Semantic STRling and Simply, maps diagnostics and transf
   await expect(
     page.getByRole('heading', { name: 'Canonical Semantic IR' }),
   ).toBeVisible();
-  await source(page).fill(
+  await edit(
+    page,
+    source(page),
     'semantic strling 1.0; case sensitive; pattern bogus;',
   );
   await expect(
@@ -415,7 +429,7 @@ test('compares revisions, measures time and confines authored material to opt-in
   await tab(page, 'Sessions');
   await page.getByRole('button', { name: 'Save revision' }).click();
   await expect(status(page)).toHaveText('Revision saved in this browser.');
-  await source(page).fill('alpha');
+  await edit(page, source(page), 'alpha');
   await expect(status(page)).toHaveText('1 match');
   await tab(page, 'Compare');
   await page
@@ -468,7 +482,7 @@ test('compares revisions, measures time and confines authored material to opt-in
   await expect(source(page)).toHaveText('');
   await expect(subject(page)).toHaveText('');
   expect(new URL(page.url()).hash).toBe('');
-  await source(page).fill('alpha');
+  await edit(page, source(page), 'alpha');
   await run(page);
   await expect(status(page)).toHaveText('No match');
 
@@ -1037,8 +1051,8 @@ test('binds assertions to duplicate PCRE2 capture names and clears revised evide
   await page.goto('/regex/lab/');
   await page.getByLabel('Live', { exact: true }).uncheck();
   await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
-  await source(page).fill('(?J)(?<part>a)|(?<part>b)');
-  await subject(page).fill('b a');
+  await edit(page, source(page), '(?J)(?<part>a)|(?<part>b)');
+  await edit(page, subject(page), 'b a');
   await run(page);
   await expect(status(page)).toHaveText('2 matches');
   await page.getByText('Extract matches or captures', { exact: true }).click();
@@ -1053,7 +1067,7 @@ test('binds assertions to duplicate PCRE2 capture names and clears revised evide
   await page.getByRole('button', { name: 'Save test' }).click();
   await page.getByRole('button', { name: 'Run all' }).click();
   await expect(status(page)).toHaveText('1 of 1 tests passed.');
-  await subject(page).fill('a');
+  await edit(page, subject(page), 'a');
   await expect(page.getByText('1 of 1 tests passed.')).toBeHidden();
 });
 
@@ -1077,8 +1091,8 @@ test('observes multiline, full-match, replacement and split behavior in each run
   ] as const) {
     await runtime.selectOption(engine);
     await flags.fill(engine === 'javascript' ? 'mu' : 'm');
-    await source(page).fill('^a(.)$');
-    await subject(page).fill('😀\naé\nb');
+    await edit(page, source(page), '^a(.)$');
+    await edit(page, subject(page), '😀\naé\nb');
     await operation.selectOption('scan');
     await run(page);
     await expect(status(page)).toHaveText('1 match', { timeout: 35_000 });
@@ -1092,8 +1106,8 @@ test('observes multiline, full-match, replacement and split behavior in each run
     await run(page);
     await expect(status(page)).toHaveText('No match');
 
-    await source(page).fill('[,;]');
-    await subject(page).fill('a,b;c');
+    await edit(page, source(page), '[,;]');
+    await edit(page, subject(page), 'a,b;c');
     await operation.selectOption('replace-all');
     await page
       .getByRole('textbox', { name: 'Replacement', exact: true })
@@ -1126,10 +1140,12 @@ test('executes the PCRE2 10.42 artifact and preserves a Unicode empty-match boun
   await page
     .getByLabel('Compiler target', { exact: true })
     .selectOption('pcre242');
-  await source(page).fill(
+  await edit(
+    page,
+    source(page),
     'semantic strling 1.0; case sensitive; pattern empty;',
   );
-  await subject(page).fill('😀');
+  await edit(page, subject(page), '😀');
   await run(page);
   await expect(status(page)).toHaveText('2 matches');
   const results = page.locator('[data-panel="results"]');
@@ -1149,8 +1165,8 @@ test('terminates the cancelled worker and retries after initialization failure',
   await page.getByLabel('Live', { exact: true }).uncheck();
   const runtime = page.getByLabel('Runtime', { exact: true });
   await runtime.selectOption('pcre2');
-  await source(page).fill('word');
-  await subject(page).fill('one word');
+  await edit(page, source(page), 'word');
+  await edit(page, subject(page), 'one word');
   const stalled = await stallNextExecutionWorker(page);
   const created = page.waitForEvent('worker', (worker) =>
     executionWorker.test(worker.url()),

@@ -15,8 +15,10 @@ const subject = (page: Page) =>
   page.getByRole('textbox', { name: 'Subject text' });
 const tab = (page: Page, name: string) =>
   page.getByRole('tab', { name, exact: true }).click();
+// Explicit Run remains available via the keyboard even if automatic STRling
+// compilation temporarily gives the primary button its Stop action.
 const run = (page: Page) =>
-  page.getByRole('button', { name: 'Run', exact: true }).click();
+  page.locator('[data-action="run"]').press('ControlOrMeta+Enter');
 const executionWorker = /\/execution\.worker-[^/]+\.js$/;
 const compilerAsset =
   /\/_strling-lab\/compiler-tools-[^/]+-[a-f0-9]{64}\.wasm$/;
@@ -1313,6 +1315,9 @@ test('keeps run controls stable, resizes both editors and exposes native selecta
   browserName,
 }) => {
   await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(status(page)).toHaveText('3 matches');
   const tall = page.getByRole('button', { name: 'Tall editors', exact: true });
   const boxes = page.locator('[data-editor]');

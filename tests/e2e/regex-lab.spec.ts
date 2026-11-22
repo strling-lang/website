@@ -492,8 +492,8 @@ for (const [pattern, text] of [
     await expect(status(page)).toHaveText('3 matches');
     await page.getByLabel('Live', { exact: true }).uncheck();
     await page.getByLabel('Operation', { exact: true }).selectOption('first');
-    await source(page).fill(pattern);
-    await subject(page).fill(text);
+    await edit(page, source(page), pattern);
+    await edit(page, subject(page), text);
     await run(page);
     const firstMatch = page.getByRole('button', {
       name: `Match 1 · "${pattern}" · [0, 2) utf16-code-units`,
@@ -503,7 +503,7 @@ for (const [pattern, text] of [
     await tab(page, 'Sessions');
     await page.getByRole('button', { name: 'Save revision' }).click();
     await expect(status(page)).toHaveText('Revision saved in this browser.');
-    await subject(page).fill('changed');
+    await edit(page, subject(page), 'changed');
     await page.getByRole('button', { name: 'Restore', exact: true }).click();
     await expect(subject(page)).toHaveText(text);
     await expect(status(page)).toHaveText(
@@ -564,11 +564,11 @@ test('bounds execution and recovers after a worker timeout', async ({
   await expect(status(page)).toContainText('time limit', { timeout: 10_000 });
   await stalled.closed;
   await page.getByLabel('Live', { exact: true }).uncheck();
-  await source(page).fill('(?:)');
-  await subject(page).fill('a'.repeat(280));
+  await edit(page, source(page), '(?:)');
+  await edit(page, subject(page), 'a'.repeat(280));
   await run(page);
   await expect(status(page)).toContainText('resource terminated');
-  await source(page).fill('^a');
+  await edit(page, source(page), '^a');
   await run(page);
   await expect(status(page)).toHaveText('1 match');
 });

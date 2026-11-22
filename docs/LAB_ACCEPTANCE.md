@@ -744,3 +744,17 @@ production publishing held until the incident is resolved. No rollback or
 deployment is part of source integration.
 [Published deployment record](https://app.netlify.com/projects/strling-lang/deploys/6aff4b86748a3243796f055d) ·
 [Netlify rollback procedure](https://docs.netlify.com/deploy/manage-deploys/manage-deploys-overview/#rollbacks).
+
+## RC4 certified-mode review
+
+The review candidate pins the verified RC4 closure and all seven release files.
+Its source-controlled shipping loader requires the public immutable metadata,
+exact target source tree, asset inventory, and matching signed evidence.
+Release acceptance also verifies GitHub's release attestation and the canonical
+compiler signature with their independent verifiers.
+
+An isolated static preview can exercise the exact candidate before publication
+with independently checked local release files. Its build results establish
+local replay and browser behavior. Public acquisition and final deployment
+remain gated on the protected publication record and byte equality between
+the public build and the reviewed static artifact.

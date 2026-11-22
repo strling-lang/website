@@ -262,3 +262,22 @@ and recorded observations. [PCRE2 global matching](https://www.pcre.org/current/
 
 If debugging a report, ask for the target, operation, environment, result
 status, and a redacted minimal reproducer. Avoid logging raw inputs.
+
+## Certified RC4 release input
+
+The certified manifest pins the Preview artifact, its source and tree, the
+separately certified compiler source, the independently verified attestation
+and evidence root, and every file in the release inventory. The build requires
+the exact immutable GitHub release and checks each asset's bytes, hashes,
+and signed evidence references. The Wasm ABI, compiler base, and memory
+guard still apply before the integration emits a content-addressed asset.
+
+Release acceptance verifies the canonical compiler certificate and GitHub's
+release attestation independently. A production build uses the public release
+transport, including when built outside Netlify. A review build can exercise
+the same loader with the frozen local release inventory through an external
+test transport. That review only qualifies the artifacts it actually used.
+
+The existing private development pin stays separate. The certified manifest
+cannot use a private override. The stable 4.0.3 compiler continues to serve its
+released interoperability operations.

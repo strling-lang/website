@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -62,17 +64,25 @@ const saveAll = {
   sourceOrigin: true,
 };
 
+const sealedManifest = { schemaVersion: 1, mode: 'sealed' };
+
 test('Netlify uses the explicit sealed mode and refuses a private adapter', async () => {
   const localFile = 'local-compiler-adapter.wasm';
   for (const context of ['production', 'deploy-preview', 'branch-deploy']) {
     const environment = { NETLIFY: 'true', CONTEXT: context };
-    assert.equal((await labCompilerTools(environment)).integration, undefined);
+    assert.equal(
+      (await labCompilerTools(environment, sealedManifest)).integration,
+      undefined,
+    );
     await assert.rejects(
       () =>
-        labCompilerTools({
-          ...environment,
-          STRLING_LAB_TOOLS_CANDIDATE: localFile,
-        }),
+        labCompilerTools(
+          {
+            ...environment,
+            STRLING_LAB_TOOLS_CANDIDATE: localFile,
+          },
+          sealedManifest,
+        ),
       /private Lab compiler adapter is only allowed in isolated builds/,
     );
   }
@@ -83,18 +93,22 @@ test('an isolated Lab build refuses a replacement compiler artifact or digest', 
   const environment = { STRLING_LAB_TOOLS_CANDIDATE: path };
   await assert.rejects(
     () =>
-      labCompilerTools({
-        ...environment,
-        STRLING_LAB_TOOLS_SHA256: 'f'.repeat(64),
-      }),
+      labCompilerTools(
+        {
+          ...environment,
+          STRLING_LAB_TOOLS_SHA256: 'f'.repeat(64),
+        },
+        sealedManifest,
+      ),
     /compiler digest differs from the pin/,
   );
   await assert.rejects(
-    () => labCompilerTools(environment),
+    () => labCompilerTools(environment, sealedManifest),
     /artifact has the wrong size or digest/,
   );
 });
 
+const hash = (data) => createHash('sha256').update(data).digest('hex');
 const shippingArtifact = {
   version: '0.1.0',
   protocol: 'strling.lab-compiler-tools@1.0.0-rc.1',
@@ -107,6 +121,20 @@ const shippingArtifact = {
   memoryBytes: 67_108_864,
   stackBytes: 2_097_152,
   url: 'https://github.com/strling-lang/strling/releases/download/lab-wasm-v0.1.0/strling_lab_wasm.wasm',
+  evidence: {
+    adapterTree: 'f'.repeat(40),
+    certifiedSource: '1'.repeat(40),
+    assets: Object.fromEntries(
+      [
+        'SHA256SUMS',
+        'draft-sbom.spdx.json',
+        'unsigned-provenance.json',
+        'rebuild-1-receipt.json',
+        'rebuild-2-receipt.json',
+        'rc4-certification-attestation.json',
+      ].map((name) => [name, { size: 8, sha256: 'e'.repeat(64) }]),
+    ),
+  },
 };
 const shipping = {
   schemaVersion: 1,
@@ -114,20 +142,36 @@ const shipping = {
   artifact: shippingArtifact,
 };
 const { Response } = globalThis;
-const published = {
-  immutable: true,
-  draft: false,
-  tag_name: 'lab-wasm-v0.1.0',
-  assets: [
-    {
-      name: 'strling_lab_wasm.wasm',
-      browser_download_url: shippingArtifact.url,
-      size: shippingArtifact.size,
-      digest: 'sha256:' + shippingArtifact.sha256,
+const wasmName = 'strling_lab_wasm.wasm';
+const attestationName = 'rc4-certification-attestation.json';
+const tag = 'lab-wasm-v0.1.0';
+const releaseRoot = shippingArtifact.url.slice(0, -wasmName.length);
+
+function releaseMetadata(artifact) {
+  return {
+    immutable: true,
+    draft: false,
+    prerelease: false,
+    tag_name: tag,
+    target_commitish: artifact.sourceRevision,
+    assets: Object.entries({
+      ...artifact.evidence.assets,
+      [wasmName]: artifact,
+    }).map(([name, pin]) => ({
+      name,
+      browser_download_url: releaseRoot + name,
+      size: pin.size,
+      digest: 'sha256:' + pin.sha256,
       state: 'uploaded',
-    },
-  ],
-};
+    })),
+  };
+}
+
+function commitMetadata(sha, tree = shippingArtifact.evidence.adapterTree) {
+  return { sha, commit: { tree: { sha: tree } } };
+}
+
+const published = releaseMetadata(shippingArtifact);
 
 test('shipping refuses an absent or unauthorized manifest before network access', async () => {
   const noNetwork = () =>
@@ -138,6 +182,7 @@ test('shipping refuses an absent or unauthorized manifest before network access'
     { ...shippingArtifact, version: '0.1.0-rc.3' },
     { ...shippingArtifact, version: 'latest' },
     { ...shippingArtifact, certifiedClosureSha256: '' },
+    { ...shippingArtifact, evidence: undefined },
   ]) {
     await assert.rejects(
       labCompilerTools({}, { ...shipping, artifact }, noNetwork),
@@ -169,18 +214,36 @@ test('shipping refuses an absent or unauthorized manifest before network access'
 });
 
 test('shipping requires immutable metadata for the exact source, version and bytes', async () => {
-  for (const [release, commit] of [
+  for (const [release, commit, tree] of [
     [{ ...published, immutable: false }, shippingArtifact.sourceRevision],
     [
       { ...published, tag_name: 'lab-wasm-v0.1.1' },
       shippingArtifact.sourceRevision,
     ],
     [published, 'e'.repeat(40)],
+    [published, shippingArtifact.sourceRevision, 'e'.repeat(40)],
+    [{ ...published, prerelease: true }, shippingArtifact.sourceRevision],
+    [
+      { ...published, target_commitish: 'e'.repeat(40) },
+      shippingArtifact.sourceRevision,
+    ],
+    [
+      { ...published, assets: published.assets.slice(1) },
+      shippingArtifact.sourceRevision,
+    ],
+    [
+      {
+        ...published,
+        assets: [...published.assets.slice(1), published.assets[1]],
+      },
+      shippingArtifact.sourceRevision,
+    ],
     [
       {
         ...published,
         assets: [
-          { ...published.assets[0], digest: 'sha256:' + 'e'.repeat(64) },
+          { ...published.assets[0], digest: 'sha256:' + '0'.repeat(64) },
+          ...published.assets.slice(1),
         ],
       },
       shippingArtifact.sourceRevision,
@@ -191,7 +254,7 @@ test('shipping requires immutable metadata for the exact source, version and byt
         if (url.endsWith('/releases/tags/lab-wasm-v0.1.0'))
           return Response.json(release);
         if (url.endsWith('/commits/lab-wasm-v0.1.0'))
-          return Response.json({ sha: commit });
+          return Response.json(commitMetadata(commit, tree));
         assert.fail('Unapproved release reached the download');
       }),
       /does not match its approved identity/,
@@ -225,7 +288,7 @@ test('shipping fails closed on a missing, redirected, oversized or replaced asse
         if (url.endsWith('/releases/tags/lab-wasm-v0.1.0'))
           return Response.json(published);
         if (url.endsWith('/commits/lab-wasm-v0.1.0'))
-          return Response.json({ sha: shippingArtifact.sourceRevision });
+          return Response.json(commitMetadata(shippingArtifact.sourceRevision));
         assert.equal(url, shippingArtifact.url);
         assert.equal(options.redirect, 'manual');
         return failure;
@@ -234,6 +297,111 @@ test('shipping fails closed on a missing, redirected, oversized or replaced asse
     );
   }
 });
+test('certified shipping rejects altered evidence and a closure with the wrong provenance', async () => {
+  const wasm = Uint8Array.of(0, 97, 115, 109, 1, 0, 0, 0);
+  const artifact = {
+    ...shippingArtifact,
+    sha256: hash(wasm),
+    evidence: { ...shippingArtifact.evidence, assets: {} },
+  };
+  const makeFixture = (fault) => {
+    const contents = {
+      [wasmName]: wasm,
+      SHA256SUMS: Buffer.from(artifact.sha256 + '  ' + wasmName + '\n'),
+      'draft-sbom.spdx.json': Buffer.from('{}'),
+      'rebuild-1-receipt.json': Buffer.from('{}'),
+      'rebuild-2-receipt.json': Buffer.from('{}'),
+      'unsigned-provenance.json': Buffer.from(
+        JSON.stringify({
+          _type: 'https://in-toto.io/Statement/v1',
+          predicateType: 'https://slsa.dev/provenance/v1',
+          subject: [{ name: wasmName, digest: { sha256: artifact.sha256 } }],
+          predicate: {
+            buildDefinition: {
+              resolvedDependencies: [
+                {
+                  uri: 'git+https://github.com/strling-lang/strling',
+                  digest: {
+                    gitCommit:
+                      fault === 'wrong provenance'
+                        ? '0'.repeat(40)
+                        : artifact.sourceRevision,
+                  },
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    };
+    const rows = Object.entries(contents)
+      .filter(([name]) => name !== wasmName)
+      .map(([name, bytes]) => ({
+        path: 'evidence/lab-wasm-preview-evidence/' + name,
+        role: 'lab-wasm-preview-evidence',
+        bytes: bytes.length,
+        sha256: hash(bytes),
+      }));
+    contents[attestationName] = Buffer.from(
+      JSON.stringify({
+        signed_payload: {
+          certification_state: 'LOCALLY_CERTIFIED',
+          certified_source: {
+            commit: artifact.evidence.certifiedSource,
+            clean: true,
+          },
+          evidence_root_sha256:
+            fault === 'wrong closure'
+              ? '0'.repeat(64)
+              : artifact.certifiedClosureSha256,
+          evidence_files: fault === 'no signed metadata' ? rows.slice(1) : rows,
+        },
+      }),
+    );
+    artifact.evidence.assets = Object.fromEntries(
+      Object.entries(contents)
+        .filter(([name]) => name !== wasmName)
+        .map(([name, bytes]) => [
+          name,
+          { size: bytes.length, sha256: hash(bytes) },
+        ]),
+    );
+    return contents;
+  };
+  for (const [fault, message] of [
+    ['wrong provenance', /release evidence does not match/],
+    ['wrong closure', /release evidence does not match/],
+    ['no signed metadata', /release evidence does not match/],
+    ['tampered attestation', /wrong size or digest/],
+    ['missing provenance', /asset or metadata is unavailable/],
+    ['valid evidence', /ABI|unexpected host capability/],
+  ]) {
+    const fixture = makeFixture(fault);
+    await assert.rejects(
+      labCompilerTools(
+        { NETLIFY: 'true' },
+        { ...shipping, artifact },
+        async (url) => {
+          if (url.endsWith('/releases/tags/' + tag))
+            return Response.json(releaseMetadata(artifact));
+          if (url.endsWith('/commits/' + tag))
+            return Response.json(commitMetadata(artifact.sourceRevision));
+          const name = url.slice(releaseRoot.length);
+          if (
+            fault === 'missing provenance' &&
+            name === 'unsigned-provenance.json'
+          )
+            return new Response(null, { status: 404 });
+          if (fault === 'tampered attestation' && name === attestationName)
+            return new Response(new Uint8Array(fixture[name].length));
+          return new Response(fixture[name]);
+        },
+      ),
+      message,
+    );
+  }
+});
+
 const redact = {
   samples: false,
   tests: false,

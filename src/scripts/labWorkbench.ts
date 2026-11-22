@@ -148,7 +148,7 @@ class LabWorkbench extends HTMLElement {
   #workspaceSaved = false;
   #inspection?: { key: string; value: PatternInspection };
   #structureOutput?: object;
-  #semanticOutput?: { copy: string; evidence: JsonObject };
+  #semanticOutput?: { copy: string; label: string; evidence: JsonObject };
 
   connectedCallback() {
     if (this.#events) return;
@@ -760,7 +760,7 @@ class LabWorkbench extends HTMLElement {
         return (
           this.#semanticOutput &&
           dataActions(
-            'Copy semantic tool output',
+            this.#semanticOutput.label,
             'Download canonical tool evidence',
             'strling-semantic-tools.json',
             this.#semanticOutput.evidence,
@@ -1110,6 +1110,7 @@ class LabWorkbench extends HTMLElement {
           );
         }
         this.#semanticOutput = {
+          label: 'Copy formatter diagnostics',
           copy: JSON.stringify(result, null, 2),
           evidence: result,
         };
@@ -1136,7 +1137,11 @@ class LabWorkbench extends HTMLElement {
             : 'The source is already canonical.',
         ),
       );
-      this.#semanticOutput = { copy: result.text, evidence: result };
+      this.#semanticOutput = {
+        label: 'Copy formatted STRling',
+        copy: result.text,
+        evidence: result,
+      };
       if (!changed) this.#say('The source is already canonical.');
       return;
     }
@@ -1216,6 +1221,7 @@ class LabWorkbench extends HTMLElement {
       }
       if (findings.childElementCount) panel.append(findings);
       this.#semanticOutput = {
+        label: 'Copy canonical explanation JSON',
         copy: JSON.stringify(result, null, 2),
         evidence: result,
       };
@@ -1247,11 +1253,6 @@ class LabWorkbench extends HTMLElement {
     if (issues.childElementCount) panel.append(issues);
     if (converted !== undefined) {
       panel.append(details('Converted source', node('pre', converted)));
-      panel.append(
-        button('Copy converted source', () => {
-          void this.#copy(converted);
-        }),
-      );
       if (result.status === 'exact' && converted.length <= limits.pattern) {
         const format =
           destination === 'semantic_strling' ? 'semantic' : 'simply';
@@ -1269,6 +1270,10 @@ class LabWorkbench extends HTMLElement {
       }
     }
     this.#semanticOutput = {
+      label:
+        converted === undefined
+          ? 'Copy conversion evidence'
+          : 'Copy converted source',
       copy: converted ?? JSON.stringify(result, null, 2),
       evidence: result,
     };

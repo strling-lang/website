@@ -699,6 +699,16 @@ test('requires an approved adapter and exercises the configured canonical tools 
   const proof = JSON.parse((await evidence.textContent())!).equivalence;
   expect(proof.status).toBe('proven');
   expect(proof.reconstructed_fingerprint).toBe(proof.source_fingerprint);
+  await expect(
+    page
+      .getByRole('group', { name: 'Selected tab actions' })
+      .getByRole('button', { name: 'Copy converted source', exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page
+      .locator('[data-panel="compiler-tools"]')
+      .getByRole('button', { name: 'Copy converted source', exact: true }),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Use exact conversion' }).click();
   await expect(page.getByLabel('Source format')).toHaveValue('simply');
   await expect(status(page)).toContainText('Compiler succeeded');

@@ -41,7 +41,7 @@ async function edit(page: Page, editor: Locator, value: string) {
     await page.keyboard.press('ControlOrMeta+KeyA');
     await page.keyboard.press('Backspace');
     await expect(editor).toHaveText('');
-    await editor.pressSequentially(lines[0]);
+    await editor.pressSequentially(lines[0]!);
     for (const line of lines.slice(1)) {
       await page.keyboard.press('Enter');
       await editor.pressSequentially(line);

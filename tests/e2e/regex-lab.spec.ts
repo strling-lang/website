@@ -32,10 +32,7 @@ const compilerToolsEnabled =
 
 async function edit(page: Page, editor: Locator, value: string) {
   const lines = value.split('\n');
-  if (
-    lines.length > 1 ||
-    page.context().browser()?.browserType().name() === 'firefox'
-  ) {
+  if (page.context().browser()?.browserType().name() === 'firefox') {
     // Firefox's contenteditable fill can apply the deletion without inserting.
     await editor.click();
     await page.keyboard.press('ControlOrMeta+KeyA');

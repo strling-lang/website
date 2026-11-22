@@ -1206,14 +1206,21 @@ test('terminates the cancelled worker and retries after initialization failure',
   const created = page.waitForEvent('worker', (worker) =>
     executionWorker.test(worker.url()),
   );
-  await run(page);
+  // Start the raw runtime with the visible Run button so this test exercises
+  // the same pointer and scroll flow as the subsequent Stop interaction.
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
   await created;
   const stop = page.getByRole('button', { name: 'Stop', exact: true });
-  await stop.evaluate((button) => button.scrollIntoView({ block: 'start' }));
-  const header = await page.getByRole('banner').boundingBox();
-  expect((await stop.boundingBox())!.y).toBeGreaterThanOrEqual(
-    header!.y + header!.height,
+  await stop.evaluate((button) =>
+    button.scrollIntoView({ block: 'start', behavior: 'instant' }),
   );
+  await expect
+    .poll(async () => {
+      const header = await page.getByRole('banner').boundingBox();
+      const button = await stop.boundingBox();
+      return button!.y - (header!.y + header!.height);
+    })
+    .toBeGreaterThanOrEqual(0);
   await stop.click();
   await stalled.closed;
   await expect(status(page)).toHaveText('Stopped.');

@@ -1,0 +1,33 @@
+---
+interface Props {
+  resource: 'working' | 'dataset';
+}
+
+const { resource } = Astro.props;
+const actions = [
+  ['new', 'New'],
+  ['rename', 'Rename'],
+  ['duplicate', 'Duplicate'],
+  ['delete', 'Delete'],
+  ['find', 'Find / replace in editor'],
+];
+---
+
+<details class="workbench-menu">
+  <summary>
+    Manage
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="m5 8 5 5 5-5"></path>
+    </svg>
+  </summary>
+  <div>
+    {
+      actions.map(([action, label]) => (
+        <button type="button" data-action={`${action}-${resource}`}>
+          {label}
+        </button>
+      ))
+    }
+    <slot />
+  </div>
+</details>

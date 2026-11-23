@@ -415,9 +415,10 @@ class LabWorkbench extends HTMLElement {
       session.datasets.map(({ name }, index) => [String(index), name]),
       String(session.selected),
     );
-    this.#action('remove-dataset')!.disabled = session.datasets.length < 2;
-    this.#action('add-dataset')!.disabled =
-      session.datasets.length >= maxDatasets;
+    this.#action('delete-dataset')!.disabled = session.datasets.length < 2;
+    const datasetsFull = session.datasets.length >= maxDatasets;
+    this.#action('new-dataset')!.disabled = datasetsFull;
+    this.#action('duplicate-dataset')!.disabled = datasetsFull;
     const origin = this.#output('origin-details');
     origin.hidden = !session.origin;
     this.#output('origin-json').textContent = session.origin
@@ -435,10 +436,12 @@ class LabWorkbench extends HTMLElement {
 
   #renderSettings() {
     const { format, source, runtime, target, run } = this.#session;
-    this.#action('format')!.hidden =
-      format === 'regex' || (format === 'semantic' && !toolsIdentity.sha256);
-    this.#action('format')!.textContent =
-      format === 'simply' ? 'Format JSON' : 'Format STRling';
+    const formatButton = this.#action('format');
+    if (formatButton) {
+      formatButton.hidden = format === 'semantic' && !toolsIdentity.sha256;
+      formatButton.textContent =
+        format === 'simply' ? 'Format JSON' : 'Format STRling';
+    }
     const replacement =
       run.operation === 'replace' || run.operation === 'replace-all';
     this.#output('replacement').hidden = !replacement;
@@ -508,8 +511,6 @@ class LabWorkbench extends HTMLElement {
     this.#action('duplicate-working')!.disabled = full;
     this.#action('rename-working')!.disabled = !this.#workingId;
     this.#action('delete-working')!.disabled = !this.#workingId;
-    this.#action('duplicate-dataset')!.disabled =
-      this.#session.datasets.length >= maxDatasets;
     const reusable: [string, string][] = this.#workspace.sources.flatMap(
       (source) =>
         source.id === this.#workingId
@@ -644,6 +645,8 @@ class LabWorkbench extends HTMLElement {
   }
 
   #manageWorking(action: string) {
+    const resource = this.#mode === 'regex' ? 'pattern' : 'source';
+    const title = resource === 'pattern' ? 'Pattern name' : 'Source name';
     const item = this.#workspace.sources.find(
       ({ id }) => id === this.#workingId,
     );
@@ -651,7 +654,7 @@ class LabWorkbench extends HTMLElement {
       if (
         !item ||
         !confirm(
-          'Delete this working source and its working datasets? Saved session revisions are kept.',
+          `Delete this working ${resource} and its datasets? Saved session revisions are kept.`,
         )
       )
         return;
@@ -665,9 +668,7 @@ class LabWorkbench extends HTMLElement {
     }
     if (action === 'rename-working') {
       if (!item) return;
-      const label = prompt('Working source name', item.label)
-        ?.trim()
-        .slice(0, 80);
+      const label = prompt(title, item.label)?.trim().slice(0, 80);
       if (!label) return;
       item.label = label;
       this.#renderWorkspace();
@@ -678,10 +679,8 @@ class LabWorkbench extends HTMLElement {
     const duplicate = action === 'duplicate-working';
     const suggested = duplicate
       ? (item?.label ?? 'Working copy').slice(0, 75) + ' copy'
-      : this.#mode === 'regex'
-        ? 'New pattern'
-        : 'New source';
-    const label = prompt('Working source name', suggested)?.trim().slice(0, 80);
+      : `New ${resource}`;
+    const label = prompt(title, suggested)?.trim().slice(0, 80);
     if (!label) return;
     const { drafts, ...session } = duplicate
       ? structuredClone(this.#snapshot(false))
@@ -2178,8 +2177,11 @@ class LabWorkbench extends HTMLElement {
             ]();
           return;
         }
-        case 'find':
-          openSearchPanel(this.#source.view);
+        case 'find-working':
+        case 'find-dataset':
+          openSearchPanel(
+            (action === 'find-working' ? this.#source : this.#subject).view,
+          );
           return;
         case 'new-working':
         case 'rename-working':
@@ -2231,15 +2233,15 @@ class LabWorkbench extends HTMLElement {
             name: this.#dataset.name.slice(0, 75) + ' copy',
           });
           return;
-        case 'add-dataset':
+        case 'new-dataset':
         case 'rename-dataset': {
           const title =
-            action === 'add-dataset'
+            action === 'new-dataset'
               ? 'Dataset ' + (this.#session.datasets.length + 1)
               : this.#dataset.name;
           const name = prompt('Dataset name', title)?.trim().slice(0, 80);
           if (!name) return;
-          if (action === 'add-dataset') {
+          if (action === 'new-dataset') {
             this.#addDataset({ name, text: '' });
             return;
           }
@@ -2248,8 +2250,8 @@ class LabWorkbench extends HTMLElement {
           this.#update();
           return;
         }
-        case 'remove-dataset':
-          if (!confirm('Remove this dataset from the working session?')) return;
+        case 'delete-dataset':
+          if (!confirm('Delete this dataset from the working session?')) return;
           this.#session.datasets.splice(this.#session.selected, 1);
           this.#session.selected = Math.min(
             this.#session.selected,
@@ -2260,8 +2262,12 @@ class LabWorkbench extends HTMLElement {
           this.#update();
           return;
         case 'copy-source':
-          await this.#copy(this.#session.source);
+        case 'copy-dataset': {
+          const editor =
+            action === 'copy-source' ? this.#source : this.#subject;
+          await this.#copy(editor.view.state.doc.toString());
           return;
+        }
         case 'export-extraction': {
           const extracted = this.#extract();
           if (extracted !== undefined)

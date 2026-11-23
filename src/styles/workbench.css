@@ -76,7 +76,8 @@ lab-workbench .workbench-check {
 }
 lab-workbench
   :is(.workbench-config, .workbench-actions, .workbench-inline)
-  :is(button, input:not([type='checkbox']), select, .workbench-check) {
+  :is(button, input:not([type='checkbox']), select, .workbench-check),
+.workbench-menu > summary {
   min-block-size: var(--lab-control-height);
 }
 .workbench-actions {
@@ -114,7 +115,8 @@ lab-workbench :is(button, summary) svg {
   color: var(--lab-accent);
   border-color: var(--lab-accent);
 }
-lab-workbench :is(button, input:not([type='checkbox']), select, textarea) {
+lab-workbench :is(button, input:not([type='checkbox']), select, textarea),
+.workbench-menu > summary {
   border: 1px solid var(--lab-line);
   border-radius: var(--radius-sm);
   background: var(--surface-elevated);
@@ -124,7 +126,8 @@ lab-workbench :is(button, input:not([type='checkbox']), select, textarea) {
   min-width: 0;
   font: 500 0.875rem / 1.5 var(--font-sans);
 }
-lab-workbench button:not(:disabled):hover {
+lab-workbench button:not(:disabled):hover,
+.workbench-menu > summary:hover {
   border-color: var(--lab-accent);
 }
 lab-workbench button:disabled {
@@ -184,6 +187,21 @@ lab-workbench [hidden] {
   font-size: 1rem;
   margin: 0;
 }
+.workbench-editor-controls {
+  align-items: center;
+  justify-content: flex-end;
+  margin-inline-start: auto;
+}
+.workbench-editor-controls > select {
+  block-size: var(--lab-control-height);
+}
+.workbench-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: inherit;
+}
 .workbench-editor {
   background: var(--lab-editor);
   height: 14rem;
@@ -199,12 +217,19 @@ lab-workbench[data-tall] .workbench-editor {
   height: min(27rem, 56vh);
 }
 .workbench-menu > summary {
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  padding: 0.32rem 0.36rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  list-style: none;
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
+}
+.workbench-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.workbench-menu[open] > summary svg {
+  transform: rotate(180deg);
 }
 .workbench-menu > div {
   position: absolute;

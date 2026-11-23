@@ -1,6 +1,7 @@
 ---
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
 import type { Crumb } from '@/components/Breadcrumbs.astro';
+import EditorManagement from './EditorManagement.astro';
 import { operations, runtimes, limits } from '@/lib/regex-lab/interactive';
 import { targets } from '@/lib/regex-lab/compiler';
 import type { Expected, LabMode } from '@/lib/regex-lab/session';
@@ -197,42 +198,30 @@ const tabs = [
       <section aria-labelledby="lab-source-heading" class="workbench-card">
         <header>
           <h2 id="lab-source-heading">{isStrling ? 'Source' : 'Pattern'}</h2>
-          <div class="workbench-inline">
+          <div class="workbench-inline workbench-editor-controls">
             <select
               data-field="working-source"
               aria-label={isStrling
                 ? 'Saved working source'
                 : 'Saved working pattern'}></select>
-            <details class="workbench-menu">
-              <summary
-                >{isStrling ? 'Manage sources' : 'Manage patterns'}</summary
-              >
-              <div>
-                <button type="button" data-action="new-working">New</button>
-                <button type="button" data-action="rename-working"
-                  >Rename</button
-                >
-                <button type="button" data-action="duplicate-working"
-                  >Duplicate</button
-                >
-                <button type="button" data-action="delete-working"
-                  >Delete</button
-                >
-                <button type="button" data-action="find"
-                  >Find / replace in editor</button
-                >
+            <div class="workbench-editor-actions">
+              <EditorManagement resource="working">
                 <button type="button" data-action="retry-workspace" hidden
                   >Retry autosave</button
                 >
                 <button type="button" data-action="reset-workspace" hidden
                   >Reset working storage</button
                 >
-              </div>
-            </details>
-            <button type="button" data-action="format" hidden
-              >Format JSON</button
-            >
-            <button type="button" data-action="copy-source">Copy</button>
+              </EditorManagement>
+              {
+                isStrling && (
+                  <button type="button" data-action="format" hidden>
+                    Format JSON
+                  </button>
+                )
+              }
+              <button type="button" data-action="copy-source">Copy</button>
+            </div>
           </div>
         </header>
         <div class="workbench-editor" data-editor="source"></div>
@@ -244,27 +233,17 @@ const tabs = [
       <section aria-labelledby="lab-subject-heading" class="workbench-card">
         <header>
           <h2 id="lab-subject-heading">Sample text</h2>
-          <div class="workbench-inline">
+          <div class="workbench-inline workbench-editor-controls">
             <select data-field="dataset" aria-label="Dataset"></select>
-            <button type="button" data-action="add-dataset">Add dataset</button>
-            <details class="workbench-menu">
-              <summary>Manage datasets</summary>
-              <div>
-                <button type="button" data-action="rename-dataset"
-                  >Rename</button
-                >
-                <button type="button" data-action="duplicate-dataset"
-                  >Duplicate</button
-                >
-                <button type="button" data-action="remove-dataset"
-                  >Remove</button
-                >
-                <label
-                  >Copy saved dataset <select data-field="reuse-dataset"
-                  ></select></label
-                >
-              </div>
-            </details>
+            <div class="workbench-editor-actions">
+              <EditorManagement resource="dataset">
+                <label>
+                  Use dataset from another working copy
+                  <select data-field="reuse-dataset"></select>
+                </label>
+              </EditorManagement>
+              <button type="button" data-action="copy-dataset">Copy</button>
+            </div>
           </div>
         </header>
         <div class="workbench-editor" data-editor="subject"></div>

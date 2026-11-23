@@ -13,6 +13,10 @@ const source = (page: Page) =>
   page.getByRole('textbox', { name: 'Pattern or STRling source' });
 const subject = (page: Page) =>
   page.getByRole('textbox', { name: 'Subject text' });
+const manage = (page: Page, editor: 'Pattern' | 'Source' | 'Sample text') =>
+  page
+    .getByRole('region', { name: editor, exact: true })
+    .getByText('Manage', { exact: true });
 const sourceHighlight = (page: Page) =>
   source(page).locator('.lab-mark--source-navigation');
 const tab = (page: Page, name: string) =>
@@ -1755,12 +1759,12 @@ test('autosaves working patterns and independent dataset copies without automati
   const save = page.locator('[data-output="workspace-status"]');
   await expect(save).toHaveText('Saved in this browser');
   const library = page.getByRole('combobox', { name: 'Saved working pattern' });
-  await page.getByText('Manage patterns', { exact: true }).click();
+  await manage(page, 'Pattern').click();
   page.once('dialog', (dialog) => dialog.accept('Copy for review'));
   await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
   await expect(library.locator('option:checked')).toHaveText('Copy for review');
   await edit(page, source(page), 'another');
-  await page.getByText('Manage datasets', { exact: true }).click();
+  await manage(page, 'Sample text').click();
   await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
   const datasets = page.getByRole('combobox', { name: 'Dataset', exact: true });
   await expect(datasets.locator('option:checked')).toHaveText('Sample copy');
@@ -1769,9 +1773,9 @@ test('autosaves working patterns and independent dataset copies without automati
   await expect(subject(page)).toHaveText('original sample');
   await library.selectOption({ label: 'Sample pattern' });
   await expect(source(page)).toHaveText('original');
-  await page.getByText('Manage datasets', { exact: true }).click();
+  await manage(page, 'Sample text').click();
   await page
-    .getByRole('combobox', { name: 'Copy saved dataset' })
+    .getByRole('combobox', { name: 'Use dataset from another working copy' })
     .selectOption({ label: 'Copy for review · Sample copy' });
   await expect(subject(page)).toHaveText('independent');
   await expect(save).toHaveText('Saved in this browser');
@@ -1783,15 +1787,15 @@ test('autosaves working patterns and independent dataset copies without automati
   await expect(
     page.getByRole('button', { name: 'Download', exact: true }),
   ).toBeDisabled();
-  await page.getByText('Manage patterns', { exact: true }).click();
+  await manage(page, 'Pattern').click();
   page.once('dialog', (dialog) => dialog.accept('Renamed pattern'));
   await page.getByRole('button', { name: 'Rename', exact: true }).click();
   await expect(library.locator('option:checked')).toHaveText('Renamed pattern');
-  await page.getByText('Manage patterns', { exact: true }).click();
+  await manage(page, 'Pattern').click();
   page.once('dialog', (dialog) => dialog.accept('Fresh pattern'));
   await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(source(page)).toHaveText('');
-  await page.getByText('Manage patterns', { exact: true }).click();
+  await manage(page, 'Pattern').click();
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(
@@ -2158,8 +2162,9 @@ test('preserves native inspection and imports a complete session under a new ide
   await page
     .getByLabel('Replacement syntax', { exact: true })
     .selectOption('native');
+  await manage(page, 'Sample text').click();
   page.once('dialog', (dialog) => dialog.accept('Second sample'));
-  await page.getByRole('button', { name: 'Add dataset' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await edit(page, subject(page), 'ALPHA-22');
   await run(page);
   await expect(status(page)).toHaveText('Replacement completed');
@@ -2293,7 +2298,7 @@ test('recovers unreadable or quota-refused working storage without modifying sav
   await page.reload();
   const save = page.locator('[data-output="workspace-status"]');
   await expect(save).toContainText('could not be read');
-  await page.getByText('Manage patterns', { exact: true }).click();
+  await manage(page, 'Pattern').click();
   page.once('dialog', (dialog) => dialog.accept());
   await page
     .getByRole('button', { name: 'Reset working storage', exact: true })
@@ -2318,7 +2323,7 @@ test('recovers unreadable or quota-refused working storage without modifying sav
   await page.evaluate(() => {
     delete document.documentElement.dataset.testRefuseWorkspace;
   });
-  await page.getByText('Manage patterns', { exact: true }).click();
+  await manage(page, 'Pattern').click();
   await page
     .getByRole('button', { name: 'Retry autosave', exact: true })
     .click();

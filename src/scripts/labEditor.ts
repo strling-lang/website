@@ -7,7 +7,7 @@ import {
   syntaxHighlighting,
 } from '@codemirror/language';
 import { setDiagnostics, type Diagnostic } from '@codemirror/lint';
-import { search, setSearchQuery } from '@codemirror/search';
+import { search, searchKeymap, setSearchQuery } from '@codemirror/search';
 import {
   Compartment,
   EditorState,
@@ -21,6 +21,7 @@ import {
   Decoration,
   EditorView,
   hoverTooltip,
+  keymap,
   WidgetType,
   type DecorationSet,
 } from '@codemirror/view';
@@ -237,13 +238,14 @@ export class LabEditor {
     const { format, limit, onChange, onLimit, onSelection, onHover } = options;
     this.#extensions = [
       format
-        ? [
-            basicSetup,
-            search({ createPanel: createLabSearchPanel, literal: true }),
-            sourceHighlight,
-            sourceHighlightPointer,
-          ]
-        : [minimalSetup, bracketMatching()],
+        ? [basicSetup, sourceHighlight, sourceHighlightPointer]
+        : [
+            minimalSetup,
+            bracketMatching(),
+            keymap.of(searchKeymap),
+            EditorState.allowMultipleSelections.of(true),
+          ],
+      search({ createPanel: createLabSearchPanel, literal: true }),
       sourceColors,
       EditorView.theme({}, { dark: true }),
       EditorView.lineWrapping,

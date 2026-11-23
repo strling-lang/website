@@ -261,13 +261,19 @@ technical disclosures share a padded body. Nested levels use a smaller inset,
 including those that contain a single preformatted block. Native summaries
 retain keyboard behavior and evidence text remains selectable.
 
-The source and pattern editors share a compact Find and Replace panel. Search
-and replacement treat regex syntax, backslashes, and dollar signs as literal
-text. Match Case and Whole Word are independent options. Ctrl/Command+F opens
-the panel, Enter and Shift+Enter navigate matches from the Find field, and
-Escape closes it. F3 and the existing CodeMirror search shortcuts remain
-available. Find All selects the matches for editing. Editor replacement is
-separate from the Lab's runtime replacement operation.
+Each editor header puts its saved-item selector first and Copy last. Manage
+offers New, Rename, Duplicate, Delete, and Find / replace in editor. STRling
+places its format action immediately before Copy. Copy writes the current
+editor text to the clipboard. Sample text also offers **Use dataset from another
+working copy** to bring in an independent copy of a dataset from the same Lab.
+
+All editors share a compact Find and Replace panel. Search and replacement
+treat regex syntax, backslashes, and dollar signs as literal text. Match Case
+and Whole Word are independent options. Ctrl/Command+F opens the panel, Enter
+and Shift+Enter navigate matches from the Find field, and Escape closes it.
+F3 and the existing CodeMirror search shortcuts remain available. Find All
+selects the matches for editing. Editor replacement is separate from the Lab's
+runtime replacement operation.
 
 Source links in Compiler, Structure, Artifact, Results, Semantic tools, and
 Debugger use a dedicated CodeMirror decoration and a reveal effect. Validated

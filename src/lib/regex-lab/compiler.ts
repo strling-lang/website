@@ -59,6 +59,7 @@ export interface CompileInput {
 export interface Compilation {
   identity: typeof compilerIdentity;
   durationMs: number;
+  timerResolutionMs?: number;
   cached?: boolean;
   result?: JsonObject;
   profile?: JsonObject;

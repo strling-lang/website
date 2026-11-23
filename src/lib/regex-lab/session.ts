@@ -338,6 +338,7 @@ function readRecording(value: unknown): Recording | undefined {
   if (
     timing !== undefined &&
     recordedTimingSchema !== 'strling-lab-timing-v1' &&
+    recordedTimingSchema !== 'strling-lab-timing-v2' &&
     recordedTimingSchema !== timingSchema
   )
     throw new Error('Invalid recorded timing schema.');

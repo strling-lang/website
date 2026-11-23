@@ -10,20 +10,17 @@ retain whichever data the original export included.
 
 ## Canonical Timing review
 
-Timing uses one unmeasured warmup followed by nine measured runs per candidate.
-A paired run prepares both candidates, warms both, then measures the baseline
-and current pattern sequentially in each round. Compare retains its functional
-correctness workflow. Timing v2 preserves individual samples, pair order,
-runtime and artifact identities, and incomplete rounds. Historical Timing v1
-session recordings remain readable.
+Timing v3 measures the current pattern against the full active sample, with one
+warmup and nine measured runs. It preserves raw samples, independent clock
+resolution estimates, runtime and artifact identities, and incomplete results.
+Timing v1 and v2 recordings remain readable. Compare retains its separate
+functional correctness workflow.
 
-Deterministic tests verify dispatch order, absence of overlap, numerically
-sorted medians, ranges, differences, and fail-fast cancellation and timeout
-handling. Browser tests check the export with JavaScript and with generated
-PCRE2 and Python artifacts. The canonical local review packet records the exact
-source, build, results, and applicability limits. Fixed baseline-first order
-can still affect timing. These measurements describe the test browser and do
-not qualify a runtime for Regex Conformance.
+Deterministic tests cover sample counts, sequential dispatch, sorted medians,
+precision, and cancellation and timeout handling. Browser tests exercise short
+and longer JavaScript runs and the generated PCRE2 and Python artifacts. The
+local review packet records the exact source, build, and results. Browser timing
+does not qualify a runtime for Regex Conformance.
 
 ## Historical compiler distribution decision
 

@@ -164,6 +164,7 @@ export function executionResult(
   request: LabExecutionRequest,
   details: EngineResult,
   provenance?: Observation,
+  resolutionMs?: number,
 ): LabExecutionResult {
   const { compileMs, executionMs, ...result } = details;
   return {
@@ -178,6 +179,7 @@ export function executionResult(
       durationMs: (compileMs ?? 0) + (executionMs ?? 0),
       compileMs,
       executionMs,
+      ...(resolutionMs !== undefined && { resolutionMs }),
     },
   };
 }

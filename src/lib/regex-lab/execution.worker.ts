@@ -10,6 +10,7 @@ import { runJavaScript } from './javascript-engine';
 import { inspection, type PatternInspection } from './inspection.ts';
 import { readContinuation, type ScanContinuation } from './continuation.ts';
 import type { TraceObservation } from './trace.ts';
+import { estimateTimerResolution } from './timer-resolution';
 import { serveWorker } from './worker-client';
 
 export interface WorkerInput {
@@ -17,6 +18,7 @@ export interface WorkerInput {
   trace?: boolean;
   inspect?: boolean;
   continuation?: ScanContinuation;
+  probeTimer?: boolean;
 }
 
 export type WorkerOutput =
@@ -71,7 +73,7 @@ serveWorker<WorkerInput, WorkerOutput>(
       python = module;
     }
   },
-  ({ request, trace, inspect, continuation }) => {
+  ({ request, trace, inspect, continuation, probeTimer }) => {
     const runtime = runtimeFor(request);
     if (!runtime)
       return executionResult(request, {
@@ -137,6 +139,7 @@ serveWorker<WorkerInput, WorkerOutput>(
         request,
         result,
         observation(runtime, pcre2.version),
+        probeTimer ? estimateTimerResolution() : undefined,
       );
       return trace
         ? {
@@ -150,12 +153,18 @@ serveWorker<WorkerInput, WorkerOutput>(
     }
     if (runtime === 'python') {
       const { result, version } = python.runPython(pattern, input, options);
-      return executionResult(request, result, observation(runtime, version));
+      return executionResult(
+        request,
+        result,
+        observation(runtime, version),
+        probeTimer ? python.pythonTimerResolutionMs() : undefined,
+      );
     }
     return executionResult(
       request,
       runJavaScript(pattern, input, options),
       observation(runtime),
+      probeTimer ? estimateTimerResolution() : undefined,
     );
   },
 );

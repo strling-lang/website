@@ -48,6 +48,8 @@ function validResult(
     !time(timing.durationMs) ||
     (timing.compileMs !== undefined && !time(timing.compileMs)) ||
     (timing.executionMs !== undefined && !time(timing.executionMs)) ||
+    (timing.resolutionMs !== undefined &&
+      (!time(timing.resolutionMs) || timing.resolutionMs === 0)) ||
     !object(observation) ||
     observation.eligibility !== 'interactive-browser-v1' ||
     observation.providerVersion !== '1.0.0' ||

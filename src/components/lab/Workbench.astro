@@ -647,23 +647,11 @@ const tabs = [
         hidden
       >
         <div class="workbench-inline">
-          <label
-            >Subject size <select data-field="size"
-              ><option value="1">Current</option><option value="0.5"
-                >Half prefix</option
-              ><option value="2">Doubled</option></select
-            ></label
-          >
-          <label class="workbench-check"
-            ><input type="checkbox" data-field="benchmark-baseline" /> Include baseline
-            revision</label
-          >
           <button data-action="benchmark" type="button">Measure</button>
         </div>
         <p class="workbench-note">
-          One warmup and nine measured runs per candidate. Comparisons run the
-          baseline first and the current pattern second in every round. Partial
-          experiments retain completed measurements.
+          One warmup and nine measured runs of the current pattern on the full
+          active sample.
         </p>
         <div data-output="performance"></div>
       </section>

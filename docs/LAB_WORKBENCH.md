@@ -186,7 +186,7 @@ trigger automatic execution. [Site security policy](../SECURITY.md).
 | strling-lab-tests-v1                                 | Named grouped assertions with independent subjects and operations.                                                                                                                                                                                              |
 | strling-lab-trace-v1                                 | Instrumentation ID, bounded events, termination, and execution provenance.                                                                                                                                                                                      |
 | strling-lab-comparison-v1                            | Runtime or revision comparison, source identity, witness inputs, native results, and normalized differences.                                                                                                                                                    |
-| strling-lab-timing-v2                                | Bounded raw measurements, separate warmups, ordered pair references, environment, sample size, and median differences.                                                                                                                                          |
+| strling-lab-timing-v3                                | One full-sample experiment with a separate warmup, nine raw measurements, clock resolution estimates, runtime and compiler evidence, and completion status. Timing v1 and v2 remain readable as historical session data.                                        |
 
 The explicit revision archive caps total serialized content at 2,000,000 UTF-16
 units, with up to 12 sessions and 12 revisions per session. Save revision and
@@ -276,11 +276,22 @@ description. Nested lists stay inside their parent item. The first five levels
 receive a visual inset so deeply nested patterns can still fit at narrow widths.
 Descriptions longer than 90 characters remain available on the node tooltip.
 
-Timing resolves both runnable candidates before sampling and gives each a dedicated browser worker. After one unmeasured warmup per candidate, each round runs the baseline followed by the current pattern. A single-candidate experiment uses the current pattern only. Both paths request nine measured executions per candidate. The complete-series median is the fifth value sorted numerically. A stopped or failed run keeps completed samples and any returned error. The existing overall deadline and worker limits still apply.
+Timing runs the current pattern against the full active sample. It reuses one
+browser worker for one warmup and nine measured runs. The complete-series median
+is the fifth value sorted numerically. A stopped or failed run keeps the
+completed samples and any returned error. Existing time, input, and output
+limits still apply. Compare remains the workflow for functional comparisons.
 
-The v2 export records dispatch order and zero-based series sample references for each attempted round, along with statuses, runtime and compiler identity, raw timings, ranges, and absolute and relative median differences. An interrupted dispatch can appear in the order without a returned sample reference. Historical v1 session recordings stay readable. End-to-end timing excludes compiler preparation and runtime initialization, with worker compile and execution time reported separately. Display precision accounts for timer resolution, observed variability, and sample count.
-
-Alternation reduces time-dependent environmental skew. Baseline-first order can still introduce order effects. Nine observations in one browser are descriptive and cannot establish statistical significance.
+End-to-end timing uses the page clock and excludes compiler preparation and the
+runtime initialization in the warmup. Worker compilation and execution use the
+runtime worker clock, including CPython's performance counter for Python. The
+STRling compiler reports its own clock and labels cached measurements. Bounded
+clock probes take place before measured runs. The display selects seconds,
+milliseconds, or microseconds, with a lower bound for values the clock or
+display cannot distinguish. When the probe cannot estimate a step, the display
+uses conservative precision. The expandable provenance and v3 export retain raw
+values and resolution estimates. The runs describe this browser and do not
+establish statistical significance.
 
 The 8,192-unit source cap is retained. All three pinned PCRE2 reactors use
 `MAX_PATTERN (8192 * 3)` bytes. A 32,768-unit ASCII pattern already exceeds

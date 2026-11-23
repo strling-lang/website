@@ -58,6 +58,7 @@ export interface LabTiming {
   durationMs: number;
   compileMs?: number;
   executionMs?: number;
+  resolutionMs?: number;
 }
 
 export interface LabExecutionError {

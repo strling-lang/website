@@ -9,6 +9,20 @@ _RUNTIME_VERSION = ".".join(map(str, sys.version_info[:3]))
 _FLAGS = dict(a=re.A, i=re.I, m=re.M, s=re.S, x=re.X)
 
 
+def timer_resolution_ms():
+    """Bound the probe and sample the clock used by the compile and run phases."""
+    previous = time.perf_counter()
+    ticks = []
+    for _ in range(65_536):
+        current = time.perf_counter()
+        if current > previous:
+            ticks.append(current - previous)
+            previous = current
+            if len(ticks) == 7:
+                break
+    return sorted(ticks)[len(ticks) // 2] * 1000 if len(ticks) >= 3 else None
+
+
 class OutputLimit(Exception):
     pass
 

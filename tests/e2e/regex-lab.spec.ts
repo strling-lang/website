@@ -22,7 +22,12 @@ const tab = (page: Page, name: string) =>
 const run = (page: Page) =>
   page.locator('[data-action="run"]').press('ControlOrMeta+Enter');
 const executionWorker = /\/execution\.worker-[^/]+\.js$/;
-type TimingRequest = { pattern: string; worker: number };
+type TimingRequest = {
+  pattern: string;
+  input: string;
+  worker: number;
+  probeTimer: boolean;
+};
 
 async function observeTimingDispatches(page: Page) {
   await page.evaluate(() => {
@@ -32,14 +37,21 @@ async function observeTimingDispatches(page: Page) {
     let next = 0;
     Object.assign(window, { labTimingRequests: requests });
     Worker.prototype.postMessage = function (
-      message: { input?: { request?: { pattern: string } } },
+      message: {
+        input?: {
+          request?: { pattern: string; input: string };
+          probeTimer?: boolean;
+        };
+      },
       ...rest: unknown[]
     ) {
       if (message.input?.request) {
         if (!workers.has(this)) workers.set(this, ++next);
         requests.push({
           pattern: message.input.request.pattern,
+          input: message.input.request.input,
           worker: workers.get(this)!,
+          probeTimer: message.input.probeTimer === true,
         });
       }
       Reflect.apply(send, this, [message, ...rest]);
@@ -796,57 +808,44 @@ test('compares revisions, measures time and exports recordings without adding th
   await expectPaddedDisclosure(page.getByText(/Sample · [1-9] differences/));
 
   await tab(page, 'Timing');
-  await expect(page.getByLabel('Repetitions', { exact: true })).toHaveCount(0);
-  await expectAlignedControls(
-    page.locator('[data-panel="performance"] > .workbench-inline'),
+  const timing = page.getByRole('tabpanel', { name: 'Timing' });
+  await expect(timing.getByRole('combobox')).toHaveCount(0);
+  await expect(timing.getByRole('checkbox')).toHaveCount(0);
+  await expect(timing.getByLabel('Repetitions', { exact: true })).toHaveCount(
+    0,
   );
-  await page
-    .getByRole('checkbox', { name: 'Include baseline revision' })
-    .check();
+  const input = (
+    await subject(page).locator('.cm-line').allTextContents()
+  ).join('\n');
   await observeTimingDispatches(page);
-  await page.getByRole('button', { name: 'Measure', exact: true }).click();
+  await timing.getByRole('button', { name: 'Measure', exact: true }).click();
   await expect(
-    page.getByText('9 of 9 measured runs completed', { exact: true }),
-  ).toHaveCount(2);
-  await expect(
-    page.getByText('Complete · 9 of 9 paired rounds completed', {
-      exact: true,
-    }),
+    timing.getByText('9 of 9 measured runs completed', { exact: true }),
   ).toBeVisible();
   await expectPaddedDisclosure(
-    page
-      .getByText('Measurements and runtime provenance', { exact: true })
-      .first(),
+    timing.getByText('Measurements and runtime provenance', { exact: true }),
   );
   const experiment = await downloadTimings(page);
   expect(experiment.status).toBe('complete');
-  expect(experiment.schema).toBe('strling-lab-timing-v2');
-  expect(
-    experiment.series.map(
-      (entry: { samples: unknown[] }) => entry.samples.length,
-    ),
-  ).toEqual([9, 9]);
-  expect(experiment.rounds).toEqual(
-    Array.from({ length: 9 }, (_, index) => ({
-      round: index + 1,
-      order: ['baseline', 'current'],
-      baseline: index,
-      current: index,
-      status: 'complete',
-    })),
-  );
+  expect(experiment.schema).toBe('strling-lab-timing-v3');
+  expect(experiment.inputUnits).toBe(input.length);
+  expect(experiment.samples).toHaveLength(9);
+  expect(experiment.warmup).toBeDefined();
+  expect(experiment).not.toHaveProperty('rounds');
+  expect(experiment).not.toHaveProperty('multiplier');
   const dispatches = await page.evaluate(
     () =>
       (window as Window & { labTimingRequests?: TimingRequest[] })
         .labTimingRequests,
   );
-  const patterns = experiment.series.map(
-    ({ executionPattern }: { executionPattern: string }, index: number) => ({
-      pattern: executionPattern,
-      worker: index + 1,
-    }),
+  expect(dispatches).toEqual(
+    Array.from({ length: 10 }, (_, index) => ({
+      pattern: 'alpha',
+      worker: 1,
+      input,
+      probeTimer: index === 0,
+    })),
   );
-  expect(dispatches).toEqual(Array.from({ length: 10 }, () => patterns).flat());
 
   await tab(page, 'Sessions');
   await expect(
@@ -1977,20 +1976,98 @@ test('preserves successful timing samples when a later real worker request is ca
   const evidence = await downloadTimings(page);
   expect(evidence.status).toBe('incomplete');
   expect(evidence.repetitions).toBe(9);
-  expect(evidence.series[0].warmup).toBeDefined();
-  expect(evidence.series[0].samples).toHaveLength(2);
+  expect(evidence.warmup).toBeDefined();
+  expect(evidence.samples).toHaveLength(2);
   await page.getByRole('button', { name: 'Measure', exact: true }).click();
   await expect(status(page)).toHaveText('Timing experiment finished.');
   const retry = await downloadTimings(page);
   expect(retry.status).toBe('complete');
-  expect(retry.series[0].samples).toHaveLength(9);
+  expect(retry.samples).toHaveLength(9);
+});
+
+test('reports short and long runs against complete samples while preserving historical timing', async ({
+  page,
+}) => {
+  test.setTimeout(100_000);
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await tab(page, 'Sessions');
+  const session = JSON.parse((await downloadSession(page)).toString());
+  for (const [runtime, pattern, input] of [
+    ['javascript', 'a', 'a'],
+    ['javascript', '(?=a{24}z)', 'a'.repeat(10_000) + 'z'],
+    ['javascript', '(?=a{513}z)', 'a'.repeat(24_000) + 'z'],
+    ['python', 'a', 'a'],
+  ] as const) {
+    await tab(page, 'Sessions');
+    const history = {
+      schema: 'strling-lab-timing-v2',
+      multiplier: 2,
+      rounds: [{ order: ['baseline', 'current'] }],
+    };
+    await page.getByLabel('Import session', { exact: true }).setInputFiles({
+      name: 'historical-session.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({
+          ...session,
+          runtime,
+          source: pattern,
+          datasets: [{ name: 'Complete sample', text: input }],
+          run: { ...session.run, operation: 'search' },
+          recorded: {
+            capturedAt: '2026-10-01T00:00:00Z',
+            investigation: { timing: history },
+          },
+        }),
+      ),
+    });
+    await expect(status(page)).toContainText('Session imported');
+    const restored = JSON.parse((await downloadSession(page)).toString());
+    expect(restored.recorded.investigation.timing).toEqual(history);
+    await observeTimingDispatches(page);
+    await tab(page, 'Timing');
+    await page.getByRole('button', { name: 'Measure', exact: true }).click();
+    await expect(status(page)).toHaveText('Timing experiment finished.', {
+      timeout: 33_000,
+    });
+    const timing = page.getByRole('tabpanel', { name: 'Timing' });
+    await expect(timing).toContainText('9 of 9 measured runs completed');
+    await expect(timing.getByText(/End to end · /)).toBeVisible();
+    await expect(timing.getByText(/Worker compile · /)).toBeVisible();
+    await expect(timing.getByText(/Runtime execution · /)).toBeVisible();
+    expect(await timing.innerText()).not.toMatch(
+      /\b0(?:\.0+)?\s+(?:µs|ms|s)\b/,
+    );
+    const result = await downloadTimings(page);
+    expect(result.dataset).toBe('Complete sample');
+    expect(result.runtime).toBe(runtime);
+    expect(result.inputUnits).toBe(input.length);
+    expect(result.samples).toHaveLength(9);
+    const workerResolution = result.warmup.timing.resolutionMs;
+    if (workerResolution !== undefined)
+      expect(workerResolution).toBeGreaterThan(0);
+    for (const sample of result.samples) {
+      expect(sample.wallMs).toBeGreaterThanOrEqual(0);
+      expect(sample.timing.executionMs).toBeGreaterThanOrEqual(0);
+      expect(sample.timing.resolutionMs).toBeUndefined();
+    }
+    const dispatches = await page.evaluate(
+      () =>
+        (window as Window & { labTimingRequests?: TimingRequest[] })
+          .labTimingRequests,
+    );
+    expect(dispatches?.map(({ input }) => input)).toEqual(
+      Array(10).fill(input),
+    );
+  }
 });
 
 for (const [target, runtime, version] of [
   ['pcre243', 'pcre243', '10.43'],
   ['python', 'python311', '3.11'],
 ] as const) {
-  test(`times nine single samples and nine pairs from actual STRling ${runtime} artifacts`, async ({
+  test(`times nine runs from actual STRling ${runtime} artifacts`, async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -2014,36 +2091,17 @@ for (const [target, runtime, version] of [
     await expect(status(page)).toHaveText('Timing experiment finished.', {
       timeout: 33_000,
     });
-    const single = await downloadTimings(page);
-    expect(single.series).toHaveLength(1);
-    expect(single.series[0].warmup.observation.runtimeVersion).toContain(
-      version,
+    const experiment = await downloadTimings(page);
+    expect(experiment.samples).toHaveLength(9);
+    expect(experiment.warmup.observation.runtimeVersion).toContain(version);
+    expect(experiment.runtime).toBe(runtime);
+    expect(experiment.compiler.identity.productVersion).toBe('4.0.3');
+    expect(experiment.artifact.target_profile).toEqual(
+      experiment.compiler.profile,
     );
-    expect(single.series[0].samples).toHaveLength(9);
-    expect(single.rounds).toBeUndefined();
-
-    await tab(page, 'Compare');
-    await page
-      .getByRole('combobox', { name: 'Baseline revision', exact: true })
-      .selectOption({ index: 1 });
-    await tab(page, 'Timing');
-    await page
-      .getByRole('checkbox', { name: 'Include baseline revision' })
-      .check();
-    await page.getByRole('button', { name: 'Measure', exact: true }).click();
-    await expect(status(page)).toHaveText('Timing experiment finished.', {
-      timeout: 33_000,
-    });
-    const paired = await downloadTimings(page);
-    expect(paired.rounds).toHaveLength(9);
-    for (const entry of paired.series) {
-      expect(entry.runtime).toBe(runtime);
-      expect(entry.compiler.identity.productVersion).toBe('4.0.3');
-      expect(entry.artifact.target_profile).toEqual(entry.compiler.profile);
-      expect(entry.samples).toHaveLength(9);
-      for (const { observation } of entry.samples)
-        expect(observation.runtimeVersion).toContain(version);
-    }
+    await expect(page.getByText(/STRling compilation · /)).toBeVisible();
+    for (const { observation } of experiment.samples)
+      expect(observation.runtimeVersion).toContain(version);
   });
 }
 

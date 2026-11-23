@@ -5,87 +5,83 @@ import {
   initialSession,
   readSession,
 } from '../../src/lib/regex-lab/session.ts';
+import { estimateTimerResolution } from '../../src/lib/regex-lab/timer-resolution.ts';
 import {
   displayTiming,
-  displayTimingDifference,
-  estimateTimerResolution,
+  formatDuration,
   runTimingExperiment,
   seriesStats,
   timingRepetitions,
   timingSchema,
 } from '../../src/lib/regex-lab/timing.ts';
 
-const durations = {
-  baseline: [1000, 90, 10, 60, 30, 70, 50, 20, 80, 40],
-  current: [5000, 22, 2, 12, 18, 6, 14, 4, 16, 8],
-};
+const durations = [5000, 22, 2, 12, 18, 6, 14, 4, 16, 8];
 
 async function experiment({
-  paired = false,
   abortAt,
   timeoutAt,
   failPreparation,
+  progress,
 } = {}) {
   const controller = new AbortController();
-  const order = paired ? ['baseline', 'current'] : ['current'];
   const result = {
     schema: timingSchema,
     dataset: 'Example',
-    multiplier: 1,
+    source: 'current',
+    inputUnits: 7,
     repetitions: timingRepetitions,
+    wallResolutionMs: 0.1,
     status: 'running',
-    order,
-    rounds: paired ? [] : undefined,
-    series: order.map((candidate) => ({
-      candidate,
-      source: candidate,
-      inputUnits: 7,
-      samples: [],
-      stats: seriesStats([]),
-    })),
+    samples: [],
+    stats: seriesStats([]),
   };
   let time = 0;
   let running = false;
   const calls = [];
   await runTimingExperiment(
     result,
-    async (entry, signal) => {
+    async (signal) => {
       assert.equal(signal, controller.signal);
-      calls.push('prepare:' + entry.candidate);
-      if (entry.candidate === failPreparation)
-        throw new Error('Compiler refused the candidate');
-      const runtime = entry.candidate === 'baseline' ? 'pcre2' : 'python';
-      entry.runtime = runtime;
-      entry.compiler = {
+      calls.push('prepare');
+      if (failPreparation) throw new Error('Compiler refused the pattern');
+      result.runtime = 'python';
+      result.compiler = {
         identity: { productVersion: '4.0.3' },
-        profile: { profile_id: runtime },
+        profile: { profile_id: 'python' },
         durationMs: 73,
+        timerResolutionMs: 0.25,
       };
-      entry.artifact = { target_profile: { profile_id: runtime } };
+      result.artifact = { target_profile: { profile_id: 'python' } };
       time += 73;
       let ordinal = 0;
-      return async (signal) => {
+      return async (signal, probeTimer) => {
         assert.equal(signal, controller.signal);
-        assert.equal(running, false, 'execution overlapped another candidate');
+        assert.equal(running, false, 'execution overlapped another run');
         running = true;
-        const id = entry.candidate + ':' + ordinal;
+        const id = ordinal++;
         calls.push(id);
+        assert.equal(
+          probeTimer,
+          id === 0,
+          'clock probing is limited to the warmup',
+        );
         await setImmediate();
-        const elapsed = durations[entry.candidate][ordinal++];
+        const elapsed = durations[id];
         time += elapsed;
         running = false;
         if (abortAt === id) controller.abort();
         return {
-          requestId: id,
+          requestId: String(id),
           status: id === timeoutAt ? 'resource-terminated' : 'matched',
           operationId: 'scan',
-          profileReleaseId: 'interactive:' + runtime + '@1',
+          profileReleaseId: 'interactive:python@1',
           provider: { kind: 'browser-local', providerId: 'test' },
-          observation: {
-            runtime,
-            runtimeVersion: runtime === 'python' ? '3.14' : '10.49',
+          observation: { runtime: 'python', runtimeVersion: '3.14' },
+          timing: {
+            durationMs: elapsed,
+            executionMs: elapsed / 2,
+            ...(probeTimer && { resolutionMs: 0.05 }),
           },
-          timing: { durationMs: elapsed, executionMs: elapsed / 2 },
           error:
             id === timeoutAt
               ? { message: 'Worker timed out', termination: 'timeout' }
@@ -94,101 +90,57 @@ async function experiment({
       };
     },
     controller.signal,
-    () => {},
+    () => progress?.(result),
     () => time,
   );
   return { result, calls };
 }
 
-test('runs one warmup and nine sequential single-candidate samples with a sorted median', async () => {
-  const { result, calls } = await experiment();
-  assert.equal(result.status, 'complete');
-  assert.deepEqual(calls, [
-    'prepare:current',
-    ...Array.from({ length: 10 }, (_, index) => 'current:' + index),
-  ]);
-  assert.equal(result.rounds, undefined);
-  const [entry] = result.series;
-  assert.equal(entry.warmup.wallMs, 5000);
-  assert.deepEqual(
-    entry.samples.map((sample) => sample.wallMs),
-    durations.current.slice(1),
-  );
-  assert.deepEqual(entry.stats.wall, { min: 2, median: 12, max: 22 });
-  assert.equal(entry.samples[4].wallMs, 6);
-});
-
-test('prepares and warms both candidates before nine strict, sequential pairs and exports stable provenance', async () => {
-  const { result, calls } = await experiment({ paired: true });
+test('warms once, runs nine sequential measurements and retains independent raw timings', async () => {
+  const updates = [];
+  const { result, calls } = await experiment({
+    progress: (run) => updates.push(run.samples.length),
+  });
   const saved = JSON.parse(JSON.stringify(result));
   assert.equal(saved.status, 'complete');
-  assert.equal(saved.repetitions, 9);
   assert.deepEqual(calls, [
-    'prepare:baseline',
-    'prepare:current',
-    ...Array.from({ length: 10 }, (_, index) => [
-      'baseline:' + index,
-      'current:' + index,
-    ]).flat(),
+    'prepare',
+    ...Array.from({ length: 10 }, (_, index) => index),
   ]);
   assert.deepEqual(
-    saved.series.map(({ stats }) => stats.wall),
-    [
-      { min: 10, median: 50, max: 90 },
-      { min: 2, median: 12, max: 22 },
-    ],
+    updates,
+    Array.from({ length: 9 }, (_, index) => index + 1),
   );
-  assert.deepEqual(saved.comparison.wall, {
-    differenceMs: -38,
-    absoluteDifferenceMs: 38,
-    relativeDifferencePercent: -76,
-  });
-  for (const [index, round] of saved.rounds.entries()) {
-    assert.deepEqual(round, {
-      round: index + 1,
-      order: ['baseline', 'current'],
-      baseline: index,
-      current: index,
-      status: 'complete',
-    });
-    assert.equal(
-      saved.series[0].samples[round.baseline].requestId,
-      `baseline:${round.round}`,
-    );
-    assert.equal(
-      saved.series[1].samples[round.current].requestId,
-      `current:${round.round}`,
-    );
-  }
-  assert.equal(saved.series[0].samples[0].observation.runtimeVersion, '10.49');
-  assert.equal(saved.series[1].samples[0].observation.runtimeVersion, '3.14');
-  assert.equal(saved.series[0].compiler.identity.productVersion, '4.0.3');
-  assert.equal(saved.series[1].artifact.target_profile.profile_id, 'python');
+  assert.equal(saved.warmup.wallMs, 5000);
+  assert.deepEqual(
+    saved.samples.map((sample) => sample.wallMs),
+    durations.slice(1),
+  );
+  assert.deepEqual(saved.stats.wall, { min: 2, median: 12, max: 22 });
+  assert.deepEqual(saved.stats.execute, { min: 1, median: 6, max: 11 });
+  assert.equal(saved.samples[4].wallMs, 6);
+  assert.equal(saved.samples[0].observation.runtimeVersion, '3.14');
+  assert.equal(saved.warmup.timing.resolutionMs, 0.05);
+  assert.equal(saved.wallResolutionMs, 0.1);
+  assert.equal(saved.compiler.timerResolutionMs, 0.25);
+  assert.equal(saved.compiler.identity.productVersion, '4.0.3');
+  assert.equal(saved.artifact.target_profile.profile_id, 'python');
 });
 
-test('preserves a pending round and a returned timeout without inventing measurements, then recovers', async () => {
-  const cancelled = await experiment({ paired: true, abortAt: 'current:2' });
+test('retains completed samples after cancellation or timeout and excludes failed timings from statistics', async () => {
+  const cancelled = await experiment({ abortAt: 3 });
   assert.equal(cancelled.result.status, 'incomplete');
   assert.match(cancelled.result.issue, /Cancelled/);
   assert.deepEqual(
-    cancelled.result.series.map(({ samples }) => samples.length),
-    [2, 1],
+    cancelled.result.samples.map(({ wallMs }) => wallMs),
+    [22, 2],
   );
-  assert.deepEqual(cancelled.result.rounds[1], {
-    round: 2,
-    order: ['baseline', 'current'],
-    status: 'incomplete',
-    baseline: 1,
-  });
-  const timedOut = await experiment({ paired: true, timeoutAt: 'current:2' });
+
+  const timedOut = await experiment({ timeoutAt: 2 });
   assert.equal(timedOut.result.status, 'incomplete');
-  assert.equal(timedOut.calls.at(-1), 'current:2');
-  assert.equal(timedOut.result.rounds[1].status, 'failed');
-  assert.equal(
-    timedOut.result.series[1].samples[1].error.termination,
-    'timeout',
-  );
-  assert.deepEqual(timedOut.result.series[1].stats.wall, {
+  assert.equal(timedOut.calls.at(-1), 2);
+  assert.equal(timedOut.result.samples[1].error.termination, 'timeout');
+  assert.deepEqual(timedOut.result.stats.wall, {
     min: 22,
     median: 22,
     max: 22,
@@ -196,56 +148,86 @@ test('preserves a pending round and a returned timeout without inventing measure
   assert.equal((await experiment()).result.status, 'complete');
 });
 
-test('does not warm or measure either candidate when preparation fails', async () => {
-  const { result, calls } = await experiment({
-    paired: true,
-    failPreparation: 'current',
-  });
+test('keeps preparation failure details without inventing any measurements', async () => {
+  const { result, calls } = await experiment({ failPreparation: true });
   assert.equal(result.status, 'incomplete');
-  assert.deepEqual(calls, ['prepare:baseline', 'prepare:current']);
-  assert.equal(result.rounds.length, 0);
-  assert.match(result.series[1].issue, /Compiler refused/);
+  assert.deepEqual(calls, ['prepare']);
+  assert.equal(result.warmup, undefined);
+  assert.equal(result.samples.length, 0);
+  assert.match(result.issue, /Compiler refused/);
 });
 
-test('reports medians and differences at supported precision and retains prior recording schemas', () => {
-  const tiny = { min: 2.01, median: 2.043, max: 2.09 };
-  const wide = { min: 20.01, median: 52.432, max: 80.95 };
-  assert.match(displayTiming(tiny, 1, 9), /^2 ms median/);
-  assert.match(displayTiming(wide, 0.01, 9), /^50 ms median/);
-  assert.doesNotMatch(displayTiming(tiny, 0.1, 1), /observed/);
+test('adapts duration units and precision to the observed clock without reporting a false zero', () => {
+  assert.equal(formatDuration(0, 0.1), '<100 µs');
+  assert.equal(formatDuration(0.0132, 0.1), '<100 µs');
+  assert.equal(formatDuration(0.10000000000002, 0.1), '100 µs');
+  assert.equal(formatDuration(0.25, 0.25), '250 µs');
+  assert.equal(formatDuration(0.054, 0.002), '54 µs');
+  assert.equal(formatDuration(0.0012, 0.00005), '1 µs');
+  assert.equal(formatDuration(0.253, 0.0001), '253 µs');
+  assert.equal(formatDuration(4.247, 0.01), '4.25 ms');
+  assert.equal(formatDuration(1.249, 0.25), '1.25 ms');
+  assert.equal(formatDuration(4.247, 1), '4 ms');
+  assert.equal(formatDuration(1503.1, 0.1), '1.5 s');
+  assert.equal(formatDuration(2100, 1500), '1.5 s');
   assert.equal(
-    displayTimingDifference(
-      { min: 100, median: 100, max: 100 },
-      { min: 80, median: 80, max: 80 },
-      1,
-      9,
-    ),
-    '20 ms lower (20%)',
+    formatDuration(0, undefined),
+    'Below timer resolution (step unobserved)',
   );
   assert.equal(
-    displayTimingDifference(tiny, tiny, 1, 9),
-    '<1 ms at display precision',
+    formatDuration(0.06, undefined),
+    'Sub-millisecond (timer step unobserved)',
   );
+  assert.equal(
+    displayTiming({ min: 0, median: 0.075, max: 1.75 }, 0.025, 9),
+    '75 µs median · <25 µs – 1.75 ms observed',
+  );
+  assert.equal(
+    displayTiming({ min: 0, median: 0, max: 0.02 }, 0.05, 9),
+    '<50 µs median · <50 µs observed',
+  );
+  assert.equal(
+    displayTiming({ min: 0.04, median: 0.04, max: 0.04 }, 0.01, 1),
+    '40 µs',
+  );
+});
+
+test('estimates a typical clock tick and reports missing evidence for a frozen clock', () => {
   assert.equal(
     estimateTimerResolution(() => 10),
     undefined,
   );
-  let ticks = 0;
+  let index = 0;
   assert.equal(
-    estimateTimerResolution(() => Math.floor(ticks++ / 2) * 0.25),
+    estimateTimerResolution(() => Math.floor(index++ / 2) * 0.25),
     0.25,
   );
-  for (const schema of ['strling-lab-timing-v1', timingSchema]) {
+  const values = [0, 0.01, 1.01, 2.01, 3.01, 4.01, 5.01, 30.01];
+  assert.ok(Math.abs(estimateTimerResolution(() => values.shift()) - 1) < 1e-9);
+});
+
+test('restores old timing settings and paired observations as inert session history', () => {
+  for (const schema of [
+    'strling-lab-timing-v1',
+    'strling-lab-timing-v2',
+    timingSchema,
+  ]) {
     const record = {
       capturedAt: '2026-10-01T00:00:00Z',
-      investigation: { timing: { schema } },
+      investigation: {
+        timing: {
+          schema,
+          multiplier: 0.5,
+          rounds: [{ order: ['baseline', 'current'] }],
+        },
+      },
     };
-    const imported = readSession({
+    const restored = readSession({
       ...initialSession('regex'),
       recorded: record,
     });
     assert.deepEqual(
-      imported.recorded.investigation.timing,
+      restored.recorded.investigation.timing,
       record.investigation.timing,
     );
   }

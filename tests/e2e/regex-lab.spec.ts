@@ -20,6 +20,36 @@ const tab = (page: Page, name: string) =>
 const run = (page: Page) =>
   page.locator('[data-action="run"]').press('ControlOrMeta+Enter');
 const executionWorker = /\/execution\.worker-[^/]+\.js$/;
+type TimingRequest = { pattern: string; worker: number };
+
+async function observeTimingDispatches(page: Page) {
+  await page.evaluate(() => {
+    const send = Worker.prototype.postMessage;
+    const requests: TimingRequest[] = [];
+    const workers = new WeakMap<Worker, number>();
+    let next = 0;
+    Object.assign(window, { labTimingRequests: requests });
+    Worker.prototype.postMessage = function (
+      message: { input?: { request?: { pattern: string } } },
+      ...rest: unknown[]
+    ) {
+      if (message.input?.request) {
+        if (!workers.has(this)) workers.set(this, ++next);
+        requests.push({
+          pattern: message.input.request.pattern,
+          worker: workers.get(this)!,
+        });
+      }
+      Reflect.apply(send, this, [message, ...rest]);
+    };
+  });
+}
+
+async function downloadTimings(page: Page) {
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download timings' }).click();
+  return JSON.parse(await readFile(await (await pending).path(), 'utf8'));
+}
 const compilerAsset =
   /\/_strling-lab\/compiler-tools-[^/]+-[a-f0-9]{64}\.wasm$/;
 const releaseManifest = JSON.parse(
@@ -535,26 +565,50 @@ test('compares revisions, measures time and confines authored material to opt-in
   await page
     .getByRole('checkbox', { name: 'Include baseline revision' })
     .check();
+  await observeTimingDispatches(page);
   await page.getByRole('button', { name: 'Measure', exact: true }).click();
   await expect(
-    page.getByText('8 of 8 measured runs completed', { exact: true }),
+    page.getByText('9 of 9 measured runs completed', { exact: true }),
   ).toHaveCount(2);
+  await expect(
+    page.getByText('Complete · 9 of 9 paired rounds completed', {
+      exact: true,
+    }),
+  ).toBeVisible();
   await expectPaddedDisclosure(
     page
       .getByText('Measurements and runtime provenance', { exact: true })
       .first(),
   );
-  const timings = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download timings' }).click();
-  const experiment = JSON.parse(
-    await readFile(await (await timings).path(), 'utf8'),
-  );
+  const experiment = await downloadTimings(page);
   expect(experiment.status).toBe('complete');
+  expect(experiment.schema).toBe('strling-lab-timing-v2');
   expect(
     experiment.series.map(
       (entry: { samples: unknown[] }) => entry.samples.length,
     ),
-  ).toEqual([8, 8]);
+  ).toEqual([9, 9]);
+  expect(experiment.rounds).toEqual(
+    Array.from({ length: 9 }, (_, index) => ({
+      round: index + 1,
+      order: ['baseline', 'current'],
+      baseline: index,
+      current: index,
+      status: 'complete',
+    })),
+  );
+  const dispatches = await page.evaluate(
+    () =>
+      (window as Window & { labTimingRequests?: TimingRequest[] })
+        .labTimingRequests,
+  );
+  const patterns = experiment.series.map(
+    ({ executionPattern }: { executionPattern: string }, index: number) => ({
+      pattern: executionPattern,
+      worker: index + 1,
+    }),
+  );
+  expect(dispatches).toEqual(Array.from({ length: 10 }, () => patterns).flat());
 
   await tab(page, 'Sessions');
   const redactedDownload = page.waitForEvent('download');
@@ -1540,7 +1594,7 @@ test('preserves successful timing samples when a later real worker request is ca
   await tab(page, 'Timing');
   await page.getByRole('button', { name: 'Measure', exact: true }).click();
   await expect(
-    page.getByText('Measuring · 2 of 8 measured runs completed'),
+    page.getByText('Measuring · 2 of 9 measured runs completed'),
   ).toBeVisible();
   const stop = page.getByRole('button', { name: 'Stop', exact: true });
   const running = await stop.boundingBox();
@@ -1552,16 +1606,73 @@ test('preserves successful timing samples when a later real worker request is ca
     .boundingBox();
   expect(idle?.width).toBe(running?.width);
   expect(idle?.x).toBe(running?.x);
-  const pending = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download timings' }).click();
-  const evidence = JSON.parse(
-    await readFile(await (await pending).path(), 'utf8'),
-  );
+  const evidence = await downloadTimings(page);
   expect(evidence.status).toBe('incomplete');
-  expect(evidence.repetitions).toBe(8);
+  expect(evidence.repetitions).toBe(9);
   expect(evidence.series[0].warmup).toBeDefined();
   expect(evidence.series[0].samples).toHaveLength(2);
 });
+
+for (const [target, runtime, version] of [
+  ['pcre243', 'pcre243', '10.43'],
+  ['python', 'python311', '3.11'],
+] as const) {
+  test(`times nine single samples and nine pairs from actual STRling ${runtime} artifacts`, async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.goto('/lab/');
+    await expect(status(page)).toContainText('Compiler succeeded');
+    await page
+      .getByLabel('Compiler target', { exact: true })
+      .selectOption(target);
+    await expect(status(page)).toContainText('Compiler succeeded');
+    await tab(page, 'Sessions');
+    await page.getByRole('button', { name: 'Save revision' }).click();
+    await expect(status(page)).toHaveText('Revision saved in this browser.');
+    await edit(
+      page,
+      source(page),
+      'semantic strling 1.0; case sensitive; pattern text "hello";',
+    );
+    await expect(status(page)).toContainText('Compiler succeeded');
+    await tab(page, 'Timing');
+    await page.getByRole('button', { name: 'Measure', exact: true }).click();
+    await expect(status(page)).toHaveText('Timing experiment finished.', {
+      timeout: 33_000,
+    });
+    const single = await downloadTimings(page);
+    expect(single.series).toHaveLength(1);
+    expect(single.series[0].warmup.observation.runtimeVersion).toContain(
+      version,
+    );
+    expect(single.series[0].samples).toHaveLength(9);
+    expect(single.rounds).toBeUndefined();
+
+    await tab(page, 'Compare');
+    await page
+      .getByRole('combobox', { name: 'Baseline revision', exact: true })
+      .selectOption({ index: 1 });
+    await tab(page, 'Timing');
+    await page
+      .getByRole('checkbox', { name: 'Include baseline revision' })
+      .check();
+    await page.getByRole('button', { name: 'Measure', exact: true }).click();
+    await expect(status(page)).toHaveText('Timing experiment finished.', {
+      timeout: 33_000,
+    });
+    const paired = await downloadTimings(page);
+    expect(paired.rounds).toHaveLength(9);
+    for (const entry of paired.series) {
+      expect(entry.runtime).toBe(runtime);
+      expect(entry.compiler.identity.productVersion).toBe('4.0.3');
+      expect(entry.artifact.target_profile).toEqual(entry.compiler.profile);
+      expect(entry.samples).toHaveLength(9);
+      for (const { observation } of entry.samples)
+        expect(observation.runtimeVersion).toContain(version);
+    }
+  });
+}
 
 test('requires explicit replacement inclusion and preserves native inspection across tabs', async ({
   page,

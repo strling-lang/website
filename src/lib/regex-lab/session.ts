@@ -8,6 +8,7 @@ import {
 } from './compiler.ts';
 import type { LabExecutionResult } from './contracts.ts';
 import { readContinuation, type ScanContinuation } from './continuation.ts';
+import { timingSchema } from './timing.ts';
 import {
   defaultOptions,
   limits,
@@ -330,7 +331,12 @@ function readRecording(value: unknown): Recording | undefined {
     fields(comparison).schema !== 'strling-lab-comparison-v1'
   )
     throw new Error('Invalid recorded comparison schema.');
-  if (timing !== undefined && fields(timing).schema !== 'strling-lab-timing-v1')
+  const recordedTimingSchema = fields(timing).schema;
+  if (
+    timing !== undefined &&
+    recordedTimingSchema !== 'strling-lab-timing-v1' &&
+    recordedTimingSchema !== timingSchema
+  )
     throw new Error('Invalid recorded timing schema.');
   return {
     capturedAt,

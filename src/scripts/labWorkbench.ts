@@ -37,6 +37,7 @@ import {
   expectedFrom,
 } from '../lib/regex-lab/experiments';
 import {
+  interactiveIdentity,
   isPcreRuntime,
   limits,
   runRequest,
@@ -80,9 +81,13 @@ import {
 } from '../lib/regex-lab/workspace';
 import {
   displayTiming,
+  displayTimingDifference,
   estimateTimerResolution,
+  interruptTiming,
+  runTimingExperiment,
   seriesStats,
   timingRepetitions,
+  timingSchema,
   type TimingExperiment,
 } from '../lib/regex-lab/timing';
 import type { TraceObservation } from '../lib/regex-lab/trace';
@@ -2975,124 +2980,155 @@ class LabWorkbench extends HTMLElement {
     if (!baseline && includeBaseline)
       throw new Error('Choose a baseline revision in Compare.');
     const current = this.#session;
-    const patterns = [...(baseline ? [baseline.session] : []), current];
+    const order = baseline
+      ? (['baseline', 'current'] as const)
+      : (['current'] as const);
+    const versions = { baseline: baseline?.session, current };
+    const selectedOptions = { ...current.run };
     const experiment: TimingExperiment = {
-      schema: 'strling-lab-timing-v1',
+      schema: timingSchema,
       dataset: dataset.name,
       multiplier,
       repetitions: timingRepetitions,
       timerResolutionMs: estimateTimerResolution(),
       status: 'running',
-      series: patterns.map((version) => ({
-        source: version.source,
+      order: [...order],
+      rounds: baseline ? [] : undefined,
+      series: order.map((candidate) => ({
+        candidate,
+        source: versions[candidate]!.source,
         inputUnits: text.length,
         samples: [],
         stats: seriesStats([]),
       })),
     };
+    const providers: BrowserLabProvider[] = [];
     this.#benchmark = experiment;
     this.#renderBenchmark(experiment);
     this.#say('Running bounded timings…');
+    const isCurrent = () =>
+      this.#benchmark === experiment &&
+      (!this.#active || this.#active.signal === signal);
     try {
-      for (const [index, version] of patterns.entries()) {
-        const entry = experiment.series[index]!;
-        try {
+      await runTimingExperiment(
+        experiment,
+        async (entry, preparationSignal) => {
           const pattern = await this.#pattern(
-            version,
-            signal,
-            version === current,
+            versions[entry.candidate]!,
+            preparationSignal,
+            entry.candidate === 'current',
           );
-          signal.throwIfAborted();
-          const options = { ...current.run, ...pattern.artifactOptions };
+          preparationSignal.throwIfAborted();
+          const options = { ...selectedOptions, ...pattern.artifactOptions };
           const runtime =
             current.format === 'regex' ? current.runtime : pattern.runtime;
           entry.executionPattern = pattern.source;
           entry.runtime = runtime;
+          entry.runtimeIdentity = interactiveIdentity(runtime);
           entry.options = options;
           if (pattern.compilation) {
             const { identity, profile, durationMs, cached } =
               pattern.compilation;
             entry.compiler = { identity, profile, durationMs, cached };
+            entry.artifact = generatedPattern(pattern.compilation)?.artifact;
           }
-          const run = async () => {
-            const start = performance.now();
-            const result = await this.#provider.execute(
+          // Alternation must not recreate a cold worker after the warmup.
+          const provider = new BrowserLabProvider();
+          providers.push(provider);
+          return (executionSignal) =>
+            provider.execute(
               runRequest(runtime, pattern.source, text, options),
-              { signal },
+              { signal: executionSignal },
             );
-            signal.throwIfAborted();
-            return {
-              status: result.status,
-              wallMs: performance.now() - start,
-              timing: result.timing,
-              observation: result.observation,
-              error: 'error' in result ? result.error : undefined,
-            };
-          };
-          entry.warmup = await run();
-          entry.issue = entry.warmup.error?.message;
-          if (!entry.issue)
-            for (let count = 0; count < timingRepetitions; count++) {
-              const sample = await run();
-              entry.samples.push(sample);
-              entry.stats = seriesStats(entry.samples);
-              entry.issue = sample.error?.message;
-              this.#renderBenchmark(experiment);
-              if (sample.error) break;
-            }
-        } catch (error) {
-          if (signal.aborted) throw error;
-          entry.issue = shortError(error);
-        }
-      }
-      if (
-        experiment.series.every(
-          (entry) =>
-            entry.samples.length === timingRepetitions &&
-            !entry.samples.some((sample) => sample.error),
-        )
-      )
-        experiment.status = 'complete';
-      else experiment.status = 'incomplete';
-      this.#say(
-        experiment.status === 'complete'
-          ? 'Timing experiment finished.'
-          : 'Timing experiment incomplete. Completed measurements are available.',
+        },
+        signal,
+        () => {
+          if (isCurrent()) this.#renderBenchmark(experiment);
+        },
       );
+      if (!signal.aborted && isCurrent())
+        this.#say(
+          experiment.status === 'complete'
+            ? 'Timing experiment finished.'
+            : 'Timing experiment incomplete. Completed measurements are available.',
+        );
     } finally {
-      if (
-        this.#benchmark === experiment &&
-        (!this.#active || this.#active.signal === signal)
-      ) {
-        if (signal.aborted) this.#interruptTiming();
-        this.#renderBenchmark(experiment);
-      }
+      for (const provider of providers) provider.dispose();
+      if (isCurrent()) this.#renderBenchmark(experiment);
     }
   }
 
   #interruptTiming() {
     const experiment = this.#benchmark;
     if (experiment?.status !== 'running') return;
-    experiment.status = 'incomplete';
-    for (const entry of experiment.series) {
-      if (
-        entry.samples.filter((sample) => !sample.error).length <
-        timingRepetitions
-      )
-        entry.issue ??= 'Cancelled or reached the time limit.';
-    }
+    interruptTiming(experiment);
     this.#renderBenchmark(experiment);
   }
 
   #renderBenchmark(experiment: TimingExperiment) {
     const panel = this.#output('performance');
     panel.replaceChildren();
-    for (const [index, entry] of experiment.series.entries()) {
+    const paired = experiment.rounds?.filter(
+      (round) => round.status === 'complete',
+    ).length;
+    const state = {
+      running: 'Measuring',
+      complete: 'Complete',
+      incomplete: 'Incomplete',
+    }[experiment.status];
+    panel.append(
+      node(
+        'h3',
+        paired === undefined
+          ? 'Single-candidate experiment'
+          : 'Paired comparison',
+      ),
+      node(
+        'p',
+        state +
+          (paired === undefined
+            ? ''
+            : ' · ' +
+              paired +
+              ' of ' +
+              timingRepetitions +
+              ' paired rounds completed'),
+      ),
+    );
+    if (experiment.issue) panel.append(node('p', experiment.issue));
+    if (paired !== undefined) {
+      const [baseline, current] = experiment.series;
+      const before = baseline?.stats.wall;
+      const after = current?.stats.wall;
+      if (experiment.status !== 'running' && before && after) {
+        const count = Math.min(
+          baseline!.samples.filter((sample) => !sample.error).length,
+          current!.samples.filter((sample) => !sample.error).length,
+        );
+        panel.append(
+          node(
+            'p',
+            'End-to-end median difference (current vs baseline) · ' +
+              displayTimingDifference(
+                before,
+                after,
+                experiment.timerResolutionMs,
+                count,
+              ),
+          ),
+        );
+      }
+      if (experiment.status !== 'running')
+        panel.append(
+          details('Paired rounds and execution order', raw(experiment.rounds)),
+        );
+    }
+    for (const entry of experiment.series) {
       const count = entry.samples.filter((sample) => !sample.error).length;
       panel.append(
         node(
           'h3',
-          experiment.series.length > 1 && index === 0
+          entry.candidate === 'baseline'
             ? 'Baseline revision'
             : 'Current revision',
         ),
@@ -3109,6 +3145,17 @@ class LabWorkbench extends HTMLElement {
             ' measured runs completed',
         ),
       );
+      if (entry.runtime)
+        panel.append(
+          node(
+            'p',
+            runtimes[entry.runtime].label +
+              (entry.options?.flags ? ' · flags ' + entry.options.flags : '') +
+              (entry.options?.pcreNewline
+                ? ' · newline ' + entry.options.pcreNewline
+                : ''),
+          ),
+        );
       if (entry.issue) panel.append(node('p', entry.issue));
       for (const [name, stats] of [
         ['End to end', entry.stats.wall],
@@ -3140,7 +3187,10 @@ class LabWorkbench extends HTMLElement {
           ),
         );
       }
-      panel.append(details('Measurements and runtime provenance', raw(entry)));
+      if (experiment.status !== 'running')
+        panel.append(
+          details('Measurements and runtime provenance', raw(entry)),
+        );
     }
     this.#renderTabActions();
   }

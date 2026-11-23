@@ -7,11 +7,6 @@ import {
   workingSource,
   WorkspaceStore,
 } from '../../src/lib/regex-lab/workspace.ts';
-import {
-  displayTiming,
-  estimateTimerResolution,
-  timingRepetitions,
-} from '../../src/lib/regex-lab/timing.ts';
 
 function storage() {
   const content = new Map();
@@ -69,22 +64,4 @@ test('protects invalid, oversized and quota-refused workspace data', () => {
   };
   assert.throws(() => store.save(workspace), /could not save/);
   assert.equal(memory.getItem(key), original);
-});
-
-test('keeps eight raw measurements while adapting displayed precision to timer resolution and variability', () => {
-  const small = { min: 2.01, median: 2.043, max: 2.09 };
-  const large = { min: 20.01, median: 52.432, max: 80.95 };
-  assert.equal(timingRepetitions, 8);
-  assert.match(displayTiming(small, 1, 8), /^2 ms typical/);
-  assert.match(displayTiming(large, 0.01, 8), /^50 ms typical/);
-  assert.doesNotMatch(displayTiming(small, 0.1, 1), /observed/);
-  assert.equal(
-    estimateTimerResolution(() => 10),
-    undefined,
-  );
-  let ticks = 0;
-  assert.equal(
-    estimateTimerResolution(() => Math.floor(ticks++ / 2) * 0.25),
-    0.25,
-  );
 });

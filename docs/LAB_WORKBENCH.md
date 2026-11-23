@@ -184,7 +184,7 @@ trigger automatic execution. [Site security policy](../SECURITY.md).
 | strling-lab-tests-v1                                 | Named grouped assertions with independent subjects and operations.                                                                                                                                         |
 | strling-lab-trace-v1                                 | Instrumentation ID, bounded events, termination, and execution provenance.                                                                                                                                 |
 | strling-lab-comparison-v1                            | Runtime or revision comparison, source identity, witness inputs, native results, and normalized differences.                                                                                               |
-| strling-lab-timing-v1                                | Bounded raw measurements, warmup, environment, sample size, and distribution summary.                                                                                                                      |
+| strling-lab-timing-v2                                | Bounded raw measurements, separate warmups, ordered pair references, environment, sample size, and median differences.                                                                                     |
 
 The explicit revision archive caps total serialized content at 2,000,000 UTF-16 units, with up
 to 12 sessions and 12 revisions per session. Downloaded session files have the
@@ -253,11 +253,11 @@ technical disclosures share a padded body. Nested levels use a smaller inset,
 including those that contain a single preformatted block. Native summaries
 retain keyboard behavior and evidence text remains selectable.
 
-Timing requests eight measured samples after an unmeasured warmup per series.
-Its exported schema retains raw values and adds completion state and the sampled
-clock-resolution estimate. A stopped or failed series keeps completed samples and
-reports how many of the eight succeeded. Display precision reflects the observed
-clock tick, duration scale, variability, and successful sample count.
+Timing resolves both runnable candidates before sampling and gives each a dedicated browser worker. After one unmeasured warmup per candidate, each round runs the baseline followed by the current pattern. A single-candidate experiment uses the current pattern only. Both paths request nine measured executions per candidate. The complete-series median is the fifth value sorted numerically. A stopped or failed run keeps completed samples and any returned error. The existing overall deadline and worker limits still apply.
+
+The v2 export records dispatch order and zero-based series sample references for each attempted round, along with statuses, runtime and compiler identity, raw timings, ranges, and absolute and relative median differences. An interrupted dispatch can appear in the order without a returned sample reference. Historical v1 session recordings stay readable. End-to-end timing excludes compiler preparation and runtime initialization, with worker compile and execution time reported separately. Display precision accounts for timer resolution, observed variability, and sample count.
+
+Alternation reduces time-dependent environmental skew. Baseline-first order can still introduce order effects. Nine observations in one browser are descriptive and cannot establish statistical significance.
 
 The 8,192-unit source cap is retained. All three pinned PCRE2 reactors use
 `MAX_PATTERN (8192 * 3)` bytes. A 32,768-unit ASCII pattern already exceeds

@@ -160,9 +160,17 @@ const expectations = [
       Save a revision before changing a pattern, then use Compare to run both
       revisions on the current datasets and tests. RegEx Lab can also run the
       same raw pattern and options in a second runtime. The results include the
-      witness input and both observations. Timing runs a bounded experiment with
-      a warmup and shows worker compile time, execution time, and end-to-end
-      latency where available.
+      witness input and both observations. Timing warms up each candidate once,
+      then runs it nine times. With a baseline, each round measures the baseline
+      followed by the current pattern. The median is the fifth sorted value for
+      a complete series. Timing shows worker compile time, execution time, and
+      end-to-end latency where available.
+    </p>
+    <p>
+      Alternating candidates reduces short-term environmental skew. The fixed
+      baseline-first order can still affect the results, and nine browser-local
+      observations cannot establish statistical significance. Use the Timing tab
+      actions to inspect or export recorded samples and incomplete rounds.
     </p>
 
     <h2>Save and share</h2>

@@ -1,5 +1,24 @@
 # STRling Lab and RegEx Lab acceptance
 
+## Canonical Timing review
+
+Timing uses one unmeasured warmup followed by nine measured runs per candidate.
+A paired run prepares both candidates, warms both, then measures the baseline
+and current pattern sequentially in each round. Compare retains its functional
+correctness workflow. Timing v2 preserves individual samples, pair order,
+runtime and artifact identities, and incomplete rounds. Historical Timing v1
+session recordings remain readable.
+
+Deterministic tests verify dispatch order, absence of overlap, numerically
+sorted medians, ranges, differences, and fail-fast cancellation and timeout
+handling. Browser tests check the export with JavaScript and with generated
+PCRE2 and Python artifacts. The canonical local review packet records the exact
+source, build, results, and applicability limits. Fixed baseline-first order
+can still affect timing. These measurements describe the test browser and do
+not qualify a runtime for Regex Conformance.
+
+## Historical compiler distribution decision
+
 **Release decision — BLOCKED.** The compiler owner has admitted the
 independently reproduced `0.1.0-rc.3` adapter for isolated website
 qualification. Production distribution requires a separate governed artifact

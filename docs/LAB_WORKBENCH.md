@@ -242,8 +242,10 @@ and stale-tab conflicts preserve the current editable copy and the previously
 stored bytes. Corrupt working storage is reset only by explicit confirmation.
 The separate revision archive and artifact handoff keep their existing formats.
 
-The fixed primary Run control becomes Stop while a worker action is active.
-Stopping pauses Live. Ctrl/Command+Enter retains explicit Run. Tall changes CSS
+The fixed primary control shows Stop after 250 ms of active work and returns
+to Run as soon as the work ends. During the delay, pressing Run starts a fresh
+execution. Stop cancels the active work and pauses Live. Ctrl/Command+Enter
+retains explicit Run. Tall changes CSS
 height for both editors without replacing either editor state. The tab strip
 scrolls independently from its Copy and Download buttons. Specialized extraction,
 integration-example, and conversion controls remain in their own panels.

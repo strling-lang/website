@@ -410,10 +410,12 @@ async function stallNextExecutionWorker(page: Page) {
       }),
     { times: 1 },
   );
+  const created = page.waitForEvent('worker', (worker) =>
+    executionWorker.test(worker.url()),
+  );
   return {
-    closed: page
-      .waitForEvent('worker', (worker) => executionWorker.test(worker.url()))
-      .then((worker) => worker.waitForEvent('close')),
+    created,
+    closed: created.then((worker) => worker.waitForEvent('close')),
   };
 }
 
@@ -1565,6 +1567,124 @@ test('executes the PCRE2 10.42 artifact and preserves a Unicode empty-match boun
       name: /\[4, 4\) utf8-bytes · editor \[2, 2\)/,
     }),
   ).toBeVisible();
+});
+
+for (const [route, initialStatus, matches] of [
+  ['/regex/lab/', '3 matches', '3 matches'],
+  ['/lab/', /Compiler succeeded/, '2 matches'],
+] as const) {
+  test(`keeps Run visible throughout a fast execution at ${route}`, async ({
+    page,
+  }) => {
+    const start = Date.UTC(2026, 0, 1);
+    await page.clock.install({ time: start });
+    await page.goto(route);
+    await expect(status(page)).toHaveText(initialStatus);
+    await page.getByLabel('Live', { exact: true }).uncheck();
+    await page.clock.pauseAt(start + 60_000);
+    const button = page.locator('[data-action="run"]');
+    const busyTransitions = await button.evaluateHandle((control) => {
+      const oldStates: (string | null)[] = [];
+      new MutationObserver((records) => {
+        for (const record of records) oldStates.push(record.oldValue);
+      }).observe(control, {
+        attributeFilter: ['data-execution-state'],
+        attributeOldValue: true,
+      });
+      return oldStates;
+    });
+    await button.press('Enter');
+    await expect(status(page)).toHaveText(matches);
+    await page.clock.runFor(250);
+    // A transient Stop would leave a busy old value even if it reset before
+    // Playwright could sample the DOM.
+    expect(await busyTransitions.jsonValue()).not.toContain('busy');
+    await expect(button).toHaveAccessibleName('Run');
+    await expect(button.locator('[data-execution-icon="run"]')).toBeVisible();
+    await expect(button.locator('[data-execution-icon="stop"]')).toBeHidden();
+  });
+}
+
+test('reveals Stop at 250 ms and restores Run as soon as a slow execution finishes', async ({
+  page,
+}) => {
+  const start = Date.UTC(2026, 0, 1);
+  await page.clock.install({ time: start });
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
+  await page.clock.pauseAt(start + 60_000);
+  const button = page.locator('[data-action="run"]');
+  const idle = await button.boundingBox();
+  const { promise, resolve } = Promise.withResolvers<void>();
+  await page.route(
+    executionWorker,
+    async (route) => {
+      await promise;
+      await route.continue();
+    },
+    { times: 1 },
+  );
+  try {
+    const starting = page.waitForRequest(executionWorker);
+    await button.press('Enter');
+    await starting;
+    await page.clock.runFor(249);
+    await expect(button).toHaveAccessibleName('Run');
+    await page.clock.runFor(1);
+    await expect(button).toHaveAccessibleName('Stop');
+    await expect(button.locator('[data-execution-icon="stop"]')).toBeVisible();
+    await expect(button.locator('[data-execution-icon="run"]')).toBeHidden();
+    expect(await button.boundingBox()).toEqual(idle);
+  } finally {
+    resolve();
+  }
+  await expect(status(page)).toHaveText('3 matches');
+  // The page clock is frozen, so restoring Run cannot rely on another timer.
+  await expect(button).toHaveAccessibleName('Run');
+});
+
+test('cancels superseded Run/Stop timers and pauses Live when Stop is pressed', async ({
+  page,
+}) => {
+  const start = Date.UTC(2026, 0, 1);
+  await page.clock.install({ time: start });
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  const live = page.getByLabel('Live', { exact: true });
+  await live.uncheck();
+  await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
+  await page.clock.pauseAt(start + 60_000);
+  const button = page.locator('[data-action="run"]');
+  const first = await stallNextExecutionWorker(page);
+  await live.press('Space');
+  await page.clock.runFor(220);
+  await first.created;
+  await page.clock.runFor(100);
+  await expect(button).toHaveAccessibleName('Run');
+
+  const second = await stallNextExecutionWorker(page);
+  await button.press('Enter');
+  await first.closed;
+  await second.created;
+  await expect(live).toBeChecked();
+  await page.clock.runFor(150);
+  await expect(button).toHaveAccessibleName('Run');
+  await page.clock.runFor(99);
+  await expect(button).toHaveAccessibleName('Run');
+  await page.clock.runFor(1);
+  await expect(button).toHaveAccessibleName('Stop');
+
+  await button.press('Enter');
+  await expect(button).toHaveAccessibleName('Run');
+  await expect(live).not.toBeChecked();
+  await second.closed;
+  await page.clock.runFor(250);
+  await expect(status(page)).toHaveText('Stopped.');
+  await run(page);
+  await expect(status(page)).toHaveText('3 matches');
+  await expect(button).toHaveAccessibleName('Run');
 });
 
 test('terminates the cancelled worker and retries after initialization failure', async ({

@@ -107,6 +107,7 @@ import {
 } from './labRendering';
 
 const transferKey = 'strling.labs.artifact.v1';
+const stopRevealDelayMs = 250;
 const assertFile = async (input: HTMLInputElement) => {
   const file = input.files?.[0];
   input.value = '';
@@ -125,6 +126,7 @@ class LabWorkbench extends HTMLElement {
   #compiler = new LabCompiler();
   #compilerTools = new LabCompilerTools();
   #timer?: ReturnType<typeof setTimeout>;
+  #stopRevealTimer?: ReturnType<typeof setTimeout>;
   #active?: AbortController;
   #events?: AbortController;
   #trust = true;
@@ -955,19 +957,36 @@ class LabWorkbench extends HTMLElement {
     this.#active?.abort();
     this.#active = undefined;
     this.#interruptTiming();
+    this.#resetExecutionControl();
+  }
+
+  get #canStop() {
+    return (
+      this.#active !== undefined &&
+      !this.#active.signal.aborted &&
+      this.#stopRevealTimer === undefined
+    );
+  }
+
+  #resetExecutionControl() {
+    clearTimeout(this.#stopRevealTimer);
+    this.#stopRevealTimer = undefined;
     this.#renderExecutionControl();
   }
 
   #renderExecutionControl() {
-    const running = Boolean(this.#active);
-    const label = running ? 'Stop' : 'Run';
+    const canStop = this.#canStop;
+    const state = canStop ? 'busy' : 'idle';
     const control = this.#action('run')!;
-    control.setAttribute('aria-label', label);
-    control.title = running
-      ? 'Stop and pause Live'
-      : 'Run (Ctrl/Command+Enter)';
-    this.#output('execution-label').textContent = label;
-    control.dataset.executionState = running ? 'busy' : 'idle';
+    if (control.dataset.executionState !== state) {
+      const label = canStop ? 'Stop' : 'Run';
+      control.setAttribute('aria-label', label);
+      control.title = canStop
+        ? 'Stop and pause Live'
+        : 'Run (Ctrl/Command+Enter)';
+      this.#output('execution-label').textContent = label;
+      control.dataset.executionState = state;
+    }
     this.#renderTabActions();
   }
 
@@ -1032,13 +1051,20 @@ class LabWorkbench extends HTMLElement {
     this.#cancel();
     const controller = new AbortController();
     this.#active = controller;
+    this.#stopRevealTimer = setTimeout(() => {
+      if (this.#active !== controller) return;
+      this.#stopRevealTimer = undefined;
+      this.#renderExecutionControl();
+    }, stopRevealDelayMs);
     this.#renderExecutionControl();
     const deadline = setTimeout(() => {
       controller.abort();
-      if (this.#active === controller)
+      if (this.#active === controller) {
+        this.#resetExecutionControl();
         this.#say(
           'The overall run reached its 30-second limit and was stopped.',
         );
+      }
     }, 30_000);
     try {
       await action(controller.signal);
@@ -1048,7 +1074,7 @@ class LabWorkbench extends HTMLElement {
       clearTimeout(deadline);
       if (this.#active === controller) {
         this.#active = undefined;
-        this.#renderExecutionControl();
+        this.#resetExecutionControl();
       }
     }
   }
@@ -2134,7 +2160,7 @@ class LabWorkbench extends HTMLElement {
     try {
       switch (action) {
         case 'run':
-          if (this.#active) {
+          if (this.#canStop) {
             this.#checked('live').checked = false;
             this.#cancel();
             this.#say('Stopped.');

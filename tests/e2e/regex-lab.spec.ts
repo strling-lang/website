@@ -366,7 +366,15 @@ test('resumes a saved PCRE2 boundary after STRling-to-RegEx handoff and reload',
   await expect(
     page.getByRole('button', { name: /\[0, 2\) utf8-bytes/ }),
   ).toBeVisible();
-  await edit(page, subject(page), 'ab-😀-ab');
+  const sample = subject(page);
+  // Confirm deletion before inserting the Unicode witness. A single
+  // contenteditable fill can append to the previous sample on WebKit.
+  await sample.press('ControlOrMeta+KeyA');
+  if ((await editorSelection(sample))[1] !== 'ab--ab'.length)
+    await sample.press('Meta+KeyA');
+  await sample.press('Backspace');
+  await expect(sample).toHaveText('');
+  await edit(page, sample, 'ab-😀-ab');
   await resume.click();
   await expect(status(page)).toContainText('differs from the saved scan');
   await expect(

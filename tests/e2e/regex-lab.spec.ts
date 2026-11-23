@@ -376,7 +376,12 @@ test('runs native providers, inspects captures, creates tests and records PCRE2 
   await page.getByRole('button', { name: 'Trace search' }).click();
   await expect(status(page)).toContainText('trace events · matched');
   await expect(page.getByRole('heading', { name: /^Step 1 of/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Next step' }).click();
+  const nextStep = page.getByRole('button', { name: 'Next step' });
+  // Trace highlighting can still be scrolling the document on a narrow view.
+  await nextStep.evaluate((control) =>
+    control.scrollIntoView({ block: 'center', behavior: 'instant' }),
+  );
+  await nextStep.click();
   await expect(page.getByRole('heading', { name: /^Step 2 of/ })).toBeVisible();
   await expectPaddedDisclosure(
     page.getByText('Capture state', { exact: true }),

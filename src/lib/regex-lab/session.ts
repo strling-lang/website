@@ -27,6 +27,7 @@ const maxArchiveUnits = 2_000_000;
 const shareLimit = 12_000;
 export const maxDatasets = 16;
 export const maxTests = 32;
+export const defaultSampleName = 'Sample 1';
 
 export type Authoring = 'regex' | 'semantic' | 'simply';
 export type LabMode = 'regex' | 'strling';
@@ -119,7 +120,7 @@ export function initialSession(mode: LabMode): Session {
   return {
     schema: sessionSchema,
     id: crypto.randomUUID(),
-    name: mode === 'regex' ? 'Untitled RegEx' : 'Untitled STRling',
+    name: defaultSampleName,
     format: mode === 'regex' ? 'regex' : 'semantic',
     source: mode === 'regex' ? '(?<word>[A-Za-z]+)-(\\d+)' : semanticExample,
     runtime: 'javascript',
@@ -127,7 +128,7 @@ export function initialSession(mode: LabMode): Session {
     run: { ...defaultOptions },
     datasets: [
       {
-        name: 'Sample',
+        name: defaultSampleName,
         text:
           mode === 'regex'
             ? 'alpha-1 beta-2\ngamma-3'
@@ -475,7 +476,7 @@ function settingsSession(session: Session) {
   settings.source = '';
   settings.runtime = session.runtime;
   settings.target = session.target;
-  settings.datasets = [{ name: 'Sample', text: '' }];
+  settings.datasets = [{ name: defaultSampleName, text: '' }];
   settings.selected = 0;
   settings.run.operation = session.run.operation;
   settings.run.replacementSyntax = session.run.replacementSyntax;

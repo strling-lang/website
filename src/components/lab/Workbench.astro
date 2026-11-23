@@ -199,6 +199,13 @@ const tabs = [
         <header>
           <h2 id="lab-source-heading">{isStrling ? 'Source' : 'Pattern'}</h2>
           <div class="workbench-inline workbench-editor-controls">
+            {
+              isStrling && (
+                <button type="button" data-action="format" hidden>
+                  Format JSON
+                </button>
+              )
+            }
             <select
               data-field="working-source"
               aria-label={isStrling
@@ -213,13 +220,6 @@ const tabs = [
                   >Reset working storage</button
                 >
               </EditorManagement>
-              {
-                isStrling && (
-                  <button type="button" data-action="format" hidden>
-                    Format JSON
-                  </button>
-                )
-              }
               <button type="button" data-action="copy-source">Copy</button>
             </div>
           </div>

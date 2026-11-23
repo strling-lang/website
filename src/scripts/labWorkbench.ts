@@ -48,6 +48,7 @@ import {
 } from '../lib/regex-lab/interactive';
 import { coordinateMap, editorRange } from '../lib/regex-lab/offsets';
 import {
+  defaultSampleName,
   exportSession,
   importBundle,
   importFragment,
@@ -166,10 +167,7 @@ class LabWorkbench extends HTMLElement {
     this.#session = initialSession(this.#mode);
     this.#trust = true;
     let initialMessage: string | undefined;
-    const starter = workingSource(
-      this.#session,
-      this.#mode === 'regex' ? 'Sample pattern' : 'Sample source',
-    );
+    const starter = workingSource(this.#session, defaultSampleName);
     this.#workspace = newWorkspace(this.#mode, starter);
     this.#workingId = starter.id;
     try {
@@ -298,6 +296,21 @@ class LabWorkbench extends HTMLElement {
     this.addEventListener('keydown', (event) => this.#keydown(event), {
       signal,
     });
+    document.addEventListener(
+      'click',
+      (event) => {
+        if (!(event.target instanceof Element)) return;
+        const control = event.target.closest(
+          'summary, button[data-action], select[data-field="reuse-dataset"]',
+        );
+        for (const menu of this.querySelectorAll<HTMLDetailsElement>(
+          '.workbench-menu[open]',
+        )) {
+          if (!menu.contains(control)) menu.open = false;
+        }
+      },
+      { capture: true, signal },
+    );
     this.querySelector<HTMLFormElement>('[data-form="test"]')!.addEventListener(
       'submit',
       (event) => this.#saveTest(event),
@@ -691,7 +704,7 @@ class LabWorkbench extends HTMLElement {
     if (!duplicate) {
       session.format = this.#session.format;
       session.source = '';
-      session.datasets = [{ name: 'Sample', text: '' }];
+      session.datasets = [{ name: defaultSampleName, text: '' }];
     }
     const next = workingSource(session, label);
     next.drafts = drafts ?? {};
@@ -2237,7 +2250,7 @@ class LabWorkbench extends HTMLElement {
         case 'rename-dataset': {
           const title =
             action === 'new-dataset'
-              ? 'Dataset ' + (this.#session.datasets.length + 1)
+              ? 'Sample ' + (this.#session.datasets.length + 1)
               : this.#dataset.name;
           const name = prompt('Dataset name', title)?.trim().slice(0, 80);
           if (!name) return;

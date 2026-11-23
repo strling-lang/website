@@ -1767,16 +1767,16 @@ test('autosaves working patterns and independent dataset copies without automati
   await manage(page, 'Sample text').click();
   await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
   const datasets = page.getByRole('combobox', { name: 'Dataset', exact: true });
-  await expect(datasets.locator('option:checked')).toHaveText('Sample copy');
+  await expect(datasets.locator('option:checked')).toHaveText('Sample 1 copy');
   await edit(page, subject(page), 'independent');
-  await datasets.selectOption({ label: 'Sample' });
+  await datasets.selectOption({ label: 'Sample 1' });
   await expect(subject(page)).toHaveText('original sample');
-  await library.selectOption({ label: 'Sample pattern' });
+  await library.selectOption({ label: 'Sample 1' });
   await expect(source(page)).toHaveText('original');
   await manage(page, 'Sample text').click();
   await page
     .getByRole('combobox', { name: 'Reuse saved dataset' })
-    .selectOption({ label: 'Copy for review · Sample copy' });
+    .selectOption({ label: 'Copy for review · Sample 1 copy' });
   await expect(subject(page)).toHaveText('independent');
   await expect(save).toHaveText('Saved in this browser');
   await page.reload();
@@ -2192,7 +2192,10 @@ test('preserves native inspection and imports a complete session under a new ide
       replacement: 'private template',
       replacementSyntax: 'native',
     },
-    datasets: [{ name: 'Sample' }, { name: 'Second sample', text: 'ALPHA-22' }],
+    datasets: [
+      { name: 'Sample 1' },
+      { name: 'Second sample', text: 'ALPHA-22' },
+    ],
     selected: 1,
     tests: [
       {
@@ -2270,7 +2273,7 @@ test('preserves native inspection and imports a complete session under a new ide
   expect((await archive()).sessions).toEqual(saved);
 
   const working = page.getByRole('combobox', { name: 'Saved working pattern' });
-  await working.selectOption({ label: 'Sample pattern' });
+  await working.selectOption({ label: 'Sample 1' });
   await expect(source(page)).toHaveText('unrelated working pattern');
   await expect(subject(page)).toHaveText('unrelated working sample');
   await page

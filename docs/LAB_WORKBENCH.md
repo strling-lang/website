@@ -261,9 +261,11 @@ technical disclosures share a padded body. Nested levels use a smaller inset,
 including those that contain a single preformatted block. Native summaries
 retain keyboard behavior and evidence text remains selectable.
 
-Each editor header puts its saved-item selector first and Copy last. Manage
-offers New, Rename, Duplicate, Delete, and Find / replace in editor. STRling
-places its format action immediately before Copy. Copy writes the current
+The STRling Source header puts Format before its saved-item selector. Pattern
+and Sample text start with their selectors, and every header ends with Copy.
+Manage offers New, Rename, Duplicate, Delete, and Find / replace in editor.
+Click outside the controls in an open Manage dropdown to dismiss it. Built-in
+sources and datasets start as **Sample 1**. Copy writes the current
 editor text to the clipboard. In Sample text, **Choose a saved dataset** brings
 in an independent copy from another working copy in the same Lab.
 

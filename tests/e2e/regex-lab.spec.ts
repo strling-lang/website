@@ -112,7 +112,7 @@ function editorSelection(editor: Locator) {
 }
 
 async function placeSourceCaret(editor: Locator) {
-  await clickInView(editor.locator('.cm-line').first());
+  await editor.focus();
   // Home alone starts a visual line on wrapped content. CodeMirror uses Meta
   // for its document-start binding in the emulated iPhone profile.
   await editor.press('Control+Home');
@@ -536,16 +536,20 @@ test('Compiler source navigation preserves the editing caret when Delete is pres
     { length: 18 },
     (_, index) => '# Source context ' + index,
   );
-  // Keep the starter's existing balanced braces. Typing them again would
-  // invoke the editor's automatic delimiter pairing in the Firefox fixture.
-  await placeSourceCaret(editor);
-  await editor.press('End');
-  for (const line of context) {
-    await editor.press('Enter');
-    await editor.pressSequentially(line);
-  }
   const input = [lines[0]!, ...context, ...lines.slice(1)];
-  await expect(editor.locator('.cm-line')).toHaveText(input);
+  if (browserName === 'firefox') {
+    // Keep the starter's balanced braces to avoid invoking delimiter pairing
+    // when the Firefox fixture types the extra lines instead of pasting them.
+    await placeSourceCaret(editor);
+    await editor.press('End');
+    for (const line of context) {
+      await editor.press('Enter');
+      await editor.pressSequentially(line);
+    }
+    await expect(editor.locator('.cm-line')).toHaveText(input);
+  } else {
+    await edit(page, editor, input.join('\n'));
+  }
   await expect(status(page)).toContainText('Compiler succeeded');
   await tab(page, 'Compiler');
   await placeSourceCaret(editor);

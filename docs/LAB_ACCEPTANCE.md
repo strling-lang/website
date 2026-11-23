@@ -756,7 +756,7 @@ Netlify production branch, resolved build command, publish directory and
 Node version against that commit. Have the release owner explicitly approve
 the actual production deploy. Then verify the published deployment record
 and compare the deployed adapter, worker and app asset digests with the
-accepted manifest. Exercise both Labs, the guide and navigation, all runtime
+accepted manifest. Exercise both Labs, contextual help and navigation, all runtime
 families, compiler tools, safe session export, and the browser's security
 and cache headers from the public origin.
 
@@ -782,3 +782,15 @@ with independently checked local release files. Its build results establish
 local replay and browser behavior. Public acquisition and final deployment
 remain gated on the protected publication record and byte equality between
 the public build and the reviewed static artifact.
+
+## Accepted interface and RC4 publication gate
+
+The canonical interface review ended at
+`c0d1e35fe2fd196d95d59cc5cb601a5028d52ba1`. Source integration retains sealed
+mode while the RC4 distribution decision is pending. The reviewed certified
+manifest pins the seven-file release and the signed evidence root
+`95753563a98e1473fc065fa0256f058075ee702bf3706f661b154dccc9583a76`.
+The protected publication run is awaiting the Program Owner decision for
+attempt 1. Shipping acceptance begins after independent verification of the
+public immutable release and its attestation.
+[Protected RC4 publication run](https://github.com/strling-lang/strling/actions/runs/44992199464).

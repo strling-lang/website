@@ -1,5 +1,29 @@
 # STRling Lab and RegEx Lab acceptance
 
+## Complete session files
+
+Save revision and Download session now capture the full current session.
+A file import opens a separate paused working copy. Saving it creates a new
+local session even when the file came from the same browser. Settings links
+keep the existing allowlist. Legacy session files are still readable and
+retain whichever data the original export included.
+
+## Canonical Timing review
+
+Timing v3 measures the current pattern against the full active sample, with one
+warmup and nine measured runs. It preserves raw samples, independent clock
+resolution estimates, runtime and artifact identities, and incomplete results.
+Timing v1 and v2 recordings remain readable. Compare retains its separate
+functional correctness workflow.
+
+Deterministic tests cover sample counts, sequential dispatch, sorted medians,
+precision, and cancellation and timeout handling. Browser tests exercise short
+and longer JavaScript runs and the generated PCRE2 and Python artifacts. The
+local review packet records the exact source, build, and results. Browser timing
+does not qualify a runtime for Regex Conformance.
+
+## Historical compiler distribution decision
+
 **Release decision — BLOCKED.** The compiler owner has admitted the
 independently reproduced `0.1.0-rc.3` adapter for isolated website
 qualification. Production distribution requires a separate governed artifact
@@ -732,7 +756,7 @@ Netlify production branch, resolved build command, publish directory and
 Node version against that commit. Have the release owner explicitly approve
 the actual production deploy. Then verify the published deployment record
 and compare the deployed adapter, worker and app asset digests with the
-accepted manifest. Exercise both Labs, the guide and navigation, all runtime
+accepted manifest. Exercise both Labs, contextual help and navigation, all runtime
 families, compiler tools, safe session export, and the browser's security
 and cache headers from the public origin.
 
@@ -744,3 +768,29 @@ production publishing held until the incident is resolved. No rollback or
 deployment is part of source integration.
 [Published deployment record](https://app.netlify.com/projects/strling-lang/deploys/6aff4b86748a3243796f055d) ·
 [Netlify rollback procedure](https://docs.netlify.com/deploy/manage-deploys/manage-deploys-overview/#rollbacks).
+
+## RC4 certified-mode review
+
+The review candidate pins the verified RC4 closure and all seven release files.
+Its source-controlled shipping loader requires the public immutable metadata,
+exact target source tree, asset inventory, and matching signed evidence.
+Release acceptance also verifies GitHub's release attestation and the canonical
+compiler signature with their independent verifiers.
+
+An isolated static preview can exercise the exact candidate before publication
+with independently checked local release files. Its build results establish
+local replay and browser behavior. Public acquisition and final deployment
+remain gated on the protected publication record and byte equality between
+the public build and the reviewed static artifact.
+
+## Accepted interface and RC4 publication gate
+
+The canonical interface review ended at
+`c0d1e35fe2fd196d95d59cc5cb601a5028d52ba1`. Source integration retains sealed
+mode while the RC4 distribution decision is pending. The reviewed certified
+manifest pins the seven-file release and the signed evidence root
+`95753563a98e1473fc065fa0256f058075ee702bf3706f661b154dccc9583a76`.
+The protected publication run is awaiting the Program Owner decision for
+attempt 1. Shipping acceptance begins after independent verification of the
+public immutable release and its attestation.
+[Protected RC4 publication run](https://github.com/strling-lang/strling/actions/runs/44992199464).

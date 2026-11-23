@@ -44,7 +44,7 @@ serveWorker<WorkerInput, LabExecutionResult | PatternInspection>(
     });
     python = bindPython(api, '3.11');
   },
-  ({ request, inspect }) => {
+  ({ request, inspect, probeTimer }) => {
     const runtime = runtimeFor(request);
     if (runtime !== 'python311' && runtime !== 'python311bytes') {
       return executionResult(request, {
@@ -85,6 +85,7 @@ serveWorker<WorkerInput, LabExecutionResult | PatternInspection>(
       request,
       result,
       observation(runtime, python.version),
+      probeTimer ? python.timerResolutionMs() : undefined,
     );
   },
 );

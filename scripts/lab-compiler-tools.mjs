@@ -16,6 +16,16 @@ const apiOrigin = 'https://api.github.com/repos/' + compilerRepository;
 const deliveryPrefix = '/github-production-release-asset/832885277/';
 const memoryPageSize = 65_536;
 const maxAssetSize = 8_388_608;
+const evidenceNames = [
+  'SHA256SUMS',
+  'draft-sbom.spdx.json',
+  'unsigned-provenance.json',
+  'rebuild-1-receipt.json',
+  'rebuild-2-receipt.json',
+  'rc4-certification-attestation.json',
+];
+const attestationName = 'rc4-certification-attestation.json';
+const evidencePath = 'evidence/lab-wasm-preview-evidence/';
 const sha40 = /^[a-f0-9]{40}$/;
 const sha64 = /^[a-f0-9]{64}$/;
 const candidate = {
@@ -100,7 +110,10 @@ async function verifyAsset(identity, bytes) {
 
 /**
  * The source-controlled manifest is the website's admission boundary. It is
- * filled in only after independent public and signed closure verification.
+ * pinned to the independently verified signed closure. The build checks
+ * the public immutable inventory and the attestation's exact admitted bytes.
+ * Cryptographic signature and GitHub attestation verification also run
+ * as release acceptance checks.
  * @param {unknown} manifest
  */
 function shippingRelease(manifest) {
@@ -113,6 +126,11 @@ function shippingRelease(manifest) {
       certifiedClosureSha256: string;
       memoryBytes: number;
       stackBytes: number;
+      evidence: {
+        adapterTree: string;
+        certifiedSource: string;
+        assets: Record<string, { size: number; sha256: string }>;
+      };
     };
   }>} */ (manifest);
   if (
@@ -144,7 +162,23 @@ function shippingRelease(manifest) {
     artifact.size <= 0 ||
     artifact.size > maxAssetSize ||
     artifact.memoryBytes !== compilerToolsMemoryBytes ||
-    artifact.stackBytes !== compilerToolsStackBytes
+    artifact.stackBytes !== compilerToolsStackBytes ||
+    !artifact.evidence ||
+    ![artifact.evidence.adapterTree, artifact.evidence.certifiedSource].every(
+      (sha) => typeof sha === 'string' && sha40.test(sha),
+    ) ||
+    !artifact.evidence.assets ||
+    Object.keys(artifact.evidence.assets).length !== evidenceNames.length ||
+    !evidenceNames.every((name) => {
+      const pin = artifact.evidence.assets[name];
+      return (
+        Number.isSafeInteger(pin?.size) &&
+        pin.size > 0 &&
+        pin.size <= 1_048_576 &&
+        typeof pin.sha256 === 'string' &&
+        sha64.test(pin.sha256)
+      );
+    })
   ) {
     throw new Error(
       'A complete, approved compiler tools release manifest is required.',
@@ -185,48 +219,124 @@ async function fetchApprovedRelease({ artifact, tag, name }, fetchRelease) {
     metadata(apiOrigin + '/releases/tags/' + tag),
     metadata(apiOrigin + '/commits/' + tag),
   ]);
-  const asset = Array.isArray(published?.assets)
-    ? published.assets.find((entry) => entry?.name === name)
-    : undefined;
+  const pins = { ...artifact.evidence.assets, [name]: artifact };
+  const releaseRoot = releaseOrigin + '/releases/download/' + tag + '/';
   if (
     published?.immutable !== true ||
     published.draft !== false ||
+    published.prerelease !== artifact.version.includes('-') ||
     published.tag_name !== tag ||
+    published.target_commitish !== artifact.sourceRevision ||
     commit?.sha !== artifact.sourceRevision ||
-    asset?.browser_download_url !== artifact.url ||
-    asset.size !== artifact.size ||
-    asset.digest !== 'sha256:' + artifact.sha256 ||
-    asset.state !== 'uploaded'
+    commit.commit?.tree?.sha !== artifact.evidence.adapterTree ||
+    !Array.isArray(published.assets) ||
+    published.assets.length !== Object.keys(pins).length ||
+    new Set(published.assets.map((entry) => entry?.name)).size !==
+      published.assets.length ||
+    !published.assets.every((entry) => {
+      if (!Object.hasOwn(pins, entry?.name)) return false;
+      const pin = pins[entry.name];
+      return (
+        entry.browser_download_url === releaseRoot + entry.name &&
+        entry.size === pin.size &&
+        entry.digest === 'sha256:' + pin.sha256 &&
+        entry.state === 'uploaded'
+      );
+    })
   )
     throw new Error(
       'The published compiler tools release does not match its approved identity.',
     );
 
-  let response = await fetchRelease(artifact.url, {
-    ...transport,
-    redirect: 'manual',
-  });
-  if ([301, 302, 303, 307, 308].includes(response.status)) {
-    const location = response.headers.get('location');
-    await response.body?.cancel();
-    const next = location ? new URL(location) : undefined;
-    if (
-      next?.origin !== 'https://release-assets.githubusercontent.com' ||
-      next.username ||
-      next.password ||
-      next.hash ||
-      !next.pathname.startsWith(deliveryPrefix) ||
-      !/^[a-z0-9-]+$/.test(next.pathname.slice(deliveryPrefix.length))
-    )
-      throw new Error(
-        'The compiler tools asset returned an unauthorized redirect.',
-      );
-    response = await fetchRelease(next.href, {
+  /** @param {string} file */
+  async function download(file) {
+    let response = await fetchRelease(releaseRoot + file, {
       ...transport,
-      redirect: 'error',
+      redirect: 'manual',
     });
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get('location');
+      await response.body?.cancel();
+      const next = location ? new URL(location) : undefined;
+      if (
+        next?.origin !== 'https://release-assets.githubusercontent.com' ||
+        next.username ||
+        next.password ||
+        next.hash ||
+        !next.pathname.startsWith(deliveryPrefix) ||
+        !/^[a-z0-9-]+$/.test(next.pathname.slice(deliveryPrefix.length))
+      )
+        throw new Error(
+          'The compiler tools asset returned an unauthorized redirect.',
+        );
+      response = await fetchRelease(next.href, {
+        ...transport,
+        redirect: 'error',
+      });
+    }
+    const bytes = await readBounded(response, pins[file].size);
+    if (bytes.length !== pins[file].size || digest(bytes) !== pins[file].sha256)
+      throw new Error(
+        'The configured Lab compiler artifact has the wrong size or digest (' +
+          file +
+          ').',
+      );
+    return bytes;
   }
-  return readBounded(response, artifact.size);
+
+  const bytes = await download(name);
+  const evidence = Object.fromEntries(
+    await Promise.all(
+      evidenceNames.map(async (file) => [file, await download(file)]),
+    ),
+  );
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const signed = JSON.parse(
+    decoder.decode(evidence[attestationName]),
+  )?.signed_payload;
+  const provenance = JSON.parse(
+    decoder.decode(evidence['unsigned-provenance.json']),
+  );
+  if (
+    signed?.certification_state !== 'LOCALLY_CERTIFIED' ||
+    signed.evidence_root_sha256 !== artifact.certifiedClosureSha256 ||
+    signed.certified_source?.commit !== artifact.evidence.certifiedSource ||
+    signed.certified_source.clean !== true ||
+    !Array.isArray(signed.evidence_files) ||
+    !evidenceNames
+      .filter((file) => file !== attestationName)
+      .every((file) => {
+        const rows = signed.evidence_files.filter(
+          (/** @type {{ path?: string }} */ row) =>
+            row?.path === evidencePath + file,
+        );
+        return (
+          rows.length === 1 &&
+          rows[0].role === 'lab-wasm-preview-evidence' &&
+          rows[0].sha256 === pins[file].sha256 &&
+          rows[0].bytes === pins[file].size
+        );
+      }) ||
+    provenance?._type !== 'https://in-toto.io/Statement/v1' ||
+    provenance.predicateType !== 'https://slsa.dev/provenance/v1' ||
+    provenance.subject?.length !== 1 ||
+    provenance.subject[0]?.name !== name ||
+    provenance.subject[0].digest?.sha256 !== artifact.sha256 ||
+    !provenance.predicate?.buildDefinition?.resolvedDependencies?.some(
+      (
+        /** @type {{ uri?: string, digest?: { gitCommit?: string } }} */ dependency,
+      ) =>
+        dependency?.uri === 'git+' + releaseOrigin &&
+        dependency.digest?.gitCommit === artifact.sourceRevision,
+    ) ||
+    decoder.decode(evidence.SHA256SUMS).trimEnd() !==
+      artifact.sha256 + '  ' + name
+  )
+    throw new Error(
+      'The release evidence does not match the approved compiler closure.',
+    );
+
+  return bytes;
 }
 
 /**

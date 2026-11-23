@@ -2,8 +2,11 @@
 
 Both routes use [Workbench.astro](../src/components/lab/Workbench.astro),
 [labWorkbench.ts](../src/scripts/labWorkbench.ts), and the modules under
-[src/lib/regex-lab](../src/lib/regex-lab/). The [user guide](../src/pages/lab/guide.astro)
-describes operations, test expectations, saving, and sharing.
+[src/lib/regex-lab](../src/lib/regex-lab/). Both Labs place runtime limits and
+license links below the workbench panels, and test expectation examples in the
+test editor. RegEx Lab lists the selected runtime's flags in the Flags input
+placeholder and tooltip. The [feature inventory](LAB_FEATURE_INVENTORY.md)
+describes the operations, saving, and sharing workflows.
 
 ## Ownership
 
@@ -74,9 +77,9 @@ the compilation provider and retains its own Wasm and protocol.
 The [release and rollback checklist](LAB_ACCEPTANCE.md#production-preparation-and-rollback)
 records the deployment boundary and required public verification.
 
-The Lab guide serves the PCRE2 license texts as same-origin static
-downloads. Git pins these files to LF and each import disables inlining,
-so the downloads and guide HTML are reproducible across checkout settings.
+Both Labs serve the PCRE2 license texts as same-origin static downloads.
+Git pins these files to LF and each import disables inlining, keeping the
+downloads reproducible across checkout settings.
 The embedded Python engine source and downloadable example sources also use
 LF so their bytes and the generated worker and page identities stay stable.
 
@@ -175,25 +178,28 @@ trigger automatic execution. [Site security policy](../SECURITY.md).
 
 ## Session and observation contracts
 
-| Schema                                               | Contents                                                                                                                                                                                                   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| strling-lab-session-v2                               | Source format, source, chosen runtime and target, flags and operation, current datasets, tests, optional derivation, optional recorded provenance. The v1 single-input form migrates to one named dataset. |
-| strling-lab-archive-v1                               | Origin-local named sessions and timestamped immutable revisions.                                                                                                                                           |
-| strling-lab-bundle-v1                                | One session and explicit redaction choices.                                                                                                                                                                |
-| strling-regex-lab-execution-request-v1 and result-v1 | Exact raw pattern, input and config, identity, status, native spans, captures, timing, and optional interactive observation provenance.                                                                    |
-| strling-lab-tests-v1                                 | Named grouped assertions with independent subjects and operations.                                                                                                                                         |
-| strling-lab-trace-v1                                 | Instrumentation ID, bounded events, termination, and execution provenance.                                                                                                                                 |
-| strling-lab-comparison-v1                            | Runtime or revision comparison, source identity, witness inputs, native results, and normalized differences.                                                                                               |
-| strling-lab-timing-v1                                | Bounded raw measurements, warmup, environment, sample size, and distribution summary.                                                                                                                      |
+| Schema                                               | Contents                                                                                                                                                                                                                                                        |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| strling-lab-session-v2                               | Complete session snapshot with active source, alternate STRling draft when present, runtime and target, operation options, datasets and selection, tests, recordings, origin, and optional scan cursor. The v1 single-input form migrates to one named dataset. |
+| strling-lab-archive-v1                               | Origin-local named sessions and timestamped immutable revisions.                                                                                                                                                                                                |
+| strling-lab-bundle-v1                                | Legacy file envelope with inclusion metadata. Still readable and used for the existing settings-only link format.                                                                                                                                               |
+| strling-regex-lab-execution-request-v1 and result-v1 | Exact raw pattern, input and config, identity, status, native spans, captures, timing, and optional interactive observation provenance.                                                                                                                         |
+| strling-lab-tests-v1                                 | Named grouped assertions with independent subjects and operations.                                                                                                                                                                                              |
+| strling-lab-trace-v1                                 | Instrumentation ID, bounded events, termination, and execution provenance.                                                                                                                                                                                      |
+| strling-lab-comparison-v1                            | Runtime or revision comparison, source identity, witness inputs, native results, and normalized differences.                                                                                                                                                    |
+| strling-lab-timing-v3                                | One full-sample experiment with a separate warmup, nine raw measurements, clock resolution estimates, runtime and compiler evidence, and completion status. Timing v1 and v2 remain readable as historical session data.                                        |
 
-The archive caps total serialized content at 2,000,000 UTF-16 units, with up
-to 12 sessions and 12 revisions per session. Downloaded session files have the
-same text limit. Active source, sample data, tests, recordings, original
-compiler source, and the saved cursor require explicit opt-in for each file.
-A bundle includes a saved cursor only with the active source, the sample and
-any original compiler source needed for verification. A settings URL uses an
-allowlist of source format, runtime,
-target, and operation selections. It excludes authored source, flags,
+The explicit revision archive caps total serialized content at 2,000,000 UTF-16
+units, with up to 12 sessions and 12 revisions per session. Save revision and
+Download session capture the current session's complete available state.
+Download writes a standalone session-v2 JSON file, including its replacement,
+recorded outputs, original compiler source when available, and any saved scan
+cursor. The file limit is 2,000,000 UTF-8 bytes. Import opens a separate working
+copy with a fresh local session ID. Save a revision to keep the imported
+recordings in the local archive.
+
+A settings URL uses an allowlist of source format, runtime, target, and
+operation selections. It excludes authored source, flags,
 replacement text, user-defined labels, subjects, tests, and recordings.
 Legacy fragments are size-limited and scrubbed from the address bar before
 parsing. Imported files and links wait for explicit execution. Cross-Lab
@@ -218,6 +224,96 @@ Changes to the subject bytes, selected provider or bound options cause a
 refusal. Empty, final, partial, timed-out and cancelled scans provide no
 eligible boundary at that point. JavaScript and Python offer fresh reruns
 and recorded observations. [PCRE2 global matching](https://www.pcre.org/current/doc/html/pcre2_next_match.html).
+
+## Working copies and interaction controls
+
+RegEx and STRling each keep a separate versioned origin-local working store.
+Changes are debounced at 380 ms and pending changes are flushed on page hide.
+A working source owns an editable session snapshot and separate Semantic/Simply
+text drafts. Its datasets can be duplicated locally or copied from a different
+working source in the same Lab. Copying creates independent editable text.
+An explicit session restore, import, settings link or artifact handoff opens a
+separate working copy. A visit that restores work leaves Live off and waits for
+explicit execution. Compiled responses, results, and investigations are not
+promoted to current observations by loading local working storage.
+
+The bounded working store uses localStorage so a small pending write can be
+flushed synchronously when the page is hidden. Each mode is capped at 12 working
+sources and 1,000,000 serialized UTF-16 units. IndexedDB would support larger
+collections and async transaction semantics. The current limits and page-hide
+flush favor the existing browser-local synchronous storage model. Failed writes
+and stale-tab conflicts preserve the current editable copy and the previously
+stored bytes. Corrupt working storage is reset only by explicit confirmation.
+The separate revision archive and artifact handoff keep their existing formats.
+
+The fixed primary control shows Stop after 250 ms of active work and returns
+to Run as soon as the work ends. During the delay, pressing Run starts a fresh
+execution. Stop cancels the active work and pauses Live. Ctrl/Command+Enter
+retains explicit Run. Tall changes CSS
+height for both editors without replacing either editor state. The tab strip
+scrolls independently from its Copy and Download buttons. Specialized extraction,
+integration-example, and conversion controls remain in their own panels.
+
+The toolbar and panel rows align actions with the controls beneath any visible
+label. They wrap without adding labels or changing focus order. The tab actions
+stay centered at the edge of the scrolling tab list. Static and generated
+technical disclosures share a padded body. Nested levels use a smaller inset,
+including those that contain a single preformatted block. Native summaries
+retain keyboard behavior and evidence text remains selectable.
+
+The STRling Source header puts Format before its saved-item selector. Pattern
+and Sample text start with their selectors, and every header ends with Copy.
+Manage offers New, Rename, Duplicate, Delete, and Find / replace in editor.
+Click outside the controls in an open Manage dropdown to dismiss it. Built-in
+sources and datasets start as **Sample 1**. Copy writes the current
+editor text to the clipboard. In Sample text, **Choose a saved dataset** brings
+in an independent copy from another working copy in the same Lab.
+
+All editors share a compact Find and Replace panel. Search and replacement
+treat regex syntax, backslashes, and dollar signs as literal text. Match Case
+and Whole Word are independent options. Ctrl/Command+F opens the panel, Enter
+and Shift+Enter navigate matches from the Find field, and Escape closes it.
+F3 and the existing CodeMirror search shortcuts remain available. Find All
+selects the matches for editing. Editor replacement is separate from the Lab's
+runtime replacement operation.
+
+Source links in Compiler, Structure, Artifact, Results, Semantic tools, and
+Debugger use a dedicated CodeMirror decoration and a reveal effect. Validated
+source spans produce one active range or point highlight without moving the
+editing caret, changing a deliberate selection, or focusing the editor.
+Clicking in the source or moving or extending its selection clears the linked
+highlight and dismisses active search and diagnostic emphasis. The editor
+keeps the native selection, search query, and diagnostic underlines. Explicit
+navigation can reveal a new highlight. Document edits, unmapped steps, and
+invalidated results clear the linked highlight as well. The Subject editor keeps
+its match and capture behavior.
+
+Compiler and RegEx structure lists share a wrapping row for the construct and
+description. Nested lists stay inside their parent item. The first five levels
+receive a visual inset so deeply nested patterns can still fit at narrow widths.
+Descriptions longer than 90 characters remain available on the node tooltip.
+
+Timing runs the current pattern against the full active sample. It reuses one
+browser worker for one warmup and nine measured runs. The complete-series median
+is the fifth value sorted numerically. A stopped or failed run keeps the
+completed samples and any returned error. Existing time, input, and output
+limits still apply. Compare remains the workflow for functional comparisons.
+
+End-to-end timing uses the page clock and excludes compiler preparation and the
+runtime initialization in the warmup. Worker compilation and execution use the
+runtime worker clock, including CPython's performance counter for Python. The
+STRling compiler reports its own clock and labels cached measurements. Bounded
+clock probes take place before measured runs. The display selects seconds,
+milliseconds, or microseconds, with a lower bound for values the clock or
+display cannot distinguish. When the probe cannot estimate a step, the display
+uses conservative precision. The expandable provenance and v3 export retain raw
+values and resolution estimates. The runs describe this browser and do not
+establish statistical significance.
+
+The 8,192-unit source cap is retained. All three pinned PCRE2 reactors use
+`MAX_PATTERN (8192 * 3)` bytes. A 32,768-unit ASCII pattern already exceeds
+that buffer. Raising the shared limit would require new Wasm reactor artifacts
+and independent validation of compiler, worker, structure, and persistence bounds.
 
 ## Build, qualification, and troubleshooting
 
@@ -262,3 +358,22 @@ and recorded observations. [PCRE2 global matching](https://www.pcre.org/current/
 
 If debugging a report, ask for the target, operation, environment, result
 status, and a redacted minimal reproducer. Avoid logging raw inputs.
+
+## Certified RC4 release input
+
+The certified manifest pins the Preview artifact, its source and tree, the
+separately certified compiler source, the independently verified attestation
+and evidence root, and every file in the release inventory. The build requires
+the exact immutable GitHub release and checks each asset's bytes, hashes,
+and signed evidence references. The Wasm ABI, compiler base, and memory
+guard still apply before the integration emits a content-addressed asset.
+
+Release acceptance verifies the canonical compiler certificate and GitHub's
+release attestation independently. A production build uses the public release
+transport, including when built outside Netlify. A review build can exercise
+the same loader with the frozen local release inventory through an external
+test transport. That review only qualifies the artifacts it actually used.
+
+The existing private development pin stays separate. The certified manifest
+cannot use a private override. The stable 4.0.3 compiler continues to serve its
+released interoperability operations.

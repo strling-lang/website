@@ -13,11 +13,69 @@ const source = (page: Page) =>
   page.getByRole('textbox', { name: 'Pattern or STRling source' });
 const subject = (page: Page) =>
   page.getByRole('textbox', { name: 'Subject text' });
+const manage = (page: Page, editor: 'Pattern' | 'Source' | 'Sample text') =>
+  page
+    .getByRole('region', { name: editor, exact: true })
+    .getByText('Manage', { exact: true });
+const sourceHighlight = (page: Page) =>
+  source(page).locator('.lab-mark--source-navigation');
 const tab = (page: Page, name: string) =>
   page.getByRole('tab', { name, exact: true }).click();
+// Explicit Run remains available via the keyboard even if automatic STRling
+// compilation temporarily gives the primary button its Stop action.
 const run = (page: Page) =>
-  page.getByRole('button', { name: /^Run Ctrl/ }).click();
+  page.locator('[data-action="run"]').press('ControlOrMeta+Enter');
 const executionWorker = /\/execution\.worker-[^/]+\.js$/;
+type TimingRequest = {
+  pattern: string;
+  input: string;
+  worker: number;
+  probeTimer: boolean;
+};
+
+async function observeTimingDispatches(page: Page) {
+  await page.evaluate(() => {
+    const send = Worker.prototype.postMessage;
+    const requests: TimingRequest[] = [];
+    const workers = new WeakMap<Worker, number>();
+    let next = 0;
+    Object.assign(window, { labTimingRequests: requests });
+    Worker.prototype.postMessage = function (
+      message: {
+        input?: {
+          request?: { pattern: string; input: string };
+          probeTimer?: boolean;
+        };
+      },
+      ...rest: unknown[]
+    ) {
+      if (message.input?.request) {
+        if (!workers.has(this)) workers.set(this, ++next);
+        requests.push({
+          pattern: message.input.request.pattern,
+          input: message.input.request.input,
+          worker: workers.get(this)!,
+          probeTimer: message.input.probeTimer === true,
+        });
+      }
+      Reflect.apply(send, this, [message, ...rest]);
+    };
+  });
+}
+
+async function downloadTimings(page: Page) {
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download timings' }).click();
+  return JSON.parse(await readFile(await (await pending).path(), 'utf8'));
+}
+
+async function downloadSession(page: Page) {
+  const pending = page.waitForEvent('download');
+  await page
+    .getByRole('button', { name: 'Download session', exact: true })
+    .click();
+  return readFile(await (await pending).path());
+}
 const compilerAsset =
   /\/_strling-lab\/compiler-tools-[^/]+-[a-f0-9]{64}\.wasm$/;
 const releaseManifest = JSON.parse(
@@ -31,42 +89,192 @@ const compilerToolsEnabled =
   Boolean(process.env.STRLING_LAB_TOOLS_CANDIDATE);
 
 async function edit(page: Page, editor: Locator, value: string) {
+  const lines = value.split('\n');
   if (page.context().browser()?.browserType().name() === 'firefox') {
     // Firefox's contenteditable fill can apply the deletion without inserting.
     await editor.click();
     await page.keyboard.press('ControlOrMeta+KeyA');
     await page.keyboard.press('Backspace');
     await expect(editor).toHaveText('');
-    await editor.pressSequentially(value);
+    await editor.pressSequentially(lines[0]!);
+    for (const line of lines.slice(1)) {
+      await page.keyboard.press('Enter');
+      await editor.pressSequentially(line);
+    }
   } else {
     await editor.fill(value);
   }
-  await expect(editor).toHaveText(value);
+  if (lines.length > 1) {
+    await expect(editor.locator('.cm-line')).toHaveText(lines);
+  } else {
+    await expect(editor).toHaveText(value);
+  }
 }
 
-test('serves PCRE2 notices as same-origin downloads from the Lab guide', async ({
-  page,
-}) => {
-  await page.goto('/lab/guide/');
+async function clickInView(control: Locator) {
+  await control.evaluate((element) =>
+    element.scrollIntoView({ block: 'center', behavior: 'instant' }),
+  );
+  await control.click();
+}
 
-  for (const version of ['10.42', '10.43', '10.49']) {
-    const notice = page.getByRole('link', {
-      name: `PCRE2 ${version}`,
+function editorSelection(editor: Locator) {
+  return editor.evaluate((element) => {
+    // Read the pinned CodeMirror view used by EditorView.findFromDOM so the
+    // assertion also works while the native DOM selection is outside the editor.
+    const tile = Reflect.get(element, 'cmTile');
+    const { anchor, head } = tile.root.view.state.selection.main;
+    return [anchor, head];
+  });
+}
+
+async function placeSourceCaret(editor: Locator) {
+  await editor.focus();
+  // Home alone starts a visual line on wrapped content. CodeMirror uses Meta
+  // for its document-start binding in the emulated iPhone profile.
+  await editor.press('Control+Home');
+  if ((await editorSelection(editor))[0] !== 0) await editor.press('Meta+Home');
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 0]);
+}
+
+async function expectSourceHighlight(page: Page, text: string) {
+  await expect
+    .poll(async () => (await sourceHighlight(page).allTextContents()).join(''))
+    .toContain(text);
+  await expect(source(page)).not.toBeFocused();
+}
+
+async function expectPaddedDisclosure(summary: Locator) {
+  await expect(summary).toBeVisible();
+  const disclosure = summary.locator('..');
+  if ((await disclosure.getAttribute('open')) === null)
+    await summary.press('Enter');
+  const body = disclosure.locator(':scope > .workbench-disclosure-body');
+  await expect(body).toBeVisible();
+  const spacing = await body.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const visible = [...element.children]
+      .map((child) => child.getBoundingClientRect())
+      .filter(({ height }) => height > 0);
+    return [
+      visible[0]!.top - bounds.top,
+      bounds.bottom - visible.at(-1)!.bottom,
+      ...visible.flatMap((child) => [
+        child.left - bounds.left,
+        bounds.right - child.right,
+      ]),
+    ];
+  });
+  expect(Math.min(...spacing)).toBeGreaterThanOrEqual(5);
+}
+
+async function expectAlignedControls(row: Locator) {
+  const controls = await row
+    .locator(
+      ':scope > button, :scope > label > :is(input:not([type="checkbox"]), select), :scope > label.workbench-check',
+    )
+    .evaluateAll((elements) =>
+      elements
+        .map((element) => {
+          const { top, bottom, height } = element.getBoundingClientRect();
+          return { top, bottom, height };
+        })
+        .filter(({ height }) => height > 0),
+    );
+  expect(controls.length).toBeGreaterThan(1);
+  for (const [index, control] of controls.entries()) {
+    for (const peer of controls.slice(index + 1)) {
+      if (
+        Math.min(control.bottom, peer.bottom) > Math.max(control.top, peer.top)
+      )
+        expect(Math.abs(control.bottom - peer.bottom)).toBeLessThanOrEqual(1);
+    }
+  }
+  expect(
+    await row.evaluate((element) => element.scrollWidth - element.clientWidth),
+  ).toBeLessThanOrEqual(1);
+}
+
+for (const route of ['/lab/', '/regex/lab/']) {
+  test(`offers runtime notices and test expectation examples inline at ${route}`, async ({
+    page,
+  }) => {
+    await page.goto(route);
+    const runtimeHelp = page.getByText('Runtime limits and licenses', {
       exact: true,
     });
-    await expect(notice).toHaveAttribute('download', '');
-    const href = await notice.getAttribute('href');
-    expect(href).toMatch(/^\/_astro\/[^/]+\.txt$/);
-
-    const response = await page.request.get(href!);
-    expect(response.ok()).toBe(true);
-    const source = new URL(
-      `../../src/lib/regex-lab/wasm/PCRE2-${version}-LICENCE.txt`,
-      import.meta.url,
+    const notices = runtimeHelp.locator('..');
+    await expect(notices).not.toHaveAttribute('open', '');
+    await expectPaddedDisclosure(runtimeHelp);
+    await expect(notices).toContainText('UTF-16 offsets');
+    await expect(notices).toContainText('UTF-8 byte offsets');
+    await expect(notices).toContainText('Unicode code-point offsets');
+    const pyodide = notices.getByRole('link', { name: 'Pyodide' });
+    await expect(pyodide).toHaveAttribute(
+      'href',
+      'https://github.com/pyodide/pyodide',
     );
-    expect(await response.body()).toEqual(await readFile(source));
-  }
-});
+    await expect(pyodide.locator('..')).toHaveText(
+      'PCRE2 license downloads for PCRE2 10.42, PCRE2 10.43, and PCRE2 10.49. Python runtime source and notices are available from Pyodide.',
+    );
+
+    for (const version of ['10.42', '10.43', '10.49']) {
+      const notice = notices.getByRole('link', {
+        name: `PCRE2 ${version}`,
+        exact: true,
+      });
+      await expect(notice).toHaveAttribute('download', '');
+      const href = await notice.getAttribute('href');
+      expect(href).toMatch(/^\/_astro\/[^/]+\.txt$/);
+      const response = await page.request.get(href!);
+      expect(response.ok()).toBe(true);
+      const license = new URL(
+        `../../src/lib/regex-lab/wasm/PCRE2-${version}-LICENCE.txt`,
+        import.meta.url,
+      );
+      expect(await response.body()).toEqual(await readFile(license));
+    }
+    await runtimeHelp.press('Enter');
+
+    await page.getByLabel('Operation', { exact: true }).selectOption('replace');
+    const replacementHelp = page.locator('[data-output="replacement"] p');
+    await expect(replacementHelp).toBeVisible();
+    await expect(replacementHelp).toContainText(
+      'JavaScript $<name>, PCRE2 ${name}, or Python \\g<name>.',
+    );
+
+    await tab(page, 'Tests');
+    await page.getByRole('button', { name: 'Add test', exact: true }).click();
+    const dialog = page.locator('dialog[open]');
+    const examples = dialog.getByText('Test expectation formats', {
+      exact: true,
+    });
+    await expectPaddedDisclosure(examples);
+    await expect(
+      dialog.getByText('Error categories include', { exact: false }),
+    ).toHaveText(
+      'Error categories include compile-rejection, runtime-error, resource-terminated, unsupported-operation, and infrastructure-failure.',
+    );
+    const lines = (await dialog.locator('pre').innerText()).trim().split('\n');
+    expect(lines.map((line) => JSON.parse(line).kind)).toEqual([
+      'boolean',
+      'matches',
+      'matches',
+      'replacement',
+      'split',
+      'error',
+    ]);
+    await dialog.getByLabel('Name', { exact: true }).fill('Missing match');
+    await dialog.getByLabel('Subject', { exact: true }).fill('');
+    await dialog
+      .getByRole('combobox', { name: 'Operation', exact: true })
+      .selectOption('search');
+    await dialog.getByLabel('Expected result JSON').fill(lines[0]!);
+    await dialog.getByRole('button', { name: 'Save test' }).click();
+    await page.getByRole('button', { name: 'Run all' }).click();
+    await expect(status(page)).toHaveText('1 of 1 tests passed.');
+  });
+}
 
 test('inspects PCRE2 compiled ranges and Python parser instructions under hosting CSP', async ({
   context,
@@ -94,8 +302,12 @@ test('inspects PCRE2 compiled ranges and Python parser instructions under hostin
   const literal = panel
     .getByRole('button', { name: /Native pattern item · "é"/ })
     .first();
-  await literal.click();
-  expect(await page.evaluate(() => getSelection()?.toString())).toBe('é');
+  await placeSourceCaret(source(page));
+  await page.getByRole('tab', { name: 'Structure' }).focus();
+  await clickInView(literal);
+  await expectSourceHighlight(page, 'é');
+  await source(page).focus();
+  await expect.poll(() => editorSelection(source(page))).toEqual([0, 0]);
 
   for (const [engine, version] of [
     ['python', '3.14'],
@@ -162,20 +374,16 @@ test('resumes a saved PCRE2 boundary after STRling-to-RegEx handoff and reload',
   await tab(page, 'Sessions');
   await page.getByRole('button', { name: 'Save revision' }).click();
   await expect(status(page)).toHaveText('Revision saved in this browser.');
-  for (const choice of [
-    'Active source',
-    'Sample data',
-    'Original STRling source of generated patterns',
-    'Saved scan cursor',
-  ]) {
-    await page.getByRole('checkbox', { name: choice, exact: true }).check();
-  }
-  const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download session' }).click();
-  const portable = await readFile(await (await download).path());
-  expect(JSON.parse(portable.toString()).session.continuation.after.end).toBe(
-    2,
-  );
+  const portable = await downloadSession(page);
+  expect(JSON.parse(portable.toString())).toMatchObject({
+    continuation: { after: { end: 2 } },
+    source: 'ab',
+    datasets: [{ text: 'ab--ab' }],
+    origin: {
+      source: 'semantic strling 1.0; case sensitive; pattern text "ab";',
+    },
+    recorded: { result: { status: 'matched' } },
+  });
   await page.reload();
   await tab(page, 'Sessions');
   await page
@@ -191,7 +399,15 @@ test('resumes a saved PCRE2 boundary after STRling-to-RegEx handoff and reload',
   await expect(
     page.getByRole('button', { name: /\[0, 2\) utf8-bytes/ }),
   ).toBeVisible();
-  await edit(page, subject(page), 'ab-😀-ab');
+  const sample = subject(page);
+  // Confirm deletion before inserting the Unicode witness. A single
+  // contenteditable fill can append to the previous sample on WebKit.
+  await sample.press('ControlOrMeta+KeyA');
+  if ((await editorSelection(sample))[1] !== 'ab--ab'.length)
+    await sample.press('Meta+KeyA');
+  await sample.press('Backspace');
+  await expect(sample).toHaveText('');
+  await edit(page, sample, 'ab-😀-ab');
   await resume.click();
   await expect(status(page)).toContainText('differs from the saved scan');
   await expect(
@@ -239,10 +455,12 @@ async function stallNextExecutionWorker(page: Page) {
       }),
     { times: 1 },
   );
+  const created = page.waitForEvent('worker', (worker) =>
+    executionWorker.test(worker.url()),
+  );
   return {
-    closed: page
-      .waitForEvent('worker', (worker) => executionWorker.test(worker.url()))
-      .then((worker) => worker.waitForEvent('close')),
+    created,
+    closed: created.then((worker) => worker.waitForEvent('close')),
   };
 }
 
@@ -286,7 +504,12 @@ test('runs native providers, inspects captures, creates tests and records PCRE2 
   await capture.click();
   await expect(capture).toHaveAttribute('aria-pressed', 'true');
 
-  await tab(page, 'Structure');
+  const structure = page.getByRole('tab', { name: 'Structure', exact: true });
+  await structure.evaluate((element) =>
+    element.scrollIntoView({ block: 'center', behavior: 'instant' }),
+  );
+  await structure.click();
+  await expect(structure).toHaveAttribute('aria-selected', 'true');
   await expect(
     page.getByRole('button', { name: 'Named capture word' }),
   ).toBeVisible();
@@ -298,8 +521,8 @@ test('runs native providers, inspects captures, creates tests and records PCRE2 
 
   await page.getByLabel('Live', { exact: true }).uncheck();
   await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
-  await source(page).fill('(a|ab)c');
-  await subject(page).fill('😀abc');
+  await edit(page, source(page), '(a|ab)c');
+  await edit(page, subject(page), '😀abc');
   await run(page);
   await expect(status(page)).toHaveText('1 match');
   await expect(
@@ -309,8 +532,18 @@ test('runs native providers, inspects captures, creates tests and records PCRE2 
   await page.getByRole('button', { name: 'Trace search' }).click();
   await expect(status(page)).toContainText('trace events · matched');
   await expect(page.getByRole('heading', { name: /^Step 1 of/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Next step' }).click();
+  const nextStep = page.getByRole('button', { name: 'Next step' });
+  // Trace highlighting can still be scrolling the document on a narrow view.
+  await nextStep.evaluate((control) =>
+    control.scrollIntoView({ block: 'center', behavior: 'instant' }),
+  );
+  await nextStep.click();
   await expect(page.getByRole('heading', { name: /^Step 2 of/ })).toBeVisible();
+  await expect(sourceHighlight(page).first()).toBeVisible();
+  await expect(source(page)).not.toBeFocused();
+  await expectPaddedDisclosure(
+    page.getByText('Capture state', { exact: true }),
+  );
 });
 
 test('compiles released Semantic STRling and Simply, maps diagnostics and transfers an artifact', async ({
@@ -322,7 +555,19 @@ test('compiles released Semantic STRling and Simply, maps diagnostics and transf
   await expect(
     page.getByRole('heading', { name: 'Canonical Semantic IR' }),
   ).toBeVisible();
-  await source(page).fill(
+  for (const name of [
+    'Semantic analysis',
+    'Semantic IR JSON',
+    'Portability decisions',
+    'Exact compiler response',
+  ]) {
+    const summary = page.getByText(name, { exact: true });
+    await expectPaddedDisclosure(summary);
+    await summary.press('Enter');
+  }
+  await edit(
+    page,
+    source(page),
     'semantic strling 1.0; case sensitive; pattern bogus;',
   );
   await expect(
@@ -338,16 +583,167 @@ test('compiles released Semantic STRling and Simply, maps diagnostics and transf
   await expect(
     page.getByText('ECMAScript 2024 · emitted flags u'),
   ).toBeVisible();
+  await expectPaddedDisclosure(
+    page.getByText('Artifact metadata, options and requirements', {
+      exact: true,
+    }),
+  );
   await page.getByRole('button', { name: 'Run artifact' }).click();
   await expect(status(page)).toHaveText('2 matches');
   await tab(page, 'Artifact');
-  await page.getByRole('button', { name: 'Open in RegEx Lab' }).click();
+  await page
+    .getByRole('button', { name: 'Open artifact and samples in RegEx Lab' })
+    .click();
   await expect(page).toHaveURL(/\/regex\/lab\/$/);
   await expect(status(page)).toContainText('Session loaded');
   await expect(source(page)).toHaveText('hello');
   await run(page);
   await expect(status(page)).toHaveText('2 matches');
-  await expect(page.getByText('Generated pattern origin')).toBeVisible();
+  await expectPaddedDisclosure(
+    page.getByText('Generated pattern origin', { exact: true }),
+  );
+});
+
+test('Compiler source navigation preserves the editing caret when Delete is pressed', async ({
+  page,
+  browserName,
+}) => {
+  await page.goto('/lab/');
+  await expect(status(page)).toContainText('Compiler succeeded');
+  const editor = source(page);
+  const lines = await editor.locator('.cm-line').allTextContents();
+  const context = Array.from(
+    { length: 18 },
+    (_, index) => '# Source context ' + index,
+  );
+  const input = [lines[0]!, ...context, ...lines.slice(1)];
+  if (browserName === 'firefox') {
+    // Keep the starter's balanced braces to avoid invoking delimiter pairing
+    // when the Firefox fixture types the extra lines instead of pasting them.
+    await placeSourceCaret(editor);
+    await editor.press('End');
+    for (const line of context) {
+      await editor.press('Enter');
+      await editor.pressSequentially(line);
+    }
+    await expect(editor.locator('.cm-line')).toHaveText(input);
+  } else {
+    await edit(page, editor, input.join('\n'));
+  }
+  await expect(status(page)).toContainText('Compiler succeeded');
+  await tab(page, 'Compiler');
+  await placeSourceCaret(editor);
+  const compiler = page.getByRole('tab', { name: 'Compiler', exact: true });
+  await compiler.focus();
+  const scroller = page.locator('[data-editor="source"] .cm-scroller');
+  const scrollBefore = await scroller.evaluate((element) => element.scrollTop);
+  const capture = page.getByRole('button', { name: 'capture', exact: true });
+  await clickInView(capture);
+  await expectSourceHighlight(page, 'capture word');
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 0]);
+  const highlightedLines = editor
+    .locator('.cm-line')
+    .filter({ has: page.locator('.lab-mark--source-navigation') });
+  await expect.poll(() => highlightedLines.count()).toBeGreaterThan(1);
+  await expect
+    .poll(() => scroller.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(scrollBefore);
+  await expect(capture.locator('..')).toHaveCSS('column-gap', '8px');
+  if (browserName === 'chromium') {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await expect(sourceHighlight(page).first()).toHaveCSS(
+      'outline-style',
+      'dashed',
+    );
+    await page.emulateMedia({ forcedColors: 'none' });
+  }
+  await editor.focus();
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 0]);
+  await editor.press('Delete');
+  await expect(editor.locator('.cm-line')).toHaveText([
+    input[0]!.slice(1),
+    ...input.slice(1),
+  ]);
+  await expect(sourceHighlight(page)).toHaveCount(0);
+});
+
+test('Artifact mappings preserve a deliberate source selection for normal editing', async ({
+  page,
+}) => {
+  await page.goto('/lab/');
+  await expect(status(page)).toContainText('Compiler succeeded');
+  await tab(page, 'Artifact');
+  await page.getByText('Source mappings', { exact: true }).press('Enter');
+  const editor = source(page);
+  const lines = await editor.locator('.cm-line').allTextContents();
+  await placeSourceCaret(editor);
+  await editor.press('Shift+ArrowRight');
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 1]);
+  await page.getByRole('tab', { name: 'Artifact' }).focus();
+  const mapping = page.getByRole('button', { name: /^Source \[/ }).first();
+  await clickInView(mapping);
+  await expect(sourceHighlight(page).first()).toBeVisible();
+  await expect(editor).not.toBeFocused();
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 1]);
+  await editor.focus();
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 1]);
+  await page.keyboard.press('Delete');
+  await expect(editor.locator('.cm-line')).toHaveText([
+    lines[0]!.slice(1),
+    ...lines.slice(1),
+  ]);
+  await expect(sourceHighlight(page)).toHaveCount(0);
+});
+
+test('RegEx Structure highlights without selecting and keeps deep trees inside a narrow viewport', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 760 });
+  await page.goto('/regex/lab/');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  const editor = source(page);
+  const pattern =
+    'x' + '(?:'.repeat(14) + '(?<word>' + 'a'.repeat(80) + ')' + ')'.repeat(14);
+  await edit(page, editor, pattern);
+  await tab(page, 'Structure');
+  await placeSourceCaret(editor);
+  const structure = page.getByRole('tab', { name: 'Structure', exact: true });
+  await structure.focus();
+  const capture = page.getByRole('button', {
+    name: 'Named capture word',
+    exact: true,
+  });
+  await clickInView(capture);
+  await expectSourceHighlight(page, '(?<word>');
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 0]);
+  const row = capture.locator('..');
+  await expect(row).toHaveCSS('flex-wrap', 'wrap');
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - innerWidth,
+    ),
+  ).toBe(0);
+  expect(
+    await row.evaluate((element) => element.scrollWidth - element.clientWidth),
+  ).toBeLessThanOrEqual(1);
+  await editor.focus();
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 0]);
+  await editor.press('Delete');
+  await expect(editor).toHaveText(pattern.slice(1));
+  await expect(sourceHighlight(page)).toHaveCount(0);
+
+  await page.locator('[data-field="flags"]').fill('');
+  await edit(page, editor, '😀');
+  await clickInView(
+    page.getByRole('button', { name: 'ECMAScript pattern', exact: true }),
+  );
+  await expectSourceHighlight(page, '😀');
+  await clickInView(
+    page.getByRole('button', { name: 'Character U+D83D', exact: true }),
+  );
+  await expect(sourceHighlight(page)).toHaveCount(0);
+  await expect(editor).not.toBeFocused();
+  await expect(editor).toHaveText('😀');
 });
 
 test('executes and traces a STRling artifact in its exact PCRE2 target', async ({
@@ -407,15 +803,18 @@ test('runs Python 3.11 text and bytes artifacts under their matching provider', 
   ).toBeVisible();
 });
 
-test('compares revisions, measures time and confines authored material to opt-in file sharing', async ({
+test('compares revisions, measures time and exports recordings without adding them to settings links', async ({
   page,
 }) => {
   await page.goto('/regex/lab/');
   await expect(status(page)).toHaveText('3 matches');
   await tab(page, 'Sessions');
+  await expectAlignedControls(
+    page.locator('[data-panel="sessions"] > .workbench-inline').first(),
+  );
   await page.getByRole('button', { name: 'Save revision' }).click();
   await expect(status(page)).toHaveText('Revision saved in this browser.');
-  await source(page).fill('alpha');
+  await edit(page, source(page), 'alpha');
   await expect(status(page)).toHaveText('1 match');
   await tab(page, 'Compare');
   await page
@@ -424,38 +823,61 @@ test('compares revisions, measures time and confines authored material to opt-in
   await page.getByRole('button', { name: 'Compare revision' }).click();
   await expect(status(page)).toHaveText('Comparison complete.');
   await expect(page.getByText(/Sample · [1-9] differences/)).toBeVisible();
+  await expectAlignedControls(
+    page.locator('[data-panel="compare"] > .workbench-inline'),
+  );
+  await expectPaddedDisclosure(page.getByText(/Sample · [1-9] differences/));
 
   await tab(page, 'Timing');
-  await page.getByLabel('Repetitions').fill('2');
-  await page.getByRole('button', { name: 'Measure', exact: true }).click();
-  await expect(page.getByText(/2 measured runs/)).toBeVisible();
+  const timing = page.getByRole('tabpanel', { name: 'Timing' });
+  await expect(timing.getByRole('combobox')).toHaveCount(0);
+  await expect(timing.getByRole('checkbox')).toHaveCount(0);
+  await expect(timing.getByLabel('Repetitions', { exact: true })).toHaveCount(
+    0,
+  );
+  const input = (
+    await subject(page).locator('.cm-line').allTextContents()
+  ).join('\n');
+  await observeTimingDispatches(page);
+  await timing.getByRole('button', { name: 'Measure', exact: true }).click();
+  await expect(
+    timing.getByText('9 of 9 measured runs completed', { exact: true }),
+  ).toBeVisible();
+  await expectPaddedDisclosure(
+    timing.getByText('Measurements and runtime provenance', { exact: true }),
+  );
+  const experiment = await downloadTimings(page);
+  expect(experiment.status).toBe('complete');
+  expect(experiment.schema).toBe('strling-lab-timing-v3');
+  expect(experiment.inputUnits).toBe(input.length);
+  expect(experiment.samples).toHaveLength(9);
+  expect(experiment.warmup).toBeDefined();
+  expect(experiment).not.toHaveProperty('rounds');
+  expect(experiment).not.toHaveProperty('multiplier');
+  const dispatches = await page.evaluate(
+    () =>
+      (window as Window & { labTimingRequests?: TimingRequest[] })
+        .labTimingRequests,
+  );
+  expect(dispatches).toEqual(
+    Array.from({ length: 10 }, (_, index) => ({
+      pattern: 'alpha',
+      worker: 1,
+      input,
+      probeTimer: index === 0,
+    })),
+  );
 
   await tab(page, 'Sessions');
-  const redactedDownload = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download session' }).click();
-  const redactedFile = JSON.parse(
-    await readFile(await (await redactedDownload).path(), 'utf8'),
-  );
-  expect(redactedFile.session.source).toBe('');
-  expect(redactedFile.session.datasets[0].text).toBe('');
-  expect(redactedFile.session).not.toHaveProperty('continuation');
-  for (const option of [
-    'Active source',
-    'Sample data',
-    'Tests',
-    'Recorded outputs',
-    'Original STRling source of generated patterns',
-  ]) {
-    await page.getByRole('checkbox', { name: option, exact: true }).check();
-  }
-  const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download session' }).click();
-  const file = JSON.parse(
-    await readFile(await (await download).path(), 'utf8'),
-  );
-  expect(file.session.source).toBe('alpha');
-  expect(file.session.datasets[0].text).toContain('beta-2');
-  expect(file.session.recorded.investigation.comparison).toBeDefined();
+  await expect(
+    page.getByRole('tabpanel', { name: 'Sessions' }).getByRole('checkbox'),
+  ).toHaveCount(0);
+  const file = JSON.parse((await downloadSession(page)).toString());
+  expect(file.source).toBe('alpha');
+  expect(file.datasets[0].text).toContain('beta-2');
+  expect(file.recorded.result.status).toBe('matched');
+  expect(file.recorded.investigation.comparison).toBeDefined();
+  expect(file.recorded.investigation.timing).toEqual(experiment);
 
   await page.getByRole('button', { name: 'Copy settings link' }).click();
   const url = await page.getByLabel('Share URL').inputValue();
@@ -468,7 +890,7 @@ test('compares revisions, measures time and confines authored material to opt-in
   await expect(source(page)).toHaveText('');
   await expect(subject(page)).toHaveText('');
   expect(new URL(page.url()).hash).toBe('');
-  await source(page).fill('alpha');
+  await edit(page, source(page), 'alpha');
   await run(page);
   await expect(status(page)).toHaveText('No match');
 
@@ -492,8 +914,8 @@ for (const [pattern, text] of [
     await expect(status(page)).toHaveText('3 matches');
     await page.getByLabel('Live', { exact: true }).uncheck();
     await page.getByLabel('Operation', { exact: true }).selectOption('first');
-    await source(page).fill(pattern);
-    await subject(page).fill(text);
+    await edit(page, source(page), pattern);
+    await edit(page, subject(page), text);
     await run(page);
     const firstMatch = page.getByRole('button', {
       name: `Match 1 · "${pattern}" · [0, 2) utf16-code-units`,
@@ -503,15 +925,15 @@ for (const [pattern, text] of [
     await tab(page, 'Sessions');
     await page.getByRole('button', { name: 'Save revision' }).click();
     await expect(status(page)).toHaveText('Revision saved in this browser.');
-    await subject(page).fill('changed');
+    await edit(page, subject(page), 'changed');
     await page.getByRole('button', { name: 'Restore', exact: true }).click();
     await expect(subject(page)).toHaveText(text);
     await expect(status(page)).toHaveText(
       'Select Run or enable Live to execute this session.',
     );
-    await page
-      .getByText('Previously recorded outputs', { exact: true })
-      .click();
+    await expectPaddedDisclosure(
+      page.getByText('Previously recorded outputs', { exact: true }),
+    );
     await expect(page.locator('[data-output="recording-json"]')).toContainText(
       '"start": 0',
     );
@@ -564,11 +986,11 @@ test('bounds execution and recovers after a worker timeout', async ({
   await expect(status(page)).toContainText('time limit', { timeout: 10_000 });
   await stalled.closed;
   await page.getByLabel('Live', { exact: true }).uncheck();
-  await source(page).fill('(?:)');
-  await subject(page).fill('a'.repeat(280));
+  await edit(page, source(page), '(?:)');
+  await edit(page, subject(page), 'a'.repeat(280));
   await run(page);
   await expect(status(page)).toContainText('resource terminated');
-  await source(page).fill('^a');
+  await edit(page, source(page), '^a');
   await run(page);
   await expect(status(page)).toHaveText('1 match');
 });
@@ -671,6 +1093,16 @@ test('requires an approved adapter and exercises the configured canonical tools 
   const proof = JSON.parse((await evidence.textContent())!).equivalence;
   expect(proof.status).toBe('proven');
   expect(proof.reconstructed_fingerprint).toBe(proof.source_fingerprint);
+  await expect(
+    page
+      .getByRole('group', { name: 'Selected tab actions' })
+      .getByRole('button', { name: 'Copy converted source', exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page
+      .locator('[data-panel="compiler-tools"]')
+      .getByRole('button', { name: 'Copy converted source', exact: true }),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Use exact conversion' }).click();
   await expect(page.getByLabel('Source format')).toHaveValue('simply');
   await expect(status(page)).toContainText('Compiler succeeded');
@@ -708,14 +1140,23 @@ test('requires an approved adapter and exercises the configured canonical tools 
   ).toBe(true);
   expect(requests.some(({ url }) => compilerAsset.test(url))).toBe(true);
   expect(JSON.stringify(requests)).not.toContain(privateText);
+  await expect(page.locator('[data-output="workspace-status"]')).toHaveText(
+    'Saved in this browser',
+  );
   expect(
-    await page.evaluate(
-      (secret) =>
-        location.href.includes(secret) ||
-        Object.values(localStorage).some((value) => value.includes(secret)),
-      privateText,
-    ),
-  ).toBe(false);
+    await page.evaluate((secret) => {
+      const workingKey = 'strling.labs.working.v1.strling';
+      return {
+        editableCopy: localStorage.getItem(workingKey)?.includes(secret),
+        otherStorage:
+          Object.entries(localStorage).some(
+            ([key, text]) => key !== workingKey && text.includes(secret),
+          ) ||
+          Object.values(sessionStorage).some((text) => text.includes(secret)),
+        address: location.href.includes(secret),
+      };
+    }, privateText),
+  ).toEqual({ editableCopy: true, otherStorage: false, address: false });
 
   await page
     .getByLabel('Compiler target', { exact: true })
@@ -749,7 +1190,8 @@ test('requires an approved adapter and exercises the configured canonical tools 
     end: byteOffset + 1,
   });
   await diagnosticButton.click();
-  expect(await page.evaluate(() => getSelection()?.toString())).toBe('o');
+  await expectSourceHighlight(page, 'o');
+  await expect(source(page).locator('.cm-lintRange').first()).toBeVisible();
   const axe = await new AxeBuilder({ page })
     .include('[data-panel="compiler-tools"]')
     .analyze();
@@ -1037,8 +1479,8 @@ test('binds assertions to duplicate PCRE2 capture names and clears revised evide
   await page.goto('/regex/lab/');
   await page.getByLabel('Live', { exact: true }).uncheck();
   await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
-  await source(page).fill('(?J)(?<part>a)|(?<part>b)');
-  await subject(page).fill('b a');
+  await edit(page, source(page), '(?J)(?<part>a)|(?<part>b)');
+  await edit(page, subject(page), 'b a');
   await run(page);
   await expect(status(page)).toHaveText('2 matches');
   await page.getByText('Extract matches or captures', { exact: true }).click();
@@ -1053,7 +1495,7 @@ test('binds assertions to duplicate PCRE2 capture names and clears revised evide
   await page.getByRole('button', { name: 'Save test' }).click();
   await page.getByRole('button', { name: 'Run all' }).click();
   await expect(status(page)).toHaveText('1 of 1 tests passed.');
-  await subject(page).fill('a');
+  await edit(page, subject(page), 'a');
   await expect(page.getByText('1 of 1 tests passed.')).toBeHidden();
 });
 
@@ -1077,8 +1519,8 @@ test('observes multiline, full-match, replacement and split behavior in each run
   ] as const) {
     await runtime.selectOption(engine);
     await flags.fill(engine === 'javascript' ? 'mu' : 'm');
-    await source(page).fill('^a(.)$');
-    await subject(page).fill('😀\naé\nb');
+    await edit(page, source(page), '^a(.)$');
+    await edit(page, subject(page), '😀\naé\nb');
     await operation.selectOption('scan');
     await run(page);
     await expect(status(page)).toHaveText('1 match', { timeout: 35_000 });
@@ -1092,8 +1534,8 @@ test('observes multiline, full-match, replacement and split behavior in each run
     await run(page);
     await expect(status(page)).toHaveText('No match');
 
-    await source(page).fill('[,;]');
-    await subject(page).fill('a,b;c');
+    await edit(page, source(page), '[,;]');
+    await edit(page, subject(page), 'a,b;c');
     await operation.selectOption('replace-all');
     await page
       .getByRole('textbox', { name: 'Replacement', exact: true })
@@ -1126,10 +1568,12 @@ test('executes the PCRE2 10.42 artifact and preserves a Unicode empty-match boun
   await page
     .getByLabel('Compiler target', { exact: true })
     .selectOption('pcre242');
-  await source(page).fill(
+  await edit(
+    page,
+    source(page),
     'semantic strling 1.0; case sensitive; pattern empty;',
   );
-  await subject(page).fill('😀');
+  await edit(page, subject(page), '😀');
   await run(page);
   await expect(status(page)).toHaveText('2 matches');
   const results = page.locator('[data-panel="results"]');
@@ -1141,6 +1585,124 @@ test('executes the PCRE2 10.42 artifact and preserves a Unicode empty-match boun
   ).toBeVisible();
 });
 
+for (const [route, initialStatus, matches] of [
+  ['/regex/lab/', '3 matches', '3 matches'],
+  ['/lab/', /Compiler succeeded/, '2 matches'],
+] as const) {
+  test(`keeps Run visible throughout a fast execution at ${route}`, async ({
+    page,
+  }) => {
+    const start = Date.UTC(2026, 0, 1);
+    await page.clock.install({ time: start });
+    await page.goto(route);
+    await expect(status(page)).toHaveText(initialStatus);
+    await page.getByLabel('Live', { exact: true }).uncheck();
+    await page.clock.pauseAt(start + 60_000);
+    const button = page.locator('[data-action="run"]');
+    const busyTransitions = await button.evaluateHandle((control) => {
+      const oldStates: (string | null)[] = [];
+      new MutationObserver((records) => {
+        for (const record of records) oldStates.push(record.oldValue);
+      }).observe(control, {
+        attributeFilter: ['data-execution-state'],
+        attributeOldValue: true,
+      });
+      return oldStates;
+    });
+    await button.press('Enter');
+    await expect(status(page)).toHaveText(matches);
+    await page.clock.runFor(250);
+    // A transient Stop would leave a busy old value even if it reset before
+    // Playwright could sample the DOM.
+    expect(await busyTransitions.jsonValue()).not.toContain('busy');
+    await expect(button).toHaveAccessibleName('Run');
+    await expect(button.locator('[data-execution-icon="run"]')).toBeVisible();
+    await expect(button.locator('[data-execution-icon="stop"]')).toBeHidden();
+  });
+}
+
+test('reveals Stop at 250 ms and restores Run as soon as a slow execution finishes', async ({
+  page,
+}) => {
+  const start = Date.UTC(2026, 0, 1);
+  await page.clock.install({ time: start });
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
+  await page.clock.pauseAt(start + 60_000);
+  const button = page.locator('[data-action="run"]');
+  const idle = await button.boundingBox();
+  const { promise, resolve } = Promise.withResolvers<void>();
+  await page.route(
+    executionWorker,
+    async (route) => {
+      await promise;
+      await route.continue();
+    },
+    { times: 1 },
+  );
+  try {
+    const starting = page.waitForRequest(executionWorker);
+    await button.press('Enter');
+    await starting;
+    await page.clock.runFor(249);
+    await expect(button).toHaveAccessibleName('Run');
+    await page.clock.runFor(1);
+    await expect(button).toHaveAccessibleName('Stop');
+    await expect(button.locator('[data-execution-icon="stop"]')).toBeVisible();
+    await expect(button.locator('[data-execution-icon="run"]')).toBeHidden();
+    expect(await button.boundingBox()).toEqual(idle);
+  } finally {
+    resolve();
+  }
+  await expect(status(page)).toHaveText('3 matches');
+  // The page clock is frozen, so restoring Run cannot rely on another timer.
+  await expect(button).toHaveAccessibleName('Run');
+});
+
+test('cancels superseded Run/Stop timers and pauses Live when Stop is pressed', async ({
+  page,
+}) => {
+  const start = Date.UTC(2026, 0, 1);
+  await page.clock.install({ time: start });
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  const live = page.getByLabel('Live', { exact: true });
+  await live.uncheck();
+  await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
+  await page.clock.pauseAt(start + 60_000);
+  const button = page.locator('[data-action="run"]');
+  const first = await stallNextExecutionWorker(page);
+  await live.press('Space');
+  await page.clock.runFor(220);
+  await first.created;
+  await page.clock.runFor(100);
+  await expect(button).toHaveAccessibleName('Run');
+
+  const second = await stallNextExecutionWorker(page);
+  await button.press('Enter');
+  await first.closed;
+  await second.created;
+  await expect(live).toBeChecked();
+  await page.clock.runFor(150);
+  await expect(button).toHaveAccessibleName('Run');
+  await page.clock.runFor(99);
+  await expect(button).toHaveAccessibleName('Run');
+  await page.clock.runFor(1);
+  await expect(button).toHaveAccessibleName('Stop');
+
+  await button.press('Enter');
+  await expect(button).toHaveAccessibleName('Run');
+  await expect(live).not.toBeChecked();
+  await second.closed;
+  await page.clock.runFor(250);
+  await expect(status(page)).toHaveText('Stopped.');
+  await run(page);
+  await expect(status(page)).toHaveText('3 matches');
+  await expect(button).toHaveAccessibleName('Run');
+});
+
 test('terminates the cancelled worker and retries after initialization failure', async ({
   page,
 }) => {
@@ -1149,20 +1711,27 @@ test('terminates the cancelled worker and retries after initialization failure',
   await page.getByLabel('Live', { exact: true }).uncheck();
   const runtime = page.getByLabel('Runtime', { exact: true });
   await runtime.selectOption('pcre2');
-  await source(page).fill('word');
-  await subject(page).fill('one word');
+  await edit(page, source(page), 'word');
+  await edit(page, subject(page), 'one word');
   const stalled = await stallNextExecutionWorker(page);
   const created = page.waitForEvent('worker', (worker) =>
     executionWorker.test(worker.url()),
   );
-  await run(page);
+  // Start the raw runtime with the visible Run button so this test exercises
+  // the same pointer and scroll flow as the subsequent Stop interaction.
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
   await created;
   const stop = page.getByRole('button', { name: 'Stop', exact: true });
-  await stop.evaluate((button) => button.scrollIntoView({ block: 'start' }));
-  const header = await page.getByRole('banner').boundingBox();
-  expect((await stop.boundingBox())!.y).toBeGreaterThanOrEqual(
-    header!.y + header!.height,
+  await stop.evaluate((button) =>
+    button.scrollIntoView({ block: 'start', behavior: 'instant' }),
   );
+  await expect
+    .poll(async () => {
+      const header = await page.getByRole('banner').boundingBox();
+      const button = await stop.boundingBox();
+      return button!.y - (header!.y + header!.height);
+    })
+    .toBeGreaterThanOrEqual(0);
   await stop.click();
   await stalled.closed;
   await expect(status(page)).toHaveText('Stopped.');
@@ -1177,4 +1746,595 @@ test('terminates the cancelled worker and retries after initialization failure',
   await expect(status(page)).toContainText('The worker could not start');
   await run(page);
   await expect(status(page)).toHaveText('1 match');
+});
+
+test('autosaves working patterns and independent dataset copies without automatic execution on return', async ({
+  page,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  await edit(page, source(page), 'original');
+  await edit(page, subject(page), 'original sample');
+  const save = page.locator('[data-output="workspace-status"]');
+  await expect(save).toHaveText('Saved in this browser');
+  const library = page.getByRole('combobox', { name: 'Saved working pattern' });
+  await manage(page, 'Pattern').click();
+  page.once('dialog', (dialog) => dialog.accept('Copy for review'));
+  await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  await expect(library.locator('option:checked')).toHaveText('Copy for review');
+  await edit(page, source(page), 'another');
+  await manage(page, 'Sample text').click();
+  await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  const datasets = page.getByRole('combobox', { name: 'Dataset', exact: true });
+  await expect(datasets.locator('option:checked')).toHaveText('Sample 1 copy');
+  await edit(page, subject(page), 'independent');
+  await datasets.selectOption({ label: 'Sample 1' });
+  await expect(subject(page)).toHaveText('original sample');
+  await library.selectOption({ label: 'Sample 1' });
+  await expect(source(page)).toHaveText('original');
+  await manage(page, 'Sample text').click();
+  await page
+    .getByRole('combobox', { name: 'Reuse saved dataset' })
+    .selectOption({ label: 'Copy for review · Sample 1 copy' });
+  await expect(subject(page)).toHaveText('independent');
+  await expect(save).toHaveText('Saved in this browser');
+  await page.reload();
+  await expect(status(page)).toContainText('Working copy restored');
+  await expect(source(page)).toHaveText('original');
+  await expect(subject(page)).toHaveText('independent');
+  await expect(page.getByLabel('Live', { exact: true })).not.toBeChecked();
+  await expect(
+    page.getByRole('button', { name: 'Download', exact: true }),
+  ).toBeDisabled();
+  await manage(page, 'Pattern').click();
+  page.once('dialog', (dialog) => dialog.accept('Renamed pattern'));
+  await page.getByRole('button', { name: 'Rename', exact: true }).click();
+  await expect(library.locator('option:checked')).toHaveText('Renamed pattern');
+  await manage(page, 'Pattern').click();
+  page.once('dialog', (dialog) => dialog.accept('Fresh pattern'));
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await expect(source(page)).toHaveText('');
+  await manage(page, 'Pattern').click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(
+    library.locator('option', { hasText: 'Fresh pattern' }),
+  ).toHaveCount(0);
+});
+
+test('restores separate Semantic and Simply drafts without running them', async ({
+  page,
+}) => {
+  await page.goto('/lab/');
+  await expect(status(page)).toContainText('Compiler succeeded');
+  const format = page.getByLabel('Source format', { exact: true });
+  const semantic =
+    'semantic strling 1.0; case sensitive; pattern text "draft";';
+  await edit(page, source(page), semantic);
+  await format.selectOption('simply');
+  await edit(page, source(page), '{"privateDraft":true}');
+  await expect(page.locator('[data-output="workspace-status"]')).toHaveText(
+    'Saved in this browser',
+  );
+  await page.reload();
+  await expect(status(page)).toContainText('Working copy restored');
+  await expect(format).toHaveValue('simply');
+  await expect(source(page)).toHaveText('{"privateDraft":true}');
+  await format.selectOption('semantic');
+  await expect(source(page)).toHaveText(semantic);
+  await expect(status(page)).toContainText('Select Run');
+  await format.selectOption('simply');
+  await expect(source(page)).toHaveText('{"privateDraft":true}');
+
+  await tab(page, 'Sessions');
+  await page.getByRole('button', { name: 'Save revision' }).click();
+  const file = await downloadSession(page);
+  expect(JSON.parse(file.toString())).toMatchObject({
+    format: 'simply',
+    source: '{"privateDraft":true}',
+    drafts: { semantic },
+  });
+  await format.selectOption('semantic');
+  await edit(page, source(page), 'different draft');
+  await page.getByRole('button', { name: 'Restore', exact: true }).click();
+  await expect(format).toHaveValue('simply');
+  await format.selectOption('semantic');
+  await expect(source(page)).toHaveText(semantic);
+
+  await page.getByLabel('Import session', { exact: true }).setInputFiles({
+    name: 'strling-session.json',
+    mimeType: 'application/json',
+    buffer: file,
+  });
+  await expect(status(page)).toContainText('Session imported');
+  await expect(format).toHaveValue('simply');
+  await expect(source(page)).toHaveText('{"privateDraft":true}');
+  await format.selectOption('semantic');
+  await expect(source(page)).toHaveText(semantic);
+  await expect(status(page)).toContainText('Select Run');
+});
+
+test('keeps run controls stable, resizes both editors and exposes native selectable disclosures', async ({
+  page,
+  browserName,
+  isMobile,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(status(page)).toHaveText('3 matches');
+  const tall = page.getByRole('button', { name: 'Tall editors', exact: true });
+  const boxes = page.locator('[data-editor]');
+  const heights = () =>
+    boxes.evaluateAll((elements) =>
+      elements.map((element) => element.getBoundingClientRect().height),
+    );
+  const before = await heights();
+  await tall.press('Enter');
+  await expect(tall).toHaveAttribute('aria-pressed', 'true');
+  const expanded = await heights();
+  expect(expanded[0]).toBe(expanded[1]);
+  expect(expanded[0]).toBeGreaterThan(before[0]!);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
+    )
+    .toBe(0);
+  await tall.click();
+  expect(await heights()).toEqual(before);
+  await expectAlignedControls(page.locator('.workbench-config'));
+  await expectAlignedControls(page.locator('.workbench-actions'));
+  await expectPaddedDisclosure(
+    page.getByText('Extract matches or captures', { exact: true }),
+  );
+  await expectAlignedControls(
+    page.locator('[data-output="extraction"] .workbench-inline'),
+  );
+  await expectPaddedDisclosure(
+    page.getByText('Structured result', { exact: true }),
+  );
+  const summary = page.getByText('Raw JSON', { exact: true });
+  await expectPaddedDisclosure(summary);
+  const json = page.locator('[data-output="result-json"]');
+  await expect(json).toBeVisible();
+  const selectionProperty =
+    browserName === 'webkit' ? '-webkit-user-select' : 'user-select';
+  await expect(summary).toHaveCSS(selectionProperty, 'none');
+  await expect(json).toHaveCSS(selectionProperty, 'text');
+  if (browserName === 'chromium') {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await summary.focus();
+    await expect(summary).toHaveCSS('outline-style', 'solid');
+    await page.emulateMedia({ forcedColors: 'none' });
+  }
+  await summary.press('Enter');
+  await expect(json).toBeHidden();
+  const bar = page.getByRole('group', { name: 'Selected tab actions' });
+  await expectAlignedControls(bar);
+  const actionOffset = await bar.evaluate((group) => {
+    const tabs = group.parentElement!.querySelector('[role="tablist"]')!;
+    const copy = group.querySelector('button')!;
+    const center = (element: Element) => {
+      const { top, height } = element.getBoundingClientRect();
+      return top + height / 2;
+    };
+    return Math.abs(center(tabs) - center(copy));
+  });
+  expect(actionOffset).toBeLessThanOrEqual(1);
+  await expect(bar.getByRole('button').nth(0)).toHaveAccessibleName(
+    'Copy result JSON',
+  );
+  if (browserName === 'chromium') {
+    await page
+      .context()
+      .grantPermissions(['clipboard-read', 'clipboard-write']);
+    await bar.getByRole('button').nth(0).press('Enter');
+    await expect(status(page)).toHaveText('Copied.');
+    const rawResult = JSON.parse(
+      await page.evaluate(() => navigator.clipboard.readText()),
+    );
+    expect(rawResult.status).toBe('matched');
+    expect(rawResult).not.toHaveProperty('result');
+  }
+  const downloaded = page.waitForEvent('download');
+  await bar.getByRole('button').nth(1).press('Enter');
+  const envelope = JSON.parse(
+    await readFile(await (await downloaded).path(), 'utf8'),
+  );
+  expect(envelope).toMatchObject({
+    schema: 'strling-lab-recorded-observation-v1',
+    result: { status: 'matched' },
+  });
+  await tab(page, 'Debugger');
+  await expect(bar.getByRole('button', { name: 'Download' })).toBeDisabled();
+  await tab(page, 'Structure');
+  await expect(
+    bar.getByRole('button', { name: 'Copy structure data' }),
+  ).toBeEnabled();
+  // Playwright resolves ControlOrMeta from the host OS, while CodeMirror uses
+  // the Apple modifier for the emulated iPhone.
+  const findKey =
+    browserName === 'webkit' && isMobile ? 'Meta' : 'ControlOrMeta';
+  await source(page).press(`${findKey}+KeyF`);
+  await expect(
+    page.getByRole('textbox', { name: 'Find', exact: true }),
+  ).toBeVisible();
+});
+
+test('preserves successful timing samples when a later real worker request is cancelled', async ({
+  page,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await page.evaluate(() => {
+    const send = Worker.prototype.postMessage;
+    let calls = 0;
+    Worker.prototype.postMessage = function (
+      message: { input?: { request?: unknown } },
+      ...rest: unknown[]
+    ) {
+      if (message.input?.request && ++calls === 4) return;
+      Reflect.apply(send, this, [message, ...rest]);
+    };
+  });
+  await tab(page, 'Timing');
+  await page.getByRole('button', { name: 'Measure', exact: true }).click();
+  await expect(
+    page.getByText('Measuring · 2 of 9 measured runs completed'),
+  ).toBeVisible();
+  const stop = page.getByRole('button', { name: 'Stop', exact: true });
+  const running = await stop.boundingBox();
+  await stop.click();
+  await expect(status(page)).toHaveText('Stopped.');
+  await expect(page.getByLabel('Live', { exact: true })).not.toBeChecked();
+  const idle = await page
+    .getByRole('button', { name: 'Run', exact: true })
+    .boundingBox();
+  expect(idle?.width).toBe(running?.width);
+  expect(idle?.x).toBe(running?.x);
+  const evidence = await downloadTimings(page);
+  expect(evidence.status).toBe('incomplete');
+  expect(evidence.repetitions).toBe(9);
+  expect(evidence.warmup).toBeDefined();
+  expect(evidence.samples).toHaveLength(2);
+  await page.getByRole('button', { name: 'Measure', exact: true }).click();
+  await expect(status(page)).toHaveText('Timing experiment finished.');
+  const retry = await downloadTimings(page);
+  expect(retry.status).toBe('complete');
+  expect(retry.samples).toHaveLength(9);
+});
+
+test('reports short and long runs against complete samples while preserving historical timing', async ({
+  page,
+}) => {
+  test.setTimeout(100_000);
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await tab(page, 'Sessions');
+  const session = JSON.parse((await downloadSession(page)).toString());
+  for (const [runtime, pattern, input] of [
+    ['javascript', 'a', 'a'],
+    ['javascript', '(?=a{24}z)', 'a'.repeat(10_000) + 'z'],
+    ['javascript', '(?=a{513}z)', 'a'.repeat(24_000) + 'z'],
+    ['python', 'a', 'a'],
+  ] as const) {
+    await tab(page, 'Sessions');
+    const history = {
+      schema: 'strling-lab-timing-v2',
+      multiplier: 2,
+      rounds: [{ order: ['baseline', 'current'] }],
+    };
+    await page.getByLabel('Import session', { exact: true }).setInputFiles({
+      name: 'historical-session.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({
+          ...session,
+          runtime,
+          source: pattern,
+          datasets: [{ name: 'Complete sample', text: input }],
+          run: { ...session.run, operation: 'search' },
+          recorded: {
+            capturedAt: '2026-10-01T00:00:00Z',
+            investigation: { timing: history },
+          },
+        }),
+      ),
+    });
+    await expect(status(page)).toContainText('Session imported');
+    const restored = JSON.parse((await downloadSession(page)).toString());
+    expect(restored.recorded.investigation.timing).toEqual(history);
+    await observeTimingDispatches(page);
+    await tab(page, 'Timing');
+    await page.getByRole('button', { name: 'Measure', exact: true }).click();
+    await expect(status(page)).toHaveText('Timing experiment finished.', {
+      timeout: 33_000,
+    });
+    const timing = page.getByRole('tabpanel', { name: 'Timing' });
+    await expect(timing).toContainText('9 of 9 measured runs completed');
+    await expect(timing.getByText(/End to end · /)).toBeVisible();
+    await expect(timing.getByText(/Worker compile · /)).toBeVisible();
+    await expect(timing.getByText(/Runtime execution · /)).toBeVisible();
+    expect(await timing.innerText()).not.toMatch(
+      /\b0(?:\.0+)?\s+(?:µs|ms|s)\b/,
+    );
+    const result = await downloadTimings(page);
+    expect(result.dataset).toBe('Complete sample');
+    expect(result.runtime).toBe(runtime);
+    expect(result.inputUnits).toBe(input.length);
+    expect(result.samples).toHaveLength(9);
+    const workerResolution = result.warmup.timing.resolutionMs;
+    if (workerResolution !== undefined)
+      expect(workerResolution).toBeGreaterThan(0);
+    for (const sample of result.samples) {
+      expect(sample.wallMs).toBeGreaterThanOrEqual(0);
+      expect(sample.timing.executionMs).toBeGreaterThanOrEqual(0);
+      expect(sample.timing.resolutionMs).toBeUndefined();
+    }
+    const dispatches = await page.evaluate(
+      () =>
+        (window as Window & { labTimingRequests?: TimingRequest[] })
+          .labTimingRequests,
+    );
+    expect(dispatches?.map(({ input }) => input)).toEqual(
+      Array(10).fill(input),
+    );
+  }
+});
+
+for (const [target, runtime, version] of [
+  ['pcre243', 'pcre243', '10.43'],
+  ['python', 'python311', '3.11'],
+] as const) {
+  test(`times nine runs from actual STRling ${runtime} artifacts`, async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.goto('/lab/');
+    await expect(status(page)).toContainText('Compiler succeeded');
+    await page
+      .getByLabel('Compiler target', { exact: true })
+      .selectOption(target);
+    await expect(status(page)).toContainText('Compiler succeeded');
+    await tab(page, 'Sessions');
+    await page.getByRole('button', { name: 'Save revision' }).click();
+    await expect(status(page)).toHaveText('Revision saved in this browser.');
+    await edit(
+      page,
+      source(page),
+      'semantic strling 1.0; case sensitive; pattern text "hello";',
+    );
+    await expect(status(page)).toContainText('Compiler succeeded');
+    await tab(page, 'Timing');
+    await page.getByRole('button', { name: 'Measure', exact: true }).click();
+    await expect(status(page)).toHaveText('Timing experiment finished.', {
+      timeout: 33_000,
+    });
+    const experiment = await downloadTimings(page);
+    expect(experiment.samples).toHaveLength(9);
+    expect(experiment.warmup.observation.runtimeVersion).toContain(version);
+    expect(experiment.runtime).toBe(runtime);
+    expect(experiment.compiler.identity.productVersion).toBe('4.0.3');
+    expect(experiment.artifact.target_profile).toEqual(
+      experiment.compiler.profile,
+    );
+    await expect(page.getByText(/STRling compilation · /)).toBeVisible();
+    for (const { observation } of experiment.samples)
+      expect(observation.runtimeVersion).toContain(version);
+  });
+}
+
+test('preserves native inspection and imports a complete session under a new identity', async ({
+  page,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  await page.getByLabel('Runtime', { exact: true }).selectOption('pcre2');
+  await tab(page, 'Structure');
+  await page.getByRole('button', { name: 'Inspect native structure' }).click();
+  await expect(
+    page.getByText('PCRE2 compiled structure', { exact: true }),
+  ).toBeVisible();
+  await tab(page, 'Results');
+  await tab(page, 'Structure');
+  await expect(
+    page.getByText('PCRE2 compiled structure', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Download structure data' }),
+  ).toBeEnabled();
+  await page.getByRole('textbox', { name: 'Flags', exact: true }).fill('i');
+  await expect(
+    page.getByText('PCRE2 compiled structure', { exact: true }),
+  ).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: 'Download', exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole('combobox', { name: 'Operation', exact: true })
+    .selectOption('replace-all');
+  await page
+    .getByRole('textbox', { name: 'Replacement', exact: true })
+    .fill('private template');
+  await page
+    .getByLabel('Replacement syntax', { exact: true })
+    .selectOption('native');
+  await manage(page, 'Sample text').click();
+  page.once('dialog', (dialog) => dialog.accept('Second sample'));
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await edit(page, subject(page), 'ALPHA-22');
+  await run(page);
+  await expect(status(page)).toHaveText('Replacement completed');
+  await tab(page, 'Tests');
+  await page.getByRole('button', { name: 'Add from result' }).click();
+  await page.getByRole('button', { name: 'Save test' }).click();
+  await tab(page, 'Sessions');
+  await page
+    .getByLabel('Session name', { exact: true })
+    .fill('Complete session');
+  await page.getByRole('button', { name: 'Save revision' }).click();
+  const archive = () =>
+    page.evaluate(() =>
+      JSON.parse(localStorage.getItem('strling.labs.archive.v1')!),
+    );
+  const originalArchive = await archive();
+  const file = await downloadSession(page);
+  const snapshot = JSON.parse(file.toString());
+  expect(snapshot).toMatchObject({
+    name: 'Complete session',
+    runtime: 'pcre2',
+    run: {
+      operation: 'replace-all',
+      flags: 'i',
+      replacement: 'private template',
+      replacementSyntax: 'native',
+    },
+    datasets: [
+      { name: 'Sample 1' },
+      { name: 'Second sample', text: 'ALPHA-22' },
+    ],
+    selected: 1,
+    tests: [
+      {
+        text: 'ALPHA-22',
+        expected: { kind: 'replacement', value: 'private template' },
+      },
+    ],
+    recorded: { result: { status: 'completed', output: 'private template' } },
+  });
+  expect(originalArchive.sessions[0].revisions[0].session).toEqual({
+    ...snapshot,
+    recorded: { ...snapshot.recorded, capturedAt: expect.any(String) },
+  });
+  await page.getByRole('button', { name: 'Copy settings link' }).click();
+  const url = decodeURIComponent(
+    await page.getByLabel('Share URL').inputValue(),
+  );
+  expect(url).not.toContain('private template');
+  expect(url).not.toContain('ALPHA-22');
+
+  await edit(page, source(page), 'unrelated working pattern');
+  await edit(page, subject(page), 'unrelated working sample');
+  await page.getByLabel('Import session', { exact: true }).setInputFiles({
+    name: 'lab-session.json',
+    mimeType: 'application/json',
+    buffer: file,
+  });
+  await expect(status(page)).toContainText(
+    'Session imported as a separate copy',
+  );
+  await expect(source(page)).toHaveText(snapshot.source);
+  await expect(subject(page)).toHaveText('ALPHA-22');
+  await expect(page.getByLabel('Dataset', { exact: true })).toHaveValue('1');
+  await expect(page.getByLabel('Runtime', { exact: true })).toHaveValue(
+    'pcre2',
+  );
+  await expect(
+    page.getByRole('textbox', { name: 'Flags', exact: true }),
+  ).toHaveValue('i');
+  await expect(
+    page.getByRole('textbox', { name: 'Replacement', exact: true }),
+  ).toHaveValue('private template');
+  await expect(page.getByLabel('Live', { exact: true })).not.toBeChecked();
+  expect(await archive()).toEqual(originalArchive);
+  await expectPaddedDisclosure(
+    page.getByText('Previously recorded outputs', { exact: true }),
+  );
+  await expect(page.locator('[data-output="recording-json"]')).toContainText(
+    'private template',
+  );
+  await page.getByRole('button', { name: 'Save revision' }).click();
+  const saved = (await archive()).sessions;
+  expect(saved).toHaveLength(2);
+  expect(saved[1]).toEqual(originalArchive.sessions[0]);
+  expect(saved[0].id).not.toBe(snapshot.id);
+  expect(saved[0].revisions[0].session).toEqual({
+    ...snapshot,
+    id: saved[0].id,
+  });
+
+  await page
+    .getByRole('tabpanel', { name: 'Sessions' })
+    .getByRole('button', { name: 'Duplicate', exact: true })
+    .click();
+  await expect(page.getByLabel('Session name', { exact: true })).toHaveValue(
+    'Complete session copy',
+  );
+  const duplicate = JSON.parse((await downloadSession(page)).toString());
+  expect(duplicate.id).not.toBe(saved[0].id);
+  expect(duplicate).toEqual({
+    ...snapshot,
+    name: 'Complete session copy',
+    id: duplicate.id,
+  });
+  expect((await archive()).sessions).toEqual(saved);
+
+  const working = page.getByRole('combobox', { name: 'Saved working pattern' });
+  await working.selectOption({ label: 'Sample 1' });
+  await expect(source(page)).toHaveText('unrelated working pattern');
+  await expect(subject(page)).toHaveText('unrelated working sample');
+  await page
+    .getByRole('combobox', { name: 'Saved session' })
+    .selectOption(saved[0].id);
+  page.once('dialog', (dialog) => dialog.accept());
+  await page
+    .getByRole('button', { name: 'Delete session', exact: true })
+    .click();
+  expect(await archive()).toEqual(originalArchive);
+});
+
+test('recovers unreadable or quota-refused working storage without modifying saved revisions', async ({
+  page,
+}) => {
+  await page.goto('/regex/lab/');
+  await expect(status(page)).toHaveText('3 matches');
+  await tab(page, 'Sessions');
+  await page.getByRole('button', { name: 'Save revision' }).click();
+  await expect(status(page)).toContainText('Revision saved');
+  const archive = await page.evaluate(() => {
+    localStorage.setItem('strling.labs.working.v1.regex', '{broken');
+    return localStorage.getItem('strling.labs.archive.v1');
+  });
+  await page.reload();
+  const save = page.locator('[data-output="workspace-status"]');
+  await expect(save).toContainText('could not be read');
+  await manage(page, 'Pattern').click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page
+    .getByRole('button', { name: 'Reset working storage', exact: true })
+    .click();
+  await expect(save).toHaveText('Saved in this browser');
+  await page.getByRole('checkbox', { name: 'Live', exact: true }).uncheck();
+  await page.evaluate(() => {
+    const write = Storage.prototype.setItem;
+    document.documentElement.dataset.testRefuseWorkspace = 'yes';
+    Storage.prototype.setItem = function (key, value) {
+      if (
+        key === 'strling.labs.working.v1.regex' &&
+        document.documentElement.dataset.testRefuseWorkspace
+      )
+        throw new DOMException('Test quota limit', 'QuotaExceededError');
+      write.call(this, key, value);
+    };
+  });
+  await edit(page, source(page), 'surviving working edit');
+  await expect(save).toContainText('could not save');
+  await expect(source(page)).toHaveText('surviving working edit');
+  await page.evaluate(() => {
+    delete document.documentElement.dataset.testRefuseWorkspace;
+  });
+  await manage(page, 'Pattern').click();
+  await page
+    .getByRole('button', { name: 'Retry autosave', exact: true })
+    .click();
+  await expect(save).toHaveText('Saved in this browser');
+  expect(
+    await page.evaluate(() => localStorage.getItem('strling.labs.archive.v1')),
+  ).toEqual(archive);
+  await page.reload();
+  await expect(source(page)).toHaveText('surviving working edit');
+  await expect(status(page)).toContainText('Working copy restored');
 });

@@ -172,11 +172,11 @@ export function summarizeTimings(values: number[]) {
   const sorted = [...values].sort((a, b) => a - b);
   const half = Math.floor(sorted.length / 2);
   return {
-    min: sorted[0],
+    min: sorted[0]!,
     median:
       sorted.length % 2
-        ? sorted[half]
+        ? sorted[half]!
         : (sorted[half - 1]! + sorted[half]!) / 2,
-    max: sorted.at(-1),
+    max: sorted.at(-1)!,
   };
 }

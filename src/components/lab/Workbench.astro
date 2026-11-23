@@ -1,9 +1,13 @@
 ---
 import Breadcrumbs from '@/components/Breadcrumbs.astro';
 import type { Crumb } from '@/components/Breadcrumbs.astro';
+import EditorManagement from './EditorManagement.astro';
 import { operations, runtimes, limits } from '@/lib/regex-lab/interactive';
 import { targets } from '@/lib/regex-lab/compiler';
-import type { LabMode } from '@/lib/regex-lab/session';
+import type { Expected, LabMode } from '@/lib/regex-lab/session';
+import pcre242License from '@/lib/regex-lab/wasm/PCRE2-10.42-LICENCE.txt?url&no-inline';
+import pcre243License from '@/lib/regex-lab/wasm/PCRE2-10.43-LICENCE.txt?url&no-inline';
+import pcre249License from '@/lib/regex-lab/wasm/PCRE2-10.49-LICENCE.txt?url&no-inline';
 import '@/styles/workbench.css';
 
 interface Props {
@@ -14,6 +18,22 @@ interface Props {
 
 const { mode, crumbs, title } = Astro.props;
 const isStrling = mode === 'strling';
+const expectationExamples = (
+  [
+    { kind: 'boolean', value: false },
+    {
+      kind: 'matches',
+      count: 2,
+      captures: [{ match: 1, key: 'name', value: 'alpha' }],
+    },
+    { kind: 'matches', count: 0 },
+    { kind: 'replacement', value: 'result' },
+    { kind: 'split', value: ['first', null, 'last'] },
+    { kind: 'error', value: 'compile-rejection' },
+  ] satisfies Expected[]
+)
+  .map((example) => JSON.stringify(example))
+  .join('\n');
 const tabs = [
   ['results', 'Results'],
   ['structure', isStrling ? 'Compiler' : 'Structure'],
@@ -34,21 +54,14 @@ const tabs = [
 <lab-workbench data-mode={mode}>
   <header class="container workbench-intro">
     <Breadcrumbs items={crumbs} />
-    <div class="workbench-heading">
-      <div>
-        <h1>{title}</h1>
-        <p>
-          {
-            isStrling
-              ? 'Compile semantic source and test the emitted pattern against your data.'
-              : 'Run regular expressions, inspect captures, and compare results across engines.'
-          }
-        </p>
-      </div>
-      <a class="workbench-link" href="/lab/guide/"
-        >Lab guide <span aria-hidden="true">↗</span></a
-      >
-    </div>
+    <h1>{title}</h1>
+    <p>
+      {
+        isStrling
+          ? 'Compile semantic source and test the emitted pattern against your data.'
+          : 'Run regular expressions, inspect captures, and compare results across engines.'
+      }
+    </p>
   </header>
   <noscript
     ><p class="container">
@@ -99,7 +112,7 @@ const tabs = [
                   maxlength="16"
                   spellcheck="false"
                   autocomplete="off"
-                  aria-describedby="workbench-flag-help"
+                  placeholder={[...runtimes.javascript.flags].join(' ')}
                 />
               </label>
             </>
@@ -120,21 +133,45 @@ const tabs = [
         <label class="workbench-check"
           ><input data-field="live" type="checkbox" /> Live</label
         >
-        <button type="button" data-action="stop" disabled>Stop</button>
-        <button type="button" class="workbench-primary" data-action="run"
-          >Run <kbd>Ctrl/⌘ ↵</kbd></button
+        <button
+          type="button"
+          class="workbench-toolbar-button"
+          data-action="tall"
+          aria-pressed="false"
+          aria-label="Tall editors"
+          title="Toggle tall editors"
         >
+          <svg viewBox="0 0 20 20" aria-hidden="true"
+            ><path d="M10 2v16M6 6l4-4 4 4m-8 8 4 4 4-4"></path></svg
+          > Tall
+        </button>
+        <button
+          type="button"
+          class="workbench-primary workbench-toolbar-button"
+          data-action="run"
+          data-execution-state="idle"
+          aria-label="Run"
+          title="Run (Ctrl/Command+Enter)"
+          aria-keyshortcuts="Control+Enter Meta+Enter"
+        >
+          <svg data-execution-icon="run" viewBox="0 0 20 20" aria-hidden="true"
+            ><path d="m6 3 11 7-11 7Z" fill="currentColor" stroke="none"
+            ></path></svg
+          >
+          <svg data-execution-icon="stop" viewBox="0 0 20 20" aria-hidden="true"
+            ><rect
+              x="4"
+              y="4"
+              width="12"
+              height="12"
+              rx="1"
+              fill="currentColor"
+              stroke="none"></rect></svg
+          >
+          <span data-output="execution-label">Run</span>
+        </button>
       </div>
     </div>
-    {
-      !isStrling && (
-        <p
-          id="workbench-flag-help"
-          class="workbench-note"
-          data-output="flags"
-        />
-      )
-    }
     <div class="workbench-replacement" data-output="replacement" hidden>
       <label
         >Replacement
@@ -151,42 +188,61 @@ const tabs = [
           <option value="native">Runtime template</option>
         </select>
       </label>
+      <p class="workbench-note">
+        Literal text is inserted verbatim. Runtime templates use the engine's
+        syntax, such as JavaScript <code>$&lt;name&gt;</code>, PCRE2{' '}
+        <code>$&#123;name&#125;</code>, or Python <code>\g&lt;name&gt;</code>.
+      </p>
     </div>
     <div class="workbench-editors">
       <section aria-labelledby="lab-source-heading" class="workbench-card">
         <header>
           <h2 id="lab-source-heading">{isStrling ? 'Source' : 'Pattern'}</h2>
-          <div class="workbench-inline">
-            <button type="button" data-action="find">Find / replace</button>
-            <button type="button" data-action="format" hidden
-              >Format JSON</button
-            >
-            <button type="button" data-action="copy-source">Copy</button>
-            <button
-              type="button"
-              data-action="resize-source"
-              aria-label="Tall source editor"
-              aria-pressed="false">Tall</button
-            >
+          <div class="workbench-inline workbench-editor-controls">
+            {
+              isStrling && (
+                <button type="button" data-action="format" hidden>
+                  Format JSON
+                </button>
+              )
+            }
+            <select
+              data-field="working-source"
+              aria-label={isStrling
+                ? 'Saved working source'
+                : 'Saved working pattern'}></select>
+            <div class="workbench-editor-actions">
+              <EditorManagement resource="working">
+                <button type="button" data-action="retry-workspace" hidden
+                  >Retry autosave</button
+                >
+                <button type="button" data-action="reset-workspace" hidden
+                  >Reset working storage</button
+                >
+              </EditorManagement>
+              <button type="button" data-action="copy-source">Copy</button>
+            </div>
           </div>
         </header>
         <div class="workbench-editor" data-editor="source"></div>
-        <footer data-output="source-meta"></footer>
+        <footer>
+          <span data-output="source-meta"></span>
+          <span data-output="workspace-status" role="status"></span>
+        </footer>
       </section>
       <section aria-labelledby="lab-subject-heading" class="workbench-card">
         <header>
-          <h2 id="lab-subject-heading">Subject</h2>
-          <div class="workbench-inline">
+          <h2 id="lab-subject-heading">Sample text</h2>
+          <div class="workbench-inline workbench-editor-controls">
             <select data-field="dataset" aria-label="Dataset"></select>
-            <button type="button" data-action="add-dataset">Add</button>
-            <button type="button" data-action="rename-dataset">Rename</button>
-            <button type="button" data-action="remove-dataset">Remove</button>
-            <button
-              type="button"
-              data-action="resize-subject"
-              aria-label="Tall subject editor"
-              aria-pressed="false">Tall</button
-            >
+            <div class="workbench-editor-actions">
+              <EditorManagement resource="dataset">
+                <select
+                  data-field="reuse-dataset"
+                  aria-label="Reuse saved dataset"></select>
+              </EditorManagement>
+              <button type="button" data-action="copy-dataset">Copy</button>
+            </div>
           </div>
         </header>
         <div class="workbench-editor" data-editor="subject"></div>
@@ -198,22 +254,53 @@ const tabs = [
     </div>
 
     <div class="workbench-investigation">
-      <div class="workbench-tabs" role="tablist" aria-label="Workbench tools">
-        {
-          tabs.map(([id, label], index) => (
-            <button
-              id={'lab-tab-' + id}
-              type="button"
-              role="tab"
-              aria-controls={'lab-panel-' + id}
-              aria-selected={index === 0 ? 'true' : 'false'}
-              tabindex={index === 0 ? 0 : -1}
-              data-tab={id}
+      <div class="workbench-tab-bar">
+        <div class="workbench-tabs" role="tablist" aria-label="Workbench tools">
+          {
+            tabs.map(([id, label], index) => (
+              <button
+                id={'lab-tab-' + id}
+                type="button"
+                role="tab"
+                aria-controls={'lab-panel-' + id}
+                aria-selected={index === 0 ? 'true' : 'false'}
+                tabindex={index === 0 ? 0 : -1}
+                data-tab={id}
+              >
+                {label}
+              </button>
+            ))
+          }
+        </div>
+        <div
+          class="workbench-tab-actions"
+          role="group"
+          aria-label="Selected tab actions"
+        >
+          <button
+            type="button"
+            data-action="tab-copy"
+            aria-label="Copy"
+            title="No output to copy"
+            disabled
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true"
+              ><rect x="6" y="6" width="11" height="11" rx="2"></rect><path
+                d="M13 3H5a2 2 0 0 0-2 2v8"></path></svg
             >
-              {label}
-            </button>
-          ))
-        }
+          </button>
+          <button
+            type="button"
+            data-action="tab-download"
+            aria-label="Download"
+            title="No output to download"
+            disabled
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true"
+              ><path d="M10 2v11m-4-4 4 4 4-4M3 13v4h14v-4"></path></svg
+            >
+          </button>
+        </div>
       </div>
       <section
         id="lab-panel-results"
@@ -222,66 +309,72 @@ const tabs = [
         aria-labelledby="lab-tab-results"
         data-panel="results"
       >
-        <div class="workbench-inline">
-          <button data-action="copy-result" type="button" disabled
-            >Copy result</button
-          >
-          <button data-action="export-result" type="button" disabled
-            >Download result</button
-          >
-        </div>
+        <p class="workbench-note">
+          Copy gives the current result JSON. Download includes the source, run
+          settings, and observation details.
+        </p>
         <p class="workbench-note" data-output="provenance" hidden></p>
-        <div data-output="matches"><p>Run a pattern to see the result.</p></div>
+        <div data-output="matches">
+          <p>Run to see matches or other output for the selected operation.</p>
+        </div>
         <details data-output="continuation-tools" hidden>
           <summary>Scan continuation</summary>
-          <div
-            class="workbench-inline"
-            data-output="checkpoint-controls"
-            hidden
-          >
-            <label
-              >Continue after match <select data-field="checkpoint-match"
-              ></select></label
+          <div class="workbench-disclosure-body">
+            <div
+              class="workbench-inline"
+              data-output="checkpoint-controls"
+              hidden
             >
-            <button type="button" data-action="record-cursor"
-              >Keep this boundary</button
+              <label
+                >Continue after match <select data-field="checkpoint-match"
+                ></select></label
+              >
+              <button type="button" data-action="record-cursor"
+                >Keep this boundary</button
+              >
+            </div>
+            <p class="workbench-note" data-output="continuation-status"></p>
+            <button type="button" data-action="resume-scan" hidden
+              >Resume saved scan</button
             >
           </div>
-          <p class="workbench-note" data-output="continuation-status"></p>
-          <button type="button" data-action="resume-scan" hidden
-            >Resume saved scan</button
-          >
         </details>
         <details data-output="extraction" hidden>
           <summary>Extract matches or captures</summary>
-          <div class="workbench-inline">
-            <label>
-              Value to extract
-              <select data-field="extraction-value"></select>
-            </label>
-            <button data-action="export-extraction" type="button">
-              Download extracted JSON
-            </button>
+          <div class="workbench-disclosure-body">
+            <div class="workbench-inline">
+              <label>
+                Value to extract
+                <select data-field="extraction-value"></select>
+              </label>
+              <button data-action="export-extraction" type="button">
+                Download extracted JSON
+              </button>
+            </div>
+            <p class="workbench-note">
+              Values follow match order. Null marks a group that did not
+              participate and an empty string marks a participating empty group.
+            </p>
+            <pre tabindex="0" data-output="extracted-values"></pre>
           </div>
-          <p class="workbench-note">
-            Values follow match order. Null marks a group that did not
-            participate and an empty string marks a participating empty group.
-          </p>
-          <pre tabindex="0" data-output="extracted-values"></pre>
         </details>
         <details data-output="result-details" hidden>
           <summary>Structured result</summary>
-          <div data-output="result-tree"></div>
-          <details>
-            <summary>Raw JSON</summary><pre
-              data-output="result-json"
-              tabindex="0">
-            </pre>
-          </details>
+          <div class="workbench-disclosure-body">
+            <div data-output="result-tree"></div>
+            <details>
+              <summary>Raw JSON</summary>
+              <div class="workbench-disclosure-body">
+                <pre data-output="result-json" tabindex="0"></pre>
+              </div>
+            </details>
+          </div>
         </details>
         <details data-output="origin-details" hidden>
           <summary>Generated pattern origin</summary>
-          <pre data-output="origin-json" tabindex="0"></pre>
+          <div class="workbench-disclosure-body">
+            <pre data-output="origin-json" tabindex="0"></pre>
+          </div>
         </details>
       </section>
       <section
@@ -308,19 +401,18 @@ const tabs = [
               <button data-action="run-artifact" type="button" disabled>
                 Run artifact
               </button>
-              <button data-action="copy-artifact" type="button" disabled>
-                Copy pattern
-              </button>
-              <button data-action="export-artifact" type="button" disabled>
-                Download artifact
-              </button>
               <button data-action="open-artifact" type="button" disabled>
-                Open in RegEx Lab
+                Open artifact and samples in RegEx Lab
               </button>
               <button data-action="open-with-cursor" type="button" hidden>
                 Open with sample and cursor in RegEx Lab
               </button>
             </div>
+            <p class="workbench-note">
+              Both handoffs carry the current datasets and compiler origin in
+              this tab. The cursor option also includes a saved scan boundary.
+              Execution waits for Run or Resume.
+            </p>
             <div data-output="artifact" />
           </section>
         )
@@ -386,9 +478,6 @@ const tabs = [
             >Add from result</button
           >
           <button data-action="run-tests" type="button">Run all</button>
-          <button data-action="export-tests" type="button"
-            >Download tests</button
-          >
           <label class="workbench-file"
             >Import tests <input
               type="file"
@@ -421,9 +510,6 @@ const tabs = [
           >
           <button data-action="next-event" type="button" disabled
             >Next step</button
-          >
-          <button data-action="export-trace" type="button" disabled
-            >Download trace</button
           >
         </div>
         <div data-output="trace"></div>
@@ -464,9 +550,6 @@ const tabs = [
               </button>
             )
           }
-          <button data-action="export-comparison" type="button" disabled
-            >Download comparison</button
-          >
         </div>
         <p class="workbench-note">
           Each comparison uses current datasets and settings on both sides and
@@ -483,34 +566,11 @@ const tabs = [
         hidden
       >
         <div class="workbench-inline">
-          <label
-            >Repetitions <input
-              data-field="repeats"
-              type="number"
-              min="1"
-              max="8"
-              value="5"
-            /></label
-          >
-          <label
-            >Subject size <select data-field="size"
-              ><option value="1">Current</option><option value="0.5"
-                >Half prefix</option
-              ><option value="2">Doubled</option></select
-            ></label
-          >
-          <label class="workbench-check"
-            ><input type="checkbox" data-field="benchmark-baseline" /> Include baseline
-            revision</label
-          >
           <button data-action="benchmark" type="button">Measure</button>
-          <button data-action="export-benchmark" type="button" disabled
-            >Download timings</button
-          >
         </div>
         <p class="workbench-note">
-          One unmeasured warmup per pattern. Worker and end-to-end timings
-          describe this browser and run.
+          One warmup and nine measured runs of the current pattern on the full
+          active sample.
         </p>
         <div data-output="performance"></div>
       </section>
@@ -550,69 +610,77 @@ const tabs = [
             >Clear local archive</button
           >
         </div>
-        <fieldset>
-          <legend>Include in downloaded session</legend>
-          <div class="workbench-inline">
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-active-source" /> Active source</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-samples" /> Sample data</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-tests" /> Tests</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-observations" /> Recorded
-              outputs</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-source" /> Original STRling
-              source of generated patterns</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-continuation" /> Saved scan
-              cursor</label
-            >
-          </div>
-          <p class="workbench-note">
-            A cursor needs active source, sample data, and original source for a
-            transferred artifact. Tests and recorded outputs may also contain
-            subject or source text. Links carry only settings and open with
-            blank source and subject.
-          </p>
-          <div class="workbench-inline">
-            <button data-action="share" type="button">Copy settings link</button
-            >
-            <button data-action="export-session" type="button"
-              >Download session</button
-            >
-            <label class="workbench-file"
-              >Import session <input
-                type="file"
-                data-field="import-session"
-                accept=".json,application/json"
-              /></label
-            >
-          </div>
-          <label data-output="share" hidden
-            >Share URL <input
-              type="url"
-              data-field="share-url"
-              readonly
+        <p class="workbench-note">
+          Download includes the current session's source, samples, tests, and
+          available recorded outputs. Use Copy for a settings-only link.
+        </p>
+        <div class="workbench-inline">
+          <label class="workbench-file"
+            >Import session <input
+              type="file"
+              data-field="import-session"
+              accept=".json,application/json"
             /></label
           >
-        </fieldset>
+        </div>
+        <label data-output="share" hidden
+          >Share URL <input type="url" data-field="share-url" readonly /></label
+        >
         <details data-output="recording" hidden>
           <summary>Previously recorded outputs</summary>
-          <p class="workbench-note">
-            Restoring a revision makes these outputs available for inspection.
-            Run starts a new observation with the current runtime and inputs.
-          </p>
-          <pre data-output="recording-json" tabindex="0"></pre>
+          <div class="workbench-disclosure-body">
+            <p class="workbench-note">
+              Restoring a revision makes these outputs available for inspection.
+              Run starts a new observation with the current runtime and inputs.
+            </p>
+            <pre data-output="recording-json" tabindex="0"></pre>
+          </div>
         </details>
       </section>
     </div>
+    <details class="workbench-reference">
+      <summary>Runtime limits and licenses</summary>
+      <div class="workbench-disclosure-body">
+        <p>
+          Runs use local browser workers with time and output limits. Python
+          downloads its runtime from this site the first time it is used. Match
+          and capture ranges include the start and exclude the end.
+        </p>
+        <ul>
+          <li>
+            JavaScript uses the browser's RegExp engine and reports UTF-16
+            offsets. Split includes captured delimiters using native <code
+              >String.split</code
+            >.
+          </li>
+          <li>
+            PCRE2 reports UTF-8 byte offsets. The <code>p</code> flag enables Unicode
+            properties. Interpreter stepping is available for PCRE2. Native structure
+            inspection is partial.
+          </li>
+          <li>
+            Python <code>re</code> reports Unicode code-point offsets. Bytes mode
+            encodes text as UTF-8, reports byte offsets and displays values in hex.
+            A byte span that splits a Unicode character has no editor range.
+          </li>
+        </ul>
+        <p>
+          PCRE2 license downloads for <a href={pcre242License} download
+            >PCRE2 10.42</a
+          >,{' '}
+          <a href={pcre243License} download>PCRE2 10.43</a>, and{' '}
+          <a href={pcre249License} download>PCRE2 10.49</a>. Python runtime
+          source and notices are available from{' '}
+          <a href="https://github.com/pyodide/pyodide">Pyodide</a>.
+        </p>
+        <p>
+          For certified engine evidence, see <a href="/regex/compatibility/"
+            >RegEx Compatibility Check</a
+          >. Lab results record local execution for the selected input and
+          runtime.
+        </p>
+      </div>
+    </details>
   </section>
   <dialog class="workbench-dialog" data-dialog="test">
     <form data-form="test">
@@ -654,9 +722,27 @@ const tabs = [
           rows="5"
           spellcheck="false"></textarea></label
       >
-      <p class="workbench-note">
-        <a href="/lab/guide/#test-expectations">Test expectation formats</a>
-      </p>
+      <details class="workbench-reference">
+        <summary>Test expectation formats</summary>
+        <div class="workbench-disclosure-body">
+          <p>
+            Enter one JSON object per test. Choose the example for your
+            operation.
+          </p>
+          <pre><code>{expectationExamples}</code></pre>
+          <p>
+            Use a numbered or named capture key. A <code>null</code> capture value
+            expects a defined group that did not participate.
+          </p>
+          <p>
+            Error categories include <code>compile-rejection</code>,{' '}
+            <code>runtime-error</code>, <code>resource-terminated</code>,{' '}
+            <code>unsupported-operation</code>, and <code
+              >infrastructure-failure</code
+            >.
+          </p>
+        </div>
+      </details>
       <p role="alert" data-output="test-error"></p>
       <div class="workbench-inline">
         <button type="submit" class="workbench-primary">Save test</button>

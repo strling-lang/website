@@ -35,9 +35,9 @@ import {
   assess,
   compareObservations,
   expectedFrom,
-  summarizeTimings,
 } from '../lib/regex-lab/experiments';
 import {
+  interactiveIdentity,
   isPcreRuntime,
   limits,
   runRequest,
@@ -48,12 +48,15 @@ import {
 } from '../lib/regex-lab/interactive';
 import { coordinateMap, editorRange } from '../lib/regex-lab/offsets';
 import {
-  bundleSession,
+  defaultSampleName,
+  exportSession,
   importBundle,
   importFragment,
   initialSession,
   maxDatasets,
+  maxSessionFileBytes,
   maxTests,
+  readSession,
   readTests,
   SessionArchive,
   shareFragment,
@@ -70,6 +73,26 @@ import {
   sourceSpan,
   type StructureNode,
 } from '../lib/regex-lab/structure';
+import type { PatternInspection } from '../lib/regex-lab/inspection';
+import {
+  WorkspaceStore,
+  maxWorkingSources,
+  newWorkspace,
+  workingSource,
+  type Workspace,
+  type WorkingSource,
+} from '../lib/regex-lab/workspace';
+import {
+  displayTiming,
+  formatDuration,
+  interruptTiming,
+  runTimingExperiment,
+  seriesStats,
+  timingRepetitions,
+  timingSchema,
+  type TimingExperiment,
+} from '../lib/regex-lab/timing';
+import { estimateTimerResolution } from '../lib/regex-lab/timer-resolution';
 import type { TraceObservation } from '../lib/regex-lab/trace';
 import { LabEditor } from './labEditor';
 import {
@@ -87,11 +110,12 @@ import {
 } from './labRendering';
 
 const transferKey = 'strling.labs.artifact.v1';
+const stopRevealDelayMs = 250;
 const assertFile = async (input: HTMLInputElement) => {
   const file = input.files?.[0];
   input.value = '';
   if (!file) return;
-  if (file.size > 2_000_000)
+  if (file.size > maxSessionFileBytes)
     throw new Error('The import exceeds the 2 MB file limit.');
   return await file.text();
 };
@@ -105,6 +129,7 @@ class LabWorkbench extends HTMLElement {
   #compiler = new LabCompiler();
   #compilerTools = new LabCompilerTools();
   #timer?: ReturnType<typeof setTimeout>;
+  #stopRevealTimer?: ReturnType<typeof setTimeout>;
   #active?: AbortController;
   #events?: AbortController;
   #trust = true;
@@ -120,10 +145,20 @@ class LabWorkbench extends HTMLElement {
   #testOutcomes = new Map<string, string[]>();
   #archive: SavedSession[] = [];
   #comparison?: object;
-  #benchmark?: object;
+  #benchmark?: TimingExperiment;
   #sourceMap?: ReadonlyMap<number, number>;
   #hoverTree?: StructureNode | null;
   #sourceDrafts = new Map<Session['format'], string>();
+  #workspace!: Workspace;
+  #workspaceStore?: WorkspaceStore;
+  #workingId?: string;
+  #saveTimer?: ReturnType<typeof setTimeout>;
+  #workspaceError = '';
+  #workspaceDirty = false;
+  #workspaceSaved = false;
+  #inspection?: { key: string; value: PatternInspection };
+  #structureOutput?: object;
+  #semanticOutput?: { copy: string; label: string; evidence: JsonObject };
 
   connectedCallback() {
     if (this.#events) return;
@@ -132,6 +167,31 @@ class LabWorkbench extends HTMLElement {
     this.#session = initialSession(this.#mode);
     this.#trust = true;
     let initialMessage: string | undefined;
+    const starter = workingSource(this.#session, defaultSampleName);
+    this.#workspace = newWorkspace(this.#mode, starter);
+    this.#workingId = starter.id;
+    try {
+      this.#workspaceStore = new WorkspaceStore(localStorage, this.#mode);
+      const restored = this.#workspaceStore.load();
+      if (restored) {
+        this.#workspace = restored;
+        this.#workspaceSaved = true;
+        this.#workingId = restored.active;
+        const source = restored.sources.find(
+          (item) => item.id === restored.active,
+        )!;
+        this.#session = structuredClone(source.session);
+        this.#sourceDrafts = new Map(
+          Object.entries(source.drafts) as [Session['format'], string][],
+        );
+        this.#trust = false;
+        initialMessage =
+          'Working copy restored. Select Run or enable Live to execute it.';
+      }
+    } catch (error) {
+      this.#workspaceError = shortError(error);
+    }
+    let adopted = false;
     try {
       const incoming =
         location.hash === '#lab-transfer'
@@ -139,7 +199,10 @@ class LabWorkbench extends HTMLElement {
           : this.#takeShareLink();
       if (incoming) {
         this.#validateMode(incoming);
+        this.#adoptWorking(incoming);
         this.#session = incoming;
+        this.#sourceDrafts.clear();
+        adopted = true;
         this.#trust = false;
         initialMessage =
           'Session loaded. Select Run or enable Live to execute it.';
@@ -199,6 +262,14 @@ class LabWorkbench extends HTMLElement {
         const target = (event.target as HTMLElement).closest<HTMLButtonElement>(
           'button',
         );
+        if (
+          target?.dataset.action &&
+          target.closest<HTMLDetailsElement>('.workbench-menu')
+        ) {
+          const menu = target.closest<HTMLDetailsElement>('.workbench-menu')!;
+          menu.open = false;
+          menu.querySelector('summary')?.focus();
+        }
         if (target?.dataset.tab) this.#showTab(target.dataset.tab);
         const action = target?.dataset.action;
         if (action) void this.#eventAction(action);
@@ -210,6 +281,7 @@ class LabWorkbench extends HTMLElement {
       (event) => {
         const field = (event.target as HTMLElement).dataset.field;
         if (field === 'flags' || field === 'replacement') this.#change(field);
+        if (field === 'name') this.#queueWorkspaceSave();
       },
       { signal },
     );
@@ -224,11 +296,29 @@ class LabWorkbench extends HTMLElement {
     this.addEventListener('keydown', (event) => this.#keydown(event), {
       signal,
     });
+    document.addEventListener(
+      'click',
+      (event) => {
+        if (!(event.target instanceof Element)) return;
+        const control = event.target.closest(
+          'summary, button[data-action], select[data-field="reuse-dataset"]',
+        );
+        for (const menu of this.querySelectorAll<HTMLDetailsElement>(
+          '.workbench-menu[open]',
+        )) {
+          if (!menu.contains(control)) menu.open = false;
+        }
+      },
+      { capture: true, signal },
+    );
     this.querySelector<HTMLFormElement>('[data-form="test"]')!.addEventListener(
       'submit',
       (event) => this.#saveTest(event),
       { signal },
     );
+    window.addEventListener('pagehide', () => this.#flushWorkspace(), {
+      signal,
+    });
     window.addEventListener('storage', () => this.#readArchive(false), {
       signal,
     });
@@ -255,10 +345,11 @@ class LabWorkbench extends HTMLElement {
     this.#checked('live').checked = this.#trust && this.#mode === 'regex';
     this.#readArchive(false);
     this.#sync();
-    this.#update(initialMessage, true);
+    this.#update(initialMessage, true, adopted);
   }
 
   disconnectedCallback() {
+    if (this.#workspaceDirty) this.#flushWorkspace();
     this.#events?.abort();
     this.#events = undefined;
     this.#cancel();
@@ -337,9 +428,10 @@ class LabWorkbench extends HTMLElement {
       session.datasets.map(({ name }, index) => [String(index), name]),
       String(session.selected),
     );
-    this.#action('remove-dataset')!.disabled = session.datasets.length < 2;
-    this.#action('add-dataset')!.disabled =
-      session.datasets.length >= maxDatasets;
+    this.#action('delete-dataset')!.disabled = session.datasets.length < 2;
+    const datasetsFull = session.datasets.length >= maxDatasets;
+    this.#action('new-dataset')!.disabled = datasetsFull;
+    this.#action('duplicate-dataset')!.disabled = datasetsFull;
     const origin = this.#output('origin-details');
     origin.hidden = !session.origin;
     this.#output('origin-json').textContent = session.origin
@@ -352,27 +444,34 @@ class LabWorkbench extends HTMLElement {
     this.#renderSettings();
     this.#renderTests();
     this.#renderArchive();
+    this.#renderWorkspace();
   }
 
   #renderSettings() {
     const { format, source, runtime, target, run } = this.#session;
-    this.#action('format')!.hidden =
-      format === 'regex' || (format === 'semantic' && !toolsIdentity.sha256);
-    this.#action('format')!.textContent =
-      format === 'simply' ? 'Format JSON' : 'Format STRling';
+    const formatButton = this.#action('format');
+    if (formatButton) {
+      formatButton.hidden = format === 'semantic' && !toolsIdentity.sha256;
+      formatButton.textContent =
+        format === 'simply' ? 'Format JSON' : 'Format STRling';
+    }
     const replacement =
       run.operation === 'replace' || run.operation === 'replace-all';
     this.#output('replacement').hidden = !replacement;
-    const detail = this.#output('flags');
-    if (detail) {
-      const description = isPcreRuntime(runtime)
-        ? ' · UTF-8 mode · p enables Unicode properties' +
-          (run.pcreNewline ? ' · all Unicode newlines' : '')
-        : '';
-      detail.textContent =
-        'Raw pattern source · Flags ' +
-        [...runtimes[runtime].flags].join(' ') +
-        description;
+    if (format === 'regex') {
+      const flags = this.#field<HTMLInputElement>('flags');
+      flags.placeholder = [...runtimes[runtime].flags].join(' ');
+      const description = [
+        `Enter flags without spaces. Available flags are ${flags.placeholder}.`,
+      ];
+      if (isPcreRuntime(runtime)) {
+        description.push(
+          'PCRE2 uses UTF-8. The p flag enables Unicode properties.',
+        );
+        if (run.pcreNewline)
+          description.push('All Unicode newlines are enabled.');
+      }
+      flags.title = description.join(' ');
     }
     this.#output('source-meta').textContent =
       (format === 'regex'
@@ -408,6 +507,350 @@ class LabWorkbench extends HTMLElement {
         ? 'Open the emitted pattern in RegEx Lab to explicitly choose PCRE2 instrumentation for an exploratory run.'
         : 'This runtime has no step trace. Use Structure or Compiler to inspect the parsed pattern.';
     this.#action('trace')!.disabled = !traceAvailable;
+  }
+
+  #renderWorkspace() {
+    const options: [string, string][] = this.#workspace.sources.map(
+      ({ id, label }) => [id, label],
+    );
+    if (!this.#workingId) options.unshift(['', 'Temporary working copy']);
+    selectOptions(
+      this.#field('working-source'),
+      options,
+      this.#workingId ?? '',
+    );
+    const full = this.#workspace.sources.length >= maxWorkingSources;
+    this.#action('new-working')!.disabled = full;
+    this.#action('duplicate-working')!.disabled = full;
+    this.#action('rename-working')!.disabled = !this.#workingId;
+    this.#action('delete-working')!.disabled = !this.#workingId;
+    const reusable: [string, string][] = this.#workspace.sources.flatMap(
+      (source) =>
+        source.id === this.#workingId
+          ? []
+          : source.session.datasets.map((dataset, index): [string, string] => [
+              source.id + ':' + index,
+              source.label + ' · ' + dataset.name,
+            ]),
+    );
+    const reuse = this.#field<HTMLSelectElement>('reuse-dataset');
+    selectOptions(reuse, [['', 'Choose a saved dataset'], ...reusable], '');
+    reuse.disabled =
+      !reusable.length || this.#session.datasets.length >= maxDatasets;
+    this.#showWorkspaceStatus();
+  }
+
+  #showWorkspaceStatus() {
+    this.#action('retry-workspace')!.hidden =
+      !this.#workspaceError || Boolean(this.#workspaceStore?.needsReset);
+    this.#action('reset-workspace')!.hidden = !this.#workspaceStore?.needsReset;
+    const status = this.#output('workspace-status');
+    const message =
+      this.#workspaceError ||
+      (this.#workspaceDirty
+        ? 'Saving locally…'
+        : this.#workspaceSaved
+          ? 'Saved in this browser'
+          : 'Working edits autosave in this browser');
+    if (status.textContent !== message) status.textContent = message;
+  }
+
+  #captureWorking() {
+    const item = this.#workspace.sources.find(
+      ({ id }) => id === this.#workingId,
+    );
+    if (!item) return;
+    const { drafts, ...session } = this.#snapshot(false);
+    item.session = structuredClone({ ...session, recorded: undefined });
+    item.drafts = drafts ?? {};
+  }
+
+  #queueWorkspaceSave() {
+    this.#workspaceDirty = true;
+    clearTimeout(this.#saveTimer);
+    this.#saveTimer = setTimeout(() => this.#flushWorkspace(), 380);
+    this.#showWorkspaceStatus();
+  }
+
+  #flushWorkspace() {
+    clearTimeout(this.#saveTimer);
+    if (!this.#workspaceDirty) return;
+    try {
+      if (!this.#workingId)
+        throw new Error(
+          'Working source limit reached. Export this temporary copy before switching.',
+        );
+      if (!this.#workspaceStore?.ready) {
+        this.#workspaceStore = new WorkspaceStore(localStorage, this.#mode);
+        if (this.#workspaceStore.load()) {
+          this.#workspaceStore = undefined;
+          throw new Error(
+            'Working storage already exists. Export these edits before reloading.',
+          );
+        }
+      }
+      this.#captureWorking();
+      this.#workspaceStore.save(this.#workspace);
+      this.#workspaceDirty = false;
+      this.#workspaceSaved = true;
+      this.#workspaceError = '';
+      this.#showWorkspaceStatus();
+    } catch (error) {
+      this.#workspaceError = shortError(error);
+      this.#showWorkspaceStatus();
+    }
+  }
+
+  #adoptWorking(session: Session) {
+    if (this.#workspace.sources.length >= maxWorkingSources) {
+      this.#workingId = undefined;
+      this.#workspaceError =
+        'Working source limit reached. Export this temporary copy before switching.';
+      return;
+    }
+    const item = workingSource(session, session.name);
+    this.#workspace.sources.push(item);
+    this.#workspace.active = item.id;
+    this.#workingId = item.id;
+  }
+
+  #selectWorking(id: string) {
+    const item = this.#workspace.sources.find((source) => source.id === id);
+    if (!item || id === this.#workingId) return;
+    if (
+      !this.#workingId &&
+      !confirm(
+        'This temporary copy has not been autosaved. Switch working sources?',
+      )
+    ) {
+      this.#renderWorkspace();
+      return;
+    }
+    this.#applySession(structuredClone(item.session), false, item);
+  }
+
+  #reuseDataset(value: string) {
+    const menu =
+      this.#field('reuse-dataset').closest<HTMLDetailsElement>(
+        '.workbench-menu',
+      );
+    if (menu) {
+      menu.open = false;
+      menu.querySelector('summary')?.focus();
+    }
+    if (!value || this.#session.datasets.length >= maxDatasets) return;
+    const delimiter = value.lastIndexOf(':');
+    const source = this.#workspace.sources.find(
+      ({ id }) => id === value.slice(0, delimiter),
+    );
+    const dataset =
+      source?.session.datasets[Number(value.slice(delimiter + 1))];
+    if (!dataset) return;
+    this.#addDataset({ ...dataset });
+  }
+
+  #addDataset(dataset: Session['datasets'][number]) {
+    if (this.#session.datasets.length >= maxDatasets) return;
+    this.#session.selected = this.#session.datasets.push(dataset) - 1;
+    this.#subject.reset(dataset.text);
+    this.#sync();
+    this.#update();
+  }
+
+  #manageWorking(action: string) {
+    const resource = this.#mode === 'regex' ? 'pattern' : 'source';
+    const title = resource === 'pattern' ? 'Pattern name' : 'Source name';
+    const item = this.#workspace.sources.find(
+      ({ id }) => id === this.#workingId,
+    );
+    if (action === 'delete-working') {
+      if (
+        !item ||
+        !confirm(
+          `Delete this working ${resource} and its datasets? Saved session revisions are kept.`,
+        )
+      )
+        return;
+      this.#workspace.sources = this.#workspace.sources.filter(
+        ({ id }) => id !== item.id,
+      );
+      const next = this.#workspace.sources[0];
+      if (next) this.#applySession(structuredClone(next.session), false, next);
+      else this.#applySession(initialSession(this.#mode), true);
+      return;
+    }
+    if (action === 'rename-working') {
+      if (!item) return;
+      const label = prompt(title, item.label)?.trim().slice(0, 80);
+      if (!label) return;
+      item.label = label;
+      this.#renderWorkspace();
+      this.#queueWorkspaceSave();
+      return;
+    }
+    if (this.#workspace.sources.length >= maxWorkingSources) return;
+    const duplicate = action === 'duplicate-working';
+    const suggested = duplicate
+      ? (item?.label ?? 'Working copy').slice(0, 75) + ' copy'
+      : `New ${resource}`;
+    const label = prompt(title, suggested)?.trim().slice(0, 80);
+    if (!label) return;
+    const { drafts, ...session } = duplicate
+      ? structuredClone(this.#snapshot(false))
+      : initialSession(this.#mode);
+    session.id = crypto.randomUUID();
+    session.name = label;
+    session.recorded = undefined;
+    if (!duplicate) {
+      session.format = this.#session.format;
+      session.source = '';
+      session.datasets = [{ name: defaultSampleName, text: '' }];
+    }
+    const next = workingSource(session, label);
+    next.drafts = drafts ?? {};
+    this.#workspace.sources.push(next);
+    this.#applySession(session, false, next);
+  }
+
+  #tabActions() {
+    const dataActions = (
+      copyLabel: string,
+      downloadLabel: string,
+      filename: string,
+      data: object,
+      copyText?: string,
+      exported = () => data,
+    ) => ({
+      copyLabel,
+      downloadLabel,
+      copy: () => this.#copy(copyText ?? JSON.stringify(data, null, 2)),
+      download: () => download(filename, JSON.stringify(exported(), null, 2)),
+    });
+    switch (this.#tab) {
+      case 'results':
+        return (
+          this.#result &&
+          dataActions(
+            'Copy result JSON',
+            'Download result with source and run settings',
+            'lab-result.json',
+            this.#result,
+            undefined,
+            () => this.#observation(),
+          )
+        );
+      case 'structure':
+        if (this.#mode === 'strling')
+          return (
+            this.#compilation &&
+            dataActions(
+              'Copy compiler response',
+              'Download compiler evidence',
+              'strling-compiler.json',
+              this.#compilation,
+            )
+          );
+        return (
+          this.#structureOutput &&
+          dataActions(
+            'Copy structure data',
+            'Download structure data',
+            'lab-structure.json',
+            this.#structureOutput,
+          )
+        );
+      case 'artifact': {
+        const generated = generatedPattern(this.#compilation);
+        return (
+          generated &&
+          this.#compilation &&
+          dataActions(
+            'Copy pattern',
+            'Download artifact',
+            'strling-artifact.json',
+            this.#compilation,
+            generated.pattern,
+          )
+        );
+      }
+      case 'compiler-tools':
+        return (
+          this.#semanticOutput &&
+          dataActions(
+            this.#semanticOutput.label,
+            'Download canonical tool evidence',
+            'strling-semantic-tools.json',
+            this.#semanticOutput.evidence,
+            this.#semanticOutput.copy,
+          )
+        );
+      case 'tests':
+        return this.#session.tests.length
+          ? dataActions(
+              'Copy test definitions',
+              'Download tests with their subjects and expectations',
+              'lab-tests.json',
+              { schema: 'strling-lab-tests-v1', tests: this.#session.tests },
+            )
+          : undefined;
+      case 'trace':
+        return (
+          this.#trace &&
+          dataActions(
+            'Copy trace JSON',
+            'Download trace',
+            'pcre2-trace.json',
+            this.#trace,
+          )
+        );
+      case 'compare':
+        return (
+          this.#comparison &&
+          dataActions(
+            'Copy comparison JSON',
+            'Download comparison with its witness inputs',
+            'lab-comparison.json',
+            this.#comparison,
+          )
+        );
+      case 'performance':
+        return (
+          this.#benchmark &&
+          dataActions(
+            'Copy timing JSON',
+            'Download timings',
+            'lab-timing.json',
+            this.#benchmark,
+          )
+        );
+      case 'sessions':
+        return {
+          copyLabel: 'Copy settings link',
+          downloadLabel: 'Download session',
+          copy: () => this.#sessionAction('share'),
+          download: () => this.#sessionAction('export-session'),
+        };
+    }
+  }
+
+  #renderTabActions() {
+    const actions = this.#active ? undefined : this.#tabActions();
+    for (const [key, label] of [
+      ['copy', actions?.copyLabel],
+      ['download', actions?.downloadLabel],
+    ] as const) {
+      const control = this.#action('tab-' + key)!;
+      control.disabled = !label;
+      control.setAttribute(
+        'aria-label',
+        label ?? (key === 'copy' ? 'Copy' : 'Download'),
+      );
+      control.title =
+        label ??
+        (this.#active
+          ? 'Wait for the active operation'
+          : 'No output for this tab yet');
+    }
   }
 
   #renderArchive() {
@@ -472,16 +915,28 @@ class LabWorkbench extends HTMLElement {
     for (const panel of this.querySelectorAll<HTMLElement>('[data-panel]'))
       panel.hidden = panel.dataset.panel !== tab;
     if (tab === 'structure') this.#renderStructure();
+    this.#renderTabActions();
   }
 
   #keydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      const menu = (event.target as HTMLElement).closest<HTMLDetailsElement>(
+        '.workbench-menu[open]',
+      );
+      if (menu) {
+        menu.open = false;
+        menu.querySelector('summary')?.focus();
+        event.preventDefault();
+        return;
+      }
+    }
     if (
       event.key === 'Enter' &&
       (event.ctrlKey || event.metaKey) &&
       !(event.target as HTMLElement).closest('dialog')
     ) {
       event.preventDefault();
-      void this.#eventAction('run');
+      void this.#runExplicitly();
       return;
     }
     const target = (event.target as HTMLElement).closest<HTMLButtonElement>(
@@ -511,10 +966,47 @@ class LabWorkbench extends HTMLElement {
     this.#timer = undefined;
     this.#active?.abort();
     this.#active = undefined;
-    this.#action('stop')!.disabled = true;
+    this.#interruptTiming();
+    this.#resetExecutionControl();
   }
 
-  #update(message?: string, keepRecording = false) {
+  get #canStop() {
+    return (
+      this.#active !== undefined &&
+      !this.#active.signal.aborted &&
+      this.#stopRevealTimer === undefined
+    );
+  }
+
+  #resetExecutionControl() {
+    clearTimeout(this.#stopRevealTimer);
+    this.#stopRevealTimer = undefined;
+    this.#renderExecutionControl();
+  }
+
+  #renderExecutionControl() {
+    const canStop = this.#canStop;
+    const state = canStop ? 'busy' : 'idle';
+    const control = this.#action('run')!;
+    if (control.dataset.executionState !== state) {
+      const label = canStop ? 'Stop' : 'Run';
+      control.setAttribute('aria-label', label);
+      control.title = canStop
+        ? 'Stop and pause Live'
+        : 'Run (Ctrl/Command+Enter)';
+      this.#output('execution-label').textContent = label;
+      control.dataset.executionState = state;
+    }
+    this.#renderTabActions();
+  }
+
+  async #runExplicitly() {
+    this.#trust = true;
+    this.#showTab('results');
+    await this.#perform((signal) => this.#run(signal, true));
+  }
+
+  #update(message?: string, keepRecording = false, persist = true) {
     this.#cancel();
     this.#result = undefined;
     this.#lastScan = undefined;
@@ -525,12 +1017,13 @@ class LabWorkbench extends HTMLElement {
     this.#sourceMap = undefined;
     this.#hoverTree = undefined;
     this.#output('compiler-tools')?.replaceChildren();
-    this.#comparison = undefined;
+    this.#semanticOutput = undefined;
+    if (this.#inspection?.key !== this.#inspectionKey())
+      this.#inspection = undefined;
+    this.#structureOutput = undefined;
+    this.#invalidateComparison();
     this.#benchmark = undefined;
-    this.#output('comparison').replaceChildren();
     this.#output('performance').replaceChildren();
-    this.#action('export-comparison')!.disabled = true;
-    this.#action('export-benchmark')!.disabled = true;
     if (!keepRecording) {
       this.#session.recorded = undefined;
       this.#output('recording').hidden = true;
@@ -539,9 +1032,12 @@ class LabWorkbench extends HTMLElement {
     this.#renderResult();
     this.#renderTrace();
     this.#renderTests();
+    this.#source.highlightSource();
     this.#source.report([]);
     this.#artifact();
     if (this.#tab === 'structure') this.#renderStructure();
+    this.#renderTabActions();
+    if (persist) this.#queueWorkspaceSave();
     this.#say(
       message ??
         (this.#trust
@@ -565,13 +1061,20 @@ class LabWorkbench extends HTMLElement {
     this.#cancel();
     const controller = new AbortController();
     this.#active = controller;
-    this.#action('stop')!.disabled = false;
+    this.#stopRevealTimer = setTimeout(() => {
+      if (this.#active !== controller) return;
+      this.#stopRevealTimer = undefined;
+      this.#renderExecutionControl();
+    }, stopRevealDelayMs);
+    this.#renderExecutionControl();
     const deadline = setTimeout(() => {
       controller.abort();
-      if (this.#active === controller)
+      if (this.#active === controller) {
+        this.#resetExecutionControl();
         this.#say(
           'The overall run reached its 30-second limit and was stopped.',
         );
+      }
     }, 30_000);
     try {
       await action(controller.signal);
@@ -581,7 +1084,7 @@ class LabWorkbench extends HTMLElement {
       clearTimeout(deadline);
       if (this.#active === controller) {
         this.#active = undefined;
-        this.#action('stop')!.disabled = true;
+        this.#resetExecutionControl();
       }
     }
   }
@@ -615,6 +1118,7 @@ class LabWorkbench extends HTMLElement {
     const session = this.#session;
     const panel = this.#output('compiler-tools');
     panel.replaceChildren();
+    this.#semanticOutput = undefined;
     this.#showTab('compiler-tools');
     this.#say('Running canonical ' + operation + '…');
     if (operation === 'format') {
@@ -643,10 +1147,15 @@ class LabWorkbench extends HTMLElement {
           const message = String(diagnostic?.message);
           panel.append(
             span
-              ? button(message, () => this.#selectSource(span))
+              ? button(message, () => this.#highlightSource(span))
               : node('p', message),
           );
         }
+        this.#semanticOutput = {
+          label: 'Copy formatter diagnostics',
+          copy: JSON.stringify(result, null, 2),
+          evidence: result,
+        };
         panel.append(details('Canonical diagnostics', raw(diagnostics)));
         this.#say('The canonical formatter rejected the source.');
         return;
@@ -670,6 +1179,11 @@ class LabWorkbench extends HTMLElement {
             : 'The source is already canonical.',
         ),
       );
+      this.#semanticOutput = {
+        label: 'Copy formatted STRling',
+        copy: result.text,
+        evidence: result,
+      };
       if (!changed) this.#say('The source is already canonical.');
       return;
     }
@@ -748,6 +1262,11 @@ class LabWorkbench extends HTMLElement {
         findings.append(row);
       }
       if (findings.childElementCount) panel.append(findings);
+      this.#semanticOutput = {
+        label: 'Copy canonical explanation JSON',
+        copy: JSON.stringify(result, null, 2),
+        evidence: result,
+      };
       panel.append(details('Canonical explanation evidence', raw(result)));
       this.#say('Canonical search explanation · ' + summary);
       return;
@@ -776,11 +1295,6 @@ class LabWorkbench extends HTMLElement {
     if (issues.childElementCount) panel.append(issues);
     if (converted !== undefined) {
       panel.append(details('Converted source', node('pre', converted)));
-      panel.append(
-        button('Copy converted source', () => {
-          void this.#copy(converted);
-        }),
-      );
       if (result.status === 'exact' && converted.length <= limits.pattern) {
         const format =
           destination === 'semantic_strling' ? 'semantic' : 'simply';
@@ -797,6 +1311,14 @@ class LabWorkbench extends HTMLElement {
         );
       }
     }
+    this.#semanticOutput = {
+      label:
+        converted === undefined
+          ? 'Copy conversion evidence'
+          : 'Copy converted source',
+      copy: converted ?? JSON.stringify(result, null, 2),
+      evidence: result,
+    };
     panel.append(details('Canonical conversion evidence', raw(result)));
     this.#say('Canonical conversion · ' + String(result.status));
   }
@@ -838,15 +1360,23 @@ class LabWorkbench extends HTMLElement {
       : coordinateMap(this.#session.source, unit);
   }
 
-  #selectSource(span: NonNullable<StructureNode['range']>, focus = true) {
-    const range = editorRange(
-      span,
-      this.#session.source.length,
-      span.unit === 'utf16-code-units'
-        ? undefined
-        : this.#sourceCoordinates(span.unit),
+  #highlightSource(span?: StructureNode['range']) {
+    const valid =
+      span &&
+      (span.unit === 'utf16-code-units' ||
+        span.unit === 'utf8-bytes' ||
+        span.unit === 'unicode-code-points');
+    this.#source.highlightSource(
+      valid
+        ? editorRange(
+            span,
+            this.#session.source.length,
+            span.unit === 'utf16-code-units'
+              ? undefined
+              : this.#sourceCoordinates(span.unit),
+          )
+        : undefined,
     );
-    if (range) this.#source.select(range.start, range.end, focus);
   }
 
   async #pattern(session: Session, signal: AbortSignal, publish: boolean) {
@@ -1012,6 +1542,7 @@ class LabWorkbench extends HTMLElement {
     if (!continuation)
       throw new Error('This match does not provide a resumable boundary.');
     this.#session.continuation = continuation;
+    this.#queueWorkspaceSave();
     this.#cursorControls();
     this.#artifact();
     this.#say('Scan boundary kept at byte ' + continuation.after.end + '.');
@@ -1036,13 +1567,15 @@ class LabWorkbench extends HTMLElement {
     const extraction = this.#output('extraction');
     extraction.hidden = result?.status !== 'matched';
     if (extraction.hidden) this.#output('extracted-values').replaceChildren();
-    for (const action of ['copy-result', 'export-result', 'test-from-result'])
-      this.#action(action)!.disabled = !result;
+    this.#action('test-from-result')!.disabled = !result;
     if (!result) {
       this.#matches = undefined;
       this.#subject.mark([]);
       this.#output('matches').replaceChildren(
-        node('p', 'Run a pattern to see its results.'),
+        node(
+          'p',
+          'Run to see matches or other output for the selected operation.',
+        ),
       );
       return;
     }
@@ -1054,7 +1587,7 @@ class LabWorkbench extends HTMLElement {
       (id) => this.#highlight(id),
       (name) => {
         const range = captures.get(name);
-        return range ? () => this.#selectSource(range) : undefined;
+        return range ? () => this.#highlightSource(range) : undefined;
       },
     );
     this.#output('matches').replaceChildren(this.#matches.content);
@@ -1208,18 +1741,36 @@ class LabWorkbench extends HTMLElement {
     }
   }
 
+  #inspectionKey() {
+    const { source, runtime, run } = this.#session;
+    return JSON.stringify([source, runtime, run.flags, run.pcreNewline]);
+  }
+
   async #inspectStructure(signal: AbortSignal) {
     const { runtime, source, run } = this.#session;
+    const key = this.#inspectionKey();
     this.#say('Inspecting ' + runtimes[runtime].label + '…');
     const inspected = await this.#provider.inspect(
       runRequest(runtime, source, '', {
-        ...run,
+        flags: run.flags,
+        pcreNewline: run.pcreNewline,
+        replacement: '',
+        replacementSyntax: 'literal',
         operation: 'search',
       }),
       signal,
     );
     signal.throwIfAborted();
+    if (this.#inspectionKey() !== key) return;
+    this.#inspection = { key, value: inspected };
+    this.#renderStructure();
+    this.#say('Structure inspection · ' + inspected.disposition);
+  }
+
+  #renderInspection(inspected: PatternInspection) {
+    const { runtime, source, run } = this.#session;
     const panel = this.#output('structure');
+    this.#structureOutput = inspected;
     panel.replaceChildren(
       node(
         'p',
@@ -1250,7 +1801,9 @@ class LabWorkbench extends HTMLElement {
     }
     if (inspected.tree)
       panel.append(
-        renderStructure(inspected.tree, (range) => this.#selectSource(range)),
+        renderStructure(inspected.tree, (range) =>
+          this.#highlightSource(range),
+        ),
       );
     if (inspected.diagnostics && 'error' in inspected.diagnostics) {
       const { message, offset, offsetUnit } = inspected.diagnostics.error;
@@ -1261,13 +1814,12 @@ class LabWorkbench extends HTMLElement {
         const span = { start: offset, end: offset, unit: offsetUnit };
         panel.append(
           editorRange(span, source.length, coordinateMap(source, offsetUnit))
-            ? button(label, () => this.#selectSource(span))
+            ? button(label, () => this.#highlightSource(span))
             : node('p', label),
         );
       }
     }
     this.#addCode(panel, runtime, source, run);
-    this.#say('Structure inspection · ' + inspected.disposition);
   }
 
   #renderStructure() {
@@ -1275,7 +1827,12 @@ class LabWorkbench extends HTMLElement {
     const session = this.#session;
     panel.replaceChildren();
     if (session.format === 'regex') {
+      this.#structureOutput = undefined;
       if (session.runtime !== 'javascript') {
+        if (this.#inspection?.key === this.#inspectionKey()) {
+          this.#renderInspection(this.#inspection.value);
+          return;
+        }
         panel.append(
           node('p', 'Inspect the current pattern with the selected runtime.'),
         );
@@ -1294,7 +1851,10 @@ class LabWorkbench extends HTMLElement {
           session.run.flags,
           session.runtime,
         );
-        panel.append(renderStructure(tree, (span) => this.#selectSource(span)));
+        this.#structureOutput = { authority: 'ecmascript-static-parser', tree };
+        panel.append(
+          renderStructure(tree, (span) => this.#highlightSource(span)),
+        );
         const flags = node('ul');
         for (const flag of session.run.flags)
           flags.append(
@@ -1347,7 +1907,7 @@ class LabWorkbench extends HTMLElement {
         const item = node('li');
         item.append(
           span
-            ? button(message, () => this.#selectSource(span))
+            ? button(message, () => this.#highlightSource(span))
             : node('span', message),
         );
         list.append(item);
@@ -1359,7 +1919,7 @@ class LabWorkbench extends HTMLElement {
     if (tree)
       panel.append(
         node('h3', 'Canonical Semantic IR'),
-        renderStructure(tree, (span) => this.#selectSource(span)),
+        renderStructure(tree, (span) => this.#highlightSource(span)),
       );
     for (const [key, label] of [
       ['analysis', 'Semantic analysis'],
@@ -1405,8 +1965,7 @@ class LabWorkbench extends HTMLElement {
     const generated = generatedPattern(response);
     const runnable = runnableArtifact(response);
     this.#action('run-artifact')!.disabled = !runnable;
-    for (const name of ['copy-artifact', 'export-artifact', 'open-artifact'])
-      this.#action(name)!.disabled = !generated;
+    this.#action('open-artifact')!.disabled = !generated;
     this.#action('open-with-cursor')!.hidden =
       !runnable || !this.#session.continuation;
     panel.replaceChildren();
@@ -1464,7 +2023,7 @@ class LabWorkbench extends HTMLElement {
         if (span)
           links.append(
             button('Source [' + span.start + ', ' + span.end + ')', () =>
-              this.#selectSource(span),
+              this.#highlightSource(span),
             ),
           );
       }
@@ -1493,7 +2052,11 @@ class LabWorkbench extends HTMLElement {
           if (text === undefined) return;
           const session = importBundle(text);
           this.#validateMode(session);
+          session.id = crypto.randomUUID();
           this.#applySession(session, false);
+          this.#say(
+            'Session imported as a separate copy. Select Run or enable Live to execute it.',
+          );
           return;
         }
         case 'import-tests': {
@@ -1515,10 +2078,18 @@ class LabWorkbench extends HTMLElement {
           if (this.#session.tests.length + imported.length > maxTests)
             throw new Error('The imported tests exceed the suite limit.');
           this.#session.tests.push(...imported);
+          this.#invalidateComparison();
           this.#renderTests();
+          this.#queueWorkspaceSave();
           this.#say('Imported ' + imported.length + ' tests.');
           return;
         }
+        case 'working-source':
+          this.#selectWorking(this.#field(field).value);
+          return;
+        case 'reuse-dataset':
+          this.#reuseDataset(this.#field(field).value);
+          return;
         case 'saved-session':
           this.#renderArchive();
           return;
@@ -1574,8 +2145,15 @@ class LabWorkbench extends HTMLElement {
       case 'conversion-destination':
       case 'explanation-scope':
         this.#cancel();
+        this.#semanticOutput = undefined;
         this.#output('compiler-tools').replaceChildren();
+        this.#renderTabActions();
         this.#say('Semantic tools settings updated.');
+        return;
+      case 'baseline':
+      case 'comparison-runtime':
+        if (this.#benchmark?.status !== 'running') this.#cancel();
+        this.#invalidateComparison();
         return;
       case 'extraction-value':
         this.#extract();
@@ -1589,32 +2167,56 @@ class LabWorkbench extends HTMLElement {
   async #eventAction(action: string) {
     try {
       switch (action) {
-        case 'stop':
-          this.#checked('live').checked = false;
-          this.#cancel();
-          this.#say('Stopped.');
-          return;
         case 'run':
+          if (this.#canStop) {
+            this.#checked('live').checked = false;
+            this.#cancel();
+            this.#say('Stopped.');
+          } else await this.#runExplicitly();
+          return;
         case 'run-artifact':
-          this.#trust = true;
-          this.#showTab('results');
-          await this.#perform((signal) => this.#run(signal, true));
+          await this.#runExplicitly();
           return;
-        case 'find':
-          openSearchPanel(this.#source.view);
-          return;
-        case 'resize-source':
-        case 'resize-subject': {
-          const name = action === 'resize-source' ? 'source' : 'subject';
-          const editor = this.querySelector<HTMLElement>(
-            '[data-editor="' + name + '"]',
-          )!;
-          this.#action(action)?.setAttribute(
-            'aria-pressed',
-            String(editor.toggleAttribute('data-tall')),
-          );
+        case 'tall': {
+          const tall = this.toggleAttribute('data-tall');
+          this.#action('tall')!.setAttribute('aria-pressed', String(tall));
           return;
         }
+        case 'tab-copy':
+        case 'tab-download': {
+          if (!this.#active)
+            await this.#tabActions()?.[
+              action === 'tab-copy' ? 'copy' : 'download'
+            ]();
+          return;
+        }
+        case 'find-working':
+        case 'find-dataset':
+          openSearchPanel(
+            (action === 'find-working' ? this.#source : this.#subject).view,
+          );
+          return;
+        case 'new-working':
+        case 'rename-working':
+        case 'delete-working':
+        case 'duplicate-working':
+          this.#manageWorking(action);
+          return;
+        case 'retry-workspace':
+          this.#workspaceDirty = true;
+          this.#flushWorkspace();
+          return;
+        case 'reset-workspace':
+          if (
+            confirm(
+              'Reset unreadable working storage for this Lab? Saved session revisions are kept.',
+            )
+          ) {
+            this.#workspaceStore?.resetUnreadable();
+            this.#workspaceDirty = true;
+            this.#flushWorkspace();
+          }
+          return;
         case 'format': {
           if (this.#session.format === 'semantic') {
             await this.#perform((signal) =>
@@ -1638,25 +2240,31 @@ class LabWorkbench extends HTMLElement {
         case 'explain':
           await this.#perform((signal) => this.#semanticTool(action, signal));
           return;
-        case 'add-dataset':
+        case 'duplicate-dataset':
+          this.#addDataset({
+            ...this.#dataset,
+            name: this.#dataset.name.slice(0, 75) + ' copy',
+          });
+          return;
+        case 'new-dataset':
         case 'rename-dataset': {
           const title =
-            action === 'add-dataset'
-              ? 'Dataset ' + (this.#session.datasets.length + 1)
+            action === 'new-dataset'
+              ? 'Sample ' + (this.#session.datasets.length + 1)
               : this.#dataset.name;
           const name = prompt('Dataset name', title)?.trim().slice(0, 80);
           if (!name) return;
-          if (action === 'add-dataset') {
-            this.#session.selected =
-              this.#session.datasets.push({ name, text: '' }) - 1;
-            this.#subject.reset('');
-          } else this.#dataset.name = name;
+          if (action === 'new-dataset') {
+            this.#addDataset({ name, text: '' });
+            return;
+          }
+          this.#dataset.name = name;
           this.#sync();
           this.#update();
           return;
         }
-        case 'remove-dataset':
-          if (!confirm('Remove this dataset from the working session?')) return;
+        case 'delete-dataset':
+          if (!confirm('Delete this dataset from the working session?')) return;
           this.#session.datasets.splice(this.#session.selected, 1);
           this.#session.selected = Math.min(
             this.#session.selected,
@@ -1667,32 +2275,18 @@ class LabWorkbench extends HTMLElement {
           this.#update();
           return;
         case 'copy-source':
-          await this.#copy(this.#session.source);
+        case 'copy-dataset': {
+          const editor =
+            action === 'copy-source' ? this.#source : this.#subject;
+          await this.#copy(editor.view.state.doc.toString());
           return;
-        case 'copy-result':
-          await this.#copy(JSON.stringify(this.#result, null, 2));
-          return;
+        }
         case 'export-extraction': {
           const extracted = this.#extract();
           if (extracted !== undefined)
             download('lab-extraction.json', extracted);
           return;
         }
-        case 'export-result':
-          download(
-            'lab-result.json',
-            JSON.stringify(this.#observation(), null, 2),
-          );
-          return;
-        case 'copy-artifact':
-          await this.#copy(generatedPattern(this.#compilation)!.pattern);
-          return;
-        case 'export-artifact':
-          download(
-            'strling-artifact.json',
-            JSON.stringify(this.#compilation, null, 2),
-          );
-          return;
         case 'open-artifact':
           this.#transferArtifact();
           return;
@@ -1720,16 +2314,6 @@ class LabWorkbench extends HTMLElement {
             this.#runTests(this.#session.tests, signal),
           );
           return;
-        case 'export-tests':
-          download(
-            'lab-tests.json',
-            JSON.stringify(
-              { schema: 'strling-lab-tests-v1', tests: this.#session.tests },
-              null,
-              2,
-            ),
-          );
-          return;
         case 'trace':
           await this.#perform((signal) => this.#debug(signal));
           return;
@@ -1738,26 +2322,14 @@ class LabWorkbench extends HTMLElement {
           this.#step += action === 'previous-event' ? -1 : 1;
           this.#renderTrace(true);
           return;
-        case 'export-trace':
-          download('pcre2-trace.json', JSON.stringify(this.#trace, null, 2));
-          return;
         case 'compare-revision':
         case 'compare-runtimes':
           await this.#perform((signal) =>
             this.#compare(action === 'compare-revision', signal),
           );
           return;
-        case 'export-comparison':
-          download(
-            'lab-comparison.json',
-            JSON.stringify(this.#comparison, null, 2),
-          );
-          return;
         case 'benchmark':
           await this.#perform((signal) => this.#measure(signal));
-          return;
-        case 'export-benchmark':
-          download('lab-timing.json', JSON.stringify(this.#benchmark, null, 2));
           return;
         default:
           await this.#sessionAction(action);
@@ -1804,25 +2376,25 @@ class LabWorkbench extends HTMLElement {
       incoming.runtime = runnable.runtime;
       Object.assign(incoming.run, runnable.options);
     }
-    sessionStorage.setItem(
-      transferKey,
-      bundleSession(incoming, {
-        source: true,
-        samples: true,
-        tests: false,
-        observations: false,
-        sourceOrigin: true,
-        continuation: withCursor,
-      }),
-    );
+    sessionStorage.setItem(transferKey, exportSession(incoming));
     location.assign('/regex/lab/#lab-transfer');
   }
 
-  #applySession(session: Session, trusted: boolean) {
+  #applySession(session: Session, trusted: boolean, working?: WorkingSource) {
     this.#cancel();
+    this.#captureWorking();
     this.#session = session;
     this.#trust = trusted;
-    this.#sourceDrafts.clear();
+    this.#sourceDrafts = new Map(
+      Object.entries(working?.drafts ?? session.drafts ?? {}) as [
+        Session['format'],
+        string,
+      ][],
+    );
+    if (working) {
+      this.#workspace.active = working.id;
+      this.#workingId = working.id;
+    } else this.#adoptWorking(session);
     this.#source.reset(session.source, session.format);
     this.#subject.reset(this.#dataset.text);
     this.#checked('live').checked = false;
@@ -1848,25 +2420,41 @@ class LabWorkbench extends HTMLElement {
 
   #snapshot(include = true): Session {
     const name = this.#field('name').value.trim();
+    const previous = this.#session.recorded;
+    const timing =
+      this.#benchmark?.status === 'running' ? undefined : this.#benchmark;
     const recorded =
       include &&
       (this.#result ||
         this.#compilation ||
         this.#trace ||
         this.#comparison ||
-        this.#benchmark)
+        timing)
         ? {
             capturedAt: new Date().toISOString(),
-            result: this.#result,
-            compilation: this.#compilation,
+            result: this.#result ?? previous?.result,
+            compilation: this.#compilation ?? previous?.compilation,
             investigation: {
-              trace: this.#trace as unknown as JsonObject | undefined,
-              comparison: this.#comparison as JsonObject | undefined,
-              timing: this.#benchmark as JsonObject | undefined,
+              trace:
+                (this.#trace as unknown as JsonObject | undefined) ??
+                previous?.investigation?.trace,
+              comparison:
+                (this.#comparison as JsonObject | undefined) ??
+                previous?.investigation?.comparison,
+              timing:
+                (timing as JsonObject | undefined) ??
+                previous?.investigation?.timing,
             },
           }
-        : this.#session.recorded;
-    return { ...this.#session, name: name || this.#session.name, recorded };
+        : previous;
+    const alternate = this.#session.format === 'simply' ? 'semantic' : 'simply';
+    const draft = this.#sourceDrafts.get(alternate);
+    return {
+      ...this.#session,
+      name: name || this.#session.name,
+      recorded,
+      drafts: draft === undefined ? undefined : { [alternate]: draft },
+    };
   }
 
   async #sessionAction(action: string) {
@@ -1874,12 +2462,15 @@ class LabWorkbench extends HTMLElement {
     const selected = this.#field('saved-session').value;
     const revision = this.#field('revision').value;
     switch (action) {
-      case 'save':
-        store.save(importBundle(JSON.stringify(this.#snapshot())));
-        this.#session.name = this.#snapshot().name;
+      case 'save': {
+        const snapshot = readSession(this.#snapshot());
+        store.save(snapshot);
+        this.#session.name = snapshot.name;
+        this.#queueWorkspaceSave();
         this.#readArchive();
         this.#say('Revision saved in this browser.');
         return;
+      }
       case 'duplicate': {
         const session = this.#snapshot();
         session.id = crypto.randomUUID();
@@ -1932,22 +2523,9 @@ class LabWorkbench extends HTMLElement {
         await this.#copy(share.href);
         return;
       }
-      case 'export-session': {
-        const choices = {
-          source: this.#checked('share-active-source').checked,
-          samples: this.#checked('share-samples').checked,
-          tests: this.#checked('share-tests').checked,
-          observations: this.#checked('share-observations').checked,
-          sourceOrigin: this.#checked('share-source').checked,
-          continuation: this.#checked('share-continuation').checked,
-        };
-        const bundle = bundleSession(
-          importBundle(JSON.stringify(this.#snapshot(choices.observations))),
-          choices,
-        );
-        download('lab-session.json', bundle);
+      case 'export-session':
+        download('lab-session.json', exportSession(this.#snapshot()));
         return;
-      }
       default:
         return;
     }
@@ -2026,6 +2604,8 @@ class LabWorkbench extends HTMLElement {
           )
         : [...this.#session.tests, test!];
       this.#testOutcomes.delete(test!.id);
+      this.#invalidateComparison();
+      this.#queueWorkspaceSave();
       this.#dialog.close();
       this.#renderTests();
       this.#say('Test saved to the working session.');
@@ -2038,7 +2618,7 @@ class LabWorkbench extends HTMLElement {
     const panel = this.#output('tests');
     panel.replaceChildren();
     this.#action('run-tests')!.disabled = !this.#session.tests.length;
-    this.#action('export-tests')!.disabled = !this.#session.tests.length;
+    this.#renderTabActions();
     if (!this.#session.tests.length)
       panel.append(node('p', 'No test cases in this session.'));
     const groups = new Map<string, LabTest[]>();
@@ -2078,7 +2658,9 @@ class LabWorkbench extends HTMLElement {
               ({ id }) => id !== item.id,
             );
             this.#testOutcomes.delete(item.id);
+            this.#invalidateComparison();
             this.#renderTests();
+            this.#queueWorkspaceSave();
             this.#action('add-test')?.focus();
           }),
         );
@@ -2148,7 +2730,7 @@ class LabWorkbench extends HTMLElement {
     this.#action('previous-event')!.disabled = !event || this.#step <= 0;
     this.#action('next-event')!.disabled =
       !event || this.#step >= trace!.events.length - 1;
-    this.#action('export-trace')!.disabled = !trace;
+    this.#renderTabActions();
     if (!trace) {
       panel.append(node('p', 'No trace recorded.'));
       return;
@@ -2163,14 +2745,15 @@ class LabWorkbench extends HTMLElement {
           resultSummary(trace.execution),
       ),
     );
-    if (!event) return;
+    if (!event) {
+      if (select) this.#highlightSource();
+      return;
+    }
     panel.append(
       node('h3', 'Step ' + (this.#step + 1) + ' of ' + trace.events.length),
     );
     const source = this.#mappedTraceSource(event.pattern);
-    const selectPattern = () => {
-      if (source) this.#selectSource(source);
-    };
+    const highlightPattern = () => this.#highlightSource(source);
     const selectInput = () => {
       const map = coordinateMap(this.#dataset.text, 'utf8-bytes');
       const offset = map.get(event.subjectPosition);
@@ -2183,7 +2766,7 @@ class LabWorkbench extends HTMLElement {
     const positionName =
       'Pattern bytes ' + event.pattern.start + '–' + event.pattern.end;
     const position = source
-      ? button(positionName, selectPattern)
+      ? button(positionName, highlightPattern)
       : node('span', positionName);
     const input = button('Input byte ' + event.subjectPosition, selectInput);
     panel.append(
@@ -2203,7 +2786,7 @@ class LabWorkbench extends HTMLElement {
       details('Capture state', raw(event.captures)),
     );
     if (select) {
-      if (source) this.#selectSource(source, false);
+      highlightPattern();
       selectInput();
     }
   }
@@ -2234,7 +2817,14 @@ class LabWorkbench extends HTMLElement {
       ?.source;
   }
 
+  #invalidateComparison() {
+    this.#comparison = undefined;
+    this.#output('comparison').replaceChildren();
+    this.#renderTabActions();
+  }
+
   async #compare(revision: boolean, signal: AbortSignal) {
+    this.#invalidateComparison();
     const baseline = revision
       ? this.#revision(this.#field('baseline').value)
       : undefined;
@@ -2396,131 +2986,164 @@ class LabWorkbench extends HTMLElement {
     }
     if (regressions.length)
       panel.append(details('Regression tests', raw(regressions)));
-    this.#action('export-comparison')!.disabled = false;
+    this.#renderTabActions();
     this.#say('Comparison complete.');
   }
 
   async #measure(signal: AbortSignal) {
-    const repeats = Number(this.#field('repeats').value);
-    const multiplier = Number(this.#field('size').value);
-    if (!Number.isInteger(repeats) || repeats < 1 || repeats > 8)
-      throw new Error('Choose 1 to 8 repetitions.');
-    const dataset = this.#dataset;
-    const text =
-      multiplier === 2
-        ? dataset.text.repeat(2)
-        : multiplier === 0.5
-          ? Array.from(dataset.text)
-              .slice(0, Math.floor(Array.from(dataset.text).length / 2))
-              .join('')
-          : dataset.text;
-    if (text.length > limits.input)
-      throw new Error('The measured subject exceeds the size limit.');
-    const baseline = this.#checked('benchmark-baseline').checked
-      ? this.#revision(this.#field('baseline').value)
-      : undefined;
-    if (!baseline && this.#checked('benchmark-baseline').checked)
-      throw new Error('Choose a baseline revision in Compare.');
+    const { name, text } = this.#dataset;
     const current = this.#session;
-    const patterns = [...(baseline ? [baseline.session] : []), current];
-    const series = [];
-    this.#say('Running bounded timings…');
-    for (const version of patterns) {
-      const pattern = await this.#pattern(version, signal, version === current);
-      const options = { ...current.run, ...pattern.artifactOptions };
-      const runtime =
-        current.format === 'regex' ? current.runtime : pattern.runtime;
-      const run = async () => {
-        const start = performance.now();
-        const result = await this.#provider.execute(
-          runRequest(runtime, pattern.source, text, options),
-          { signal },
-        );
-        signal.throwIfAborted();
-        return {
-          status: result.status,
-          wallMs: performance.now() - start,
-          timing: result.timing,
-          observation: result.observation,
-          error: 'error' in result ? result.error : undefined,
-        };
-      };
-      const warmup = await run();
-      const samples = [];
-      if (!warmup.error) {
-        for (let index = 0; index < repeats; index++) {
-          const sample = await run();
-          samples.push(sample);
-          if (sample.error) break;
-        }
-      }
-      const complete = samples.filter((sample) => !sample.error);
-      const stats = {
-        wall: summarizeTimings(complete.map((sample) => sample.wallMs)),
-        compile: summarizeTimings(
-          complete.flatMap((sample) => sample.timing.compileMs ?? []),
-        ),
-        execute: summarizeTimings(
-          complete.flatMap((sample) => sample.timing.executionMs ?? []),
-        ),
-      };
-      series.push({
-        source: version.source,
-        executionPattern: pattern.source,
-        compiler: pattern.compilation && {
-          identity: pattern.compilation.identity,
-          profile: pattern.compilation.profile,
-          durationMs: pattern.compilation.durationMs,
-          cached: pattern.compilation.cached,
-        },
-        inputUnits: text.length,
-        runtime,
-        options,
-        warmup,
-        samples,
-        stats,
-      });
-    }
-    this.#benchmark = {
-      schema: 'strling-lab-timing-v1',
-      dataset: dataset.name,
-      multiplier,
-      repetitions: repeats,
-      series,
+    const selectedOptions = { ...current.run };
+    const experiment: TimingExperiment = {
+      schema: timingSchema,
+      dataset: name,
+      source: current.source,
+      inputUnits: text.length,
+      repetitions: timingRepetitions,
+      wallResolutionMs: estimateTimerResolution(),
+      status: 'running',
+      samples: [],
+      stats: seriesStats([]),
     };
+    const provider = new BrowserLabProvider();
+    this.#benchmark = experiment;
+    this.#renderBenchmark(experiment);
+    this.#say('Running bounded timings…');
+    const isCurrent = () =>
+      this.#benchmark === experiment &&
+      (!this.#active || this.#active.signal === signal);
+    try {
+      await runTimingExperiment(
+        experiment,
+        async (preparationSignal) => {
+          const pattern = await this.#pattern(current, preparationSignal, true);
+          preparationSignal.throwIfAborted();
+          const options = { ...selectedOptions, ...pattern.artifactOptions };
+          const runtime = pattern.runtime;
+          experiment.executionPattern = pattern.source;
+          experiment.runtime = runtime;
+          experiment.runtimeIdentity = interactiveIdentity(runtime);
+          experiment.options = options;
+          if (pattern.compilation) {
+            const { identity, profile, durationMs, cached, timerResolutionMs } =
+              pattern.compilation;
+            experiment.compiler = {
+              identity,
+              profile,
+              durationMs,
+              cached,
+              timerResolutionMs,
+            };
+            experiment.artifact = generatedPattern(
+              pattern.compilation,
+            )?.artifact;
+          }
+          return (executionSignal, probeTimer) =>
+            provider.execute(
+              runRequest(runtime, pattern.source, text, options),
+              { signal: executionSignal, probeTimer },
+            );
+        },
+        signal,
+        () => {
+          if (isCurrent()) this.#renderBenchmark(experiment);
+        },
+      );
+      if (!signal.aborted && isCurrent())
+        this.#say(
+          experiment.status === 'complete'
+            ? 'Timing experiment finished.'
+            : 'Timing experiment incomplete. Completed measurements are available.',
+        );
+    } finally {
+      provider.dispose();
+      if (isCurrent()) this.#renderBenchmark(experiment);
+    }
+  }
+
+  #interruptTiming() {
+    const experiment = this.#benchmark;
+    if (experiment?.status !== 'running') return;
+    interruptTiming(experiment);
+    this.#renderBenchmark(experiment);
+  }
+
+  #renderBenchmark(experiment: TimingExperiment) {
     const panel = this.#output('performance');
     panel.replaceChildren();
-    for (const [index, entry] of series.entries()) {
+    const completed = experiment.samples.filter((sample) => !sample.error);
+    const count = completed.length;
+    const workerResolution = experiment.warmup?.timing.resolutionMs;
+    const statusPrefix = {
+      running: 'Measuring · ',
+      complete: '',
+      incomplete: 'Incomplete · ',
+    }[experiment.status];
+    panel.append(
+      node(
+        'p',
+        statusPrefix +
+          count +
+          ' of ' +
+          timingRepetitions +
+          ' measured runs completed',
+      ),
+    );
+    if (experiment.runtime)
       panel.append(
         node(
-          'h3',
-          baseline && index === 0 ? 'Baseline revision' : 'Current revision',
+          'p',
+          runtimes[experiment.runtime].label +
+            (experiment.options?.flags
+              ? ' · flags ' + experiment.options.flags
+              : '') +
+            (experiment.options?.pcreNewline
+              ? ' · newline ' + experiment.options.pcreNewline
+              : ''),
         ),
       );
-      panel.append(
-        entry.stats.wall
-          ? node(
-              'p',
-              entry.samples.length +
-                ' measured runs · wall min / median / max ' +
-                [
-                  entry.stats.wall.min,
-                  entry.stats.wall.median,
-                  entry.stats.wall.max,
-                ]
-                  .map((value) => value?.toFixed(2))
-                  .join(' / ') +
-                ' ms',
-            )
-          : node(
-              'p',
-              entry.warmup.error?.message ?? 'No successful measured runs.',
-            ),
-      );
-      panel.append(details('Measurements and runtime provenance', raw(entry)));
+    if (experiment.issue) panel.append(node('p', experiment.issue));
+    for (const [name, stats, resolution, sampleCount] of [
+      ['End to end', experiment.stats.wall, experiment.wallResolutionMs, count],
+      [
+        'Worker compile',
+        experiment.stats.compile,
+        workerResolution,
+        completed.filter((sample) => sample.timing.compileMs !== undefined)
+          .length,
+      ],
+      [
+        'Runtime execution',
+        experiment.stats.execute,
+        workerResolution,
+        completed.filter((sample) => sample.timing.executionMs !== undefined)
+          .length,
+      ],
+    ] as const) {
+      if (stats)
+        panel.append(
+          node(
+            'p',
+            name + ' · ' + displayTiming(stats, resolution, sampleCount),
+          ),
+        );
     }
-    this.#action('export-benchmark')!.disabled = false;
-    this.#say('Timing experiment finished.');
+    if (experiment.compiler) {
+      const { durationMs, timerResolutionMs, cached } = experiment.compiler;
+      panel.append(
+        node(
+          'p',
+          'STRling compilation · ' +
+            formatDuration(durationMs, timerResolutionMs) +
+            (cached ? ' · cached' : ''),
+        ),
+      );
+    }
+    if (experiment.status !== 'running')
+      panel.append(
+        details('Measurements and runtime provenance', raw(experiment)),
+      );
+    this.#renderTabActions();
   }
 }
 

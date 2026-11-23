@@ -36,5 +36,6 @@ export function runPython(pattern: string, input: string, options: RunOptions) {
 }
 
 export const pythonVersion = () => python.version;
+export const pythonTimerResolutionMs = () => python.timerResolutionMs();
 export const inspectPython = (pattern: string, flags: string) =>
   python.inspect(pattern, flags);

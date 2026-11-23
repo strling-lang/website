@@ -7,23 +7,30 @@ import {
   syntaxHighlighting,
 } from '@codemirror/language';
 import { setDiagnostics, type Diagnostic } from '@codemirror/lint';
+import { search, searchKeymap, setSearchQuery } from '@codemirror/search';
 import {
   Compartment,
   EditorState,
   RangeSetBuilder,
+  StateEffect,
+  StateField,
+  Transaction,
   type Extension,
 } from '@codemirror/state';
 import {
   Decoration,
   EditorView,
   hoverTooltip,
+  keymap,
   WidgetType,
   type DecorationSet,
 } from '@codemirror/view';
 import { basicSetup, minimalSetup } from 'codemirror';
 import { tags } from '@lezer/highlight';
 import language from '../lib/regex-lab/semantic-language.json';
+import type { TextRange } from '../lib/regex-lab/offsets';
 import type { Authoring } from '../lib/regex-lab/session';
+import { createLabSearchPanel } from './labSearchPanel';
 
 const keywords = new Set(language.keyword_terminals);
 const sourceColors = syntaxHighlighting(
@@ -68,7 +75,7 @@ export interface Mark {
   start: number;
   end: number;
   id: string;
-  kind: 'match' | 'capture' | 'selected';
+  kind: 'match' | 'capture' | 'selected' | 'source-navigation';
 }
 
 class ZeroMarker extends WidgetType {
@@ -109,6 +116,88 @@ function decorations(marks: Mark[]): DecorationSet {
   return builder.finish();
 }
 
+const setSourceHighlight = StateEffect.define<DecorationSet>();
+const dismissSourceHighlights = StateEffect.define<void>();
+const dismissedSourceHighlights = {
+  linked: Decoration.none,
+  searchDismissed: true,
+  diagnosticDismissed: true,
+};
+const sourceHighlight = StateField.define<{
+  linked: DecorationSet;
+  searchDismissed: boolean;
+  diagnosticDismissed: boolean;
+}>({
+  create: () => ({
+    linked: Decoration.none,
+    searchDismissed: false,
+    diagnosticDismissed: false,
+  }),
+  update(value, transaction) {
+    const searchSelection = transaction.isUserEvent('select.search');
+    const manualSelection =
+      transaction.isUserEvent('select') && !searchSelection;
+    if (
+      manualSelection ||
+      transaction.effects.some((effect) => effect.is(dismissSourceHighlights))
+    )
+      return dismissedSourceHighlights;
+
+    let linked = transaction.docChanged ? Decoration.none : value.linked;
+    for (const effect of transaction.effects)
+      if (effect.is(setSourceHighlight) && !transaction.docChanged)
+        linked = effect.value;
+    const searchDismissed =
+      value.searchDismissed &&
+      !searchSelection &&
+      !transaction.isUserEvent('input.replace') &&
+      !transaction.effects.some((effect) => effect.is(setSearchQuery));
+    // The native lint panel and F8 set a selection and reveal it without
+    // the user-event annotation used by caret motion and mouse selection.
+    const diagnosticDismissed =
+      value.diagnosticDismissed &&
+      !(
+        transaction.selection &&
+        !transaction.docChanged &&
+        transaction.scrollIntoView &&
+        !transaction.annotation(Transaction.userEvent)
+      );
+    if (
+      linked === value.linked &&
+      searchDismissed === value.searchDismissed &&
+      diagnosticDismissed === value.diagnosticDismissed
+    )
+      return value;
+    return { linked, searchDismissed, diagnosticDismissed };
+  },
+  provide: (field) => [
+    EditorView.decorations.from(field, ({ linked }) => linked),
+    EditorView.editorAttributes.from(field, (value) => ({
+      'data-search-highlight-dismissed': String(value.searchDismissed),
+      'data-diagnostic-highlight-dismissed': String(value.diagnosticDismissed),
+    })),
+  ],
+});
+
+const sourceHighlightPointer = EditorView.domEventObservers({
+  mousedown(event, view) {
+    if (event.button !== 0) return;
+    // A click at the existing caret may not emit a selection transaction.
+    // Let CodeMirror resolve the clicked DOM position before removing marks.
+    queueMicrotask(() => {
+      const current = view.state.field(sourceHighlight, false);
+      if (
+        view.dom.isConnected &&
+        current &&
+        (current.linked !== Decoration.none ||
+          !current.searchDismissed ||
+          !current.diagnosticDismissed)
+      )
+        view.dispatch({ effects: dismissSourceHighlights.of(undefined) });
+    });
+  },
+});
+
 function sourceExtensions(format: Authoring) {
   if (format === 'simply') return json();
   if (format === 'semantic') {
@@ -148,7 +237,15 @@ export class LabEditor {
   ) {
     const { format, limit, onChange, onLimit, onSelection, onHover } = options;
     this.#extensions = [
-      format ? basicSetup : [minimalSetup, bracketMatching()],
+      format
+        ? [basicSetup, sourceHighlight, sourceHighlightPointer]
+        : [
+            minimalSetup,
+            bracketMatching(),
+            keymap.of(searchKeymap),
+            EditorState.allowMultipleSelections.of(true),
+          ],
+      search({ createPanel: createLabSearchPanel, literal: true }),
       sourceColors,
       EditorView.theme({}, { dark: true }),
       EditorView.lineWrapping,
@@ -232,6 +329,43 @@ export class LabEditor {
       effects: this.#marks.reconfigure(
         EditorView.decorations.of(decorations(marks)),
       ),
+    });
+  }
+
+  highlightSource(range?: TextRange) {
+    const { state } = this.view;
+    const current = state.field(sourceHighlight, false);
+    if (!current) return;
+    const boundary = (offset: number) =>
+      Number.isInteger(offset) &&
+      offset >= 0 &&
+      offset <= state.doc.length &&
+      !/[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(
+        state.sliceDoc(
+          Math.max(0, offset - 1),
+          Math.min(state.doc.length, offset + 1),
+        ),
+      );
+
+    if (
+      !range ||
+      range.start > range.end ||
+      !boundary(range.start) ||
+      !boundary(range.end)
+    ) {
+      if (current.linked !== Decoration.none)
+        this.view.dispatch({ effects: setSourceHighlight.of(Decoration.none) });
+      return;
+    }
+    this.view.dispatch({
+      effects: [
+        setSourceHighlight.of(
+          decorations([
+            { ...range, id: 'source-navigation', kind: 'source-navigation' },
+          ]),
+        ),
+        EditorView.scrollIntoView(range.start),
+      ],
     });
   }
 

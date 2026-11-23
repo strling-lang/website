@@ -57,9 +57,15 @@ export class BrowserLabProvider
 
   async execute(
     request: LabExecutionRequest,
-    { signal }: { signal: AbortSignal },
+    { signal, probeTimer }: { signal: AbortSignal; probeTimer?: boolean },
   ): Promise<LabExecutionResult> {
-    const result = await this.#run(request, false, signal);
+    const result = await this.#run(
+      request,
+      false,
+      signal,
+      undefined,
+      probeTimer,
+    );
     if ('status' in result) return result;
     throw new Error('The worker returned an invalid execution response.');
   }
@@ -128,6 +134,7 @@ export class BrowserLabProvider
     trace: boolean,
     signal: AbortSignal,
     continuation?: ScanContinuation,
+    probeTimer?: boolean,
   ): Promise<LabExecutionResult | TraceObservation> {
     const runtime = runtimeFor(request);
     if (!runtime || (trace && !isPcreRuntime(runtime))) {
@@ -142,7 +149,7 @@ export class BrowserLabProvider
     this.#select(runtime);
     try {
       const reply = await this.#worker.run(
-        { request, trace, continuation },
+        { request, trace, continuation, probeTimer },
         signal,
       );
       const result = validateBrowserReply(reply, request, runtime, trace);

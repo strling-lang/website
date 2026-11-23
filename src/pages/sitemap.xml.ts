@@ -13,7 +13,6 @@ const fixed = [
   '/learn/',
   '/regex/',
   '/project/',
-  '/lab/guide/',
 ];
 
 const availableSurfaceRoutes = [...strlingSurfaces, ...regexSurfaces]

@@ -33,6 +33,11 @@ export class LabCompiler {
       result.identity.productVersion !== compilerIdentity.productVersion ||
       result.identity.abi !== compilerIdentity.abi ||
       result.identity.protocol !== compilerIdentity.protocol ||
+      !Number.isFinite(result.durationMs) ||
+      result.durationMs < 0 ||
+      (result.timerResolutionMs !== undefined &&
+        (!Number.isFinite(result.timerResolutionMs) ||
+          result.timerResolutionMs <= 0)) ||
       (result.result && !sameProfileReference(result.profile, expected)) ||
       [result.result?.artifact, result.result?.portability].some(
         (projection) =>

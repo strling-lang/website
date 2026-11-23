@@ -52,6 +52,14 @@ async function downloadTimings(page: Page) {
   await page.getByRole('button', { name: 'Download timings' }).click();
   return JSON.parse(await readFile(await (await pending).path(), 'utf8'));
 }
+
+async function downloadSession(page: Page) {
+  const pending = page.waitForEvent('download');
+  await page
+    .getByRole('button', { name: 'Download session', exact: true })
+    .click();
+  return readFile(await (await pending).path());
+}
 const compilerAsset =
   /\/_strling-lab\/compiler-tools-[^/]+-[a-f0-9]{64}\.wasm$/;
 const releaseManifest = JSON.parse(
@@ -333,20 +341,16 @@ test('resumes a saved PCRE2 boundary after STRling-to-RegEx handoff and reload',
   await tab(page, 'Sessions');
   await page.getByRole('button', { name: 'Save revision' }).click();
   await expect(status(page)).toHaveText('Revision saved in this browser.');
-  for (const choice of [
-    'Active source',
-    'Sample data',
-    'Original STRling source of generated patterns',
-    'Saved scan cursor',
-  ]) {
-    await page.getByRole('checkbox', { name: choice, exact: true }).check();
-  }
-  const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download session' }).click();
-  const portable = await readFile(await (await download).path());
-  expect(JSON.parse(portable.toString()).session.continuation.after.end).toBe(
-    2,
-  );
+  const portable = await downloadSession(page);
+  expect(JSON.parse(portable.toString())).toMatchObject({
+    continuation: { after: { end: 2 } },
+    source: 'ab',
+    datasets: [{ text: 'ab--ab' }],
+    origin: {
+      source: 'semantic strling 1.0; case sensitive; pattern text "ab";',
+    },
+    recorded: { result: { status: 'matched' } },
+  });
   await page.reload();
   await tab(page, 'Sessions');
   await page
@@ -758,7 +762,7 @@ test('runs Python 3.11 text and bytes artifacts under their matching provider', 
   ).toBeVisible();
 });
 
-test('compares revisions, measures time and confines authored material to opt-in file sharing', async ({
+test('compares revisions, measures time and exports recordings without adding them to settings links', async ({
   page,
 }) => {
   await page.goto('/regex/lab/');
@@ -837,31 +841,15 @@ test('compares revisions, measures time and confines authored material to opt-in
   expect(dispatches).toEqual(Array.from({ length: 10 }, () => patterns).flat());
 
   await tab(page, 'Sessions');
-  const redactedDownload = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download session' }).click();
-  const redactedFile = JSON.parse(
-    await readFile(await (await redactedDownload).path(), 'utf8'),
-  );
-  expect(redactedFile.session.source).toBe('');
-  expect(redactedFile.session.datasets[0].text).toBe('');
-  expect(redactedFile.session).not.toHaveProperty('continuation');
-  for (const option of [
-    'Active source',
-    'Sample data',
-    'Tests',
-    'Recorded outputs',
-    'Original STRling source of generated patterns',
-  ]) {
-    await page.getByRole('checkbox', { name: option, exact: true }).check();
-  }
-  const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download session' }).click();
-  const file = JSON.parse(
-    await readFile(await (await download).path(), 'utf8'),
-  );
-  expect(file.session.source).toBe('alpha');
-  expect(file.session.datasets[0].text).toContain('beta-2');
-  expect(file.session.recorded.investigation.comparison).toBeDefined();
+  await expect(
+    page.getByRole('tabpanel', { name: 'Sessions' }).getByRole('checkbox'),
+  ).toHaveCount(0);
+  const file = JSON.parse((await downloadSession(page)).toString());
+  expect(file.source).toBe('alpha');
+  expect(file.datasets[0].text).toContain('beta-2');
+  expect(file.recorded.result.status).toBe('matched');
+  expect(file.recorded.investigation.comparison).toBeDefined();
+  expect(file.recorded.investigation.timing).toEqual(experiment);
 
   await page.getByRole('button', { name: 'Copy settings link' }).click();
   const url = await page.getByLabel('Share URL').inputValue();
@@ -1810,6 +1798,33 @@ test('restores separate Semantic and Simply drafts without running them', async 
   await expect(status(page)).toContainText('Select Run');
   await format.selectOption('simply');
   await expect(source(page)).toHaveText('{"privateDraft":true}');
+
+  await tab(page, 'Sessions');
+  await page.getByRole('button', { name: 'Save revision' }).click();
+  const file = await downloadSession(page);
+  expect(JSON.parse(file.toString())).toMatchObject({
+    format: 'simply',
+    source: '{"privateDraft":true}',
+    drafts: { semantic },
+  });
+  await format.selectOption('semantic');
+  await edit(page, source(page), 'different draft');
+  await page.getByRole('button', { name: 'Restore', exact: true }).click();
+  await expect(format).toHaveValue('simply');
+  await format.selectOption('semantic');
+  await expect(source(page)).toHaveText(semantic);
+
+  await page.getByLabel('Import session', { exact: true }).setInputFiles({
+    name: 'strling-session.json',
+    mimeType: 'application/json',
+    buffer: file,
+  });
+  await expect(status(page)).toContainText('Session imported');
+  await expect(format).toHaveValue('simply');
+  await expect(source(page)).toHaveText('{"privateDraft":true}');
+  await format.selectOption('semantic');
+  await expect(source(page)).toHaveText(semantic);
+  await expect(status(page)).toContainText('Select Run');
 });
 
 test('keeps run controls stable, resizes both editors and exposes native selectable disclosures', async ({
@@ -2024,7 +2039,7 @@ for (const [target, runtime, version] of [
   });
 }
 
-test('requires explicit replacement inclusion and preserves native inspection across tabs', async ({
+test('preserves native inspection and imports a complete session under a new identity', async ({
   page,
 }) => {
   await page.goto('/regex/lab/');
@@ -2057,23 +2072,127 @@ test('requires explicit replacement inclusion and preserves native inspection ac
   await page
     .getByRole('textbox', { name: 'Replacement', exact: true })
     .fill('private template');
+  await page
+    .getByLabel('Replacement syntax', { exact: true })
+    .selectOption('native');
+  page.once('dialog', (dialog) => dialog.accept('Second sample'));
+  await page.getByRole('button', { name: 'Add dataset' }).click();
+  await edit(page, subject(page), 'ALPHA-22');
+  await run(page);
+  await expect(status(page)).toHaveText('Replacement completed');
+  await tab(page, 'Tests');
+  await page.getByRole('button', { name: 'Add from result' }).click();
+  await page.getByRole('button', { name: 'Save test' }).click();
   await tab(page, 'Sessions');
-  const exported = async () => {
-    const pending = page.waitForEvent('download');
-    await page
-      .getByRole('button', {
-        name: 'Download session with selected inclusions',
-      })
-      .click();
-    return JSON.parse(await readFile(await (await pending).path(), 'utf8'));
-  };
-  expect((await exported()).session.run.replacement).toBe('');
-  await page.getByRole('checkbox', { name: 'Replacement text' }).check();
-  expect((await exported()).session.run.replacement).toBe('private template');
+  await page
+    .getByLabel('Session name', { exact: true })
+    .fill('Complete session');
+  await page.getByRole('button', { name: 'Save revision' }).click();
+  const archive = () =>
+    page.evaluate(() =>
+      JSON.parse(localStorage.getItem('strling.labs.archive.v1')!),
+    );
+  const originalArchive = await archive();
+  const file = await downloadSession(page);
+  const snapshot = JSON.parse(file.toString());
+  expect(snapshot).toMatchObject({
+    name: 'Complete session',
+    runtime: 'pcre2',
+    run: {
+      operation: 'replace-all',
+      flags: 'i',
+      replacement: 'private template',
+      replacementSyntax: 'native',
+    },
+    datasets: [{ name: 'Sample' }, { name: 'Second sample', text: 'ALPHA-22' }],
+    selected: 1,
+    tests: [
+      {
+        text: 'ALPHA-22',
+        expected: { kind: 'replacement', value: 'private template' },
+      },
+    ],
+    recorded: { result: { status: 'completed', output: 'private template' } },
+  });
+  expect(originalArchive.sessions[0].revisions[0].session).toEqual({
+    ...snapshot,
+    recorded: { ...snapshot.recorded, capturedAt: expect.any(String) },
+  });
   await page.getByRole('button', { name: 'Copy settings link' }).click();
-  expect(
-    decodeURIComponent(await page.getByLabel('Share URL').inputValue()),
-  ).not.toContain('private template');
+  const url = decodeURIComponent(
+    await page.getByLabel('Share URL').inputValue(),
+  );
+  expect(url).not.toContain('private template');
+  expect(url).not.toContain('ALPHA-22');
+
+  await edit(page, source(page), 'unrelated working pattern');
+  await edit(page, subject(page), 'unrelated working sample');
+  await page.getByLabel('Import session', { exact: true }).setInputFiles({
+    name: 'lab-session.json',
+    mimeType: 'application/json',
+    buffer: file,
+  });
+  await expect(status(page)).toContainText(
+    'Session imported as a separate copy',
+  );
+  await expect(source(page)).toHaveText(snapshot.source);
+  await expect(subject(page)).toHaveText('ALPHA-22');
+  await expect(page.getByLabel('Dataset', { exact: true })).toHaveValue('1');
+  await expect(page.getByLabel('Runtime', { exact: true })).toHaveValue(
+    'pcre2',
+  );
+  await expect(
+    page.getByRole('textbox', { name: 'Flags', exact: true }),
+  ).toHaveValue('i');
+  await expect(
+    page.getByRole('textbox', { name: 'Replacement', exact: true }),
+  ).toHaveValue('private template');
+  await expect(page.getByLabel('Live', { exact: true })).not.toBeChecked();
+  expect(await archive()).toEqual(originalArchive);
+  await expectPaddedDisclosure(
+    page.getByText('Previously recorded outputs', { exact: true }),
+  );
+  await expect(page.locator('[data-output="recording-json"]')).toContainText(
+    'private template',
+  );
+  await page.getByRole('button', { name: 'Save revision' }).click();
+  const saved = (await archive()).sessions;
+  expect(saved).toHaveLength(2);
+  expect(saved[1]).toEqual(originalArchive.sessions[0]);
+  expect(saved[0].id).not.toBe(snapshot.id);
+  expect(saved[0].revisions[0].session).toEqual({
+    ...snapshot,
+    id: saved[0].id,
+  });
+
+  await page
+    .getByRole('tabpanel', { name: 'Sessions' })
+    .getByRole('button', { name: 'Duplicate', exact: true })
+    .click();
+  await expect(page.getByLabel('Session name', { exact: true })).toHaveValue(
+    'Complete session copy',
+  );
+  const duplicate = JSON.parse((await downloadSession(page)).toString());
+  expect(duplicate.id).not.toBe(saved[0].id);
+  expect(duplicate).toEqual({
+    ...snapshot,
+    name: 'Complete session copy',
+    id: duplicate.id,
+  });
+  expect((await archive()).sessions).toEqual(saved);
+
+  const working = page.getByRole('combobox', { name: 'Saved working pattern' });
+  await working.selectOption({ label: 'Sample pattern' });
+  await expect(source(page)).toHaveText('unrelated working pattern');
+  await expect(subject(page)).toHaveText('unrelated working sample');
+  await page
+    .getByRole('combobox', { name: 'Saved session' })
+    .selectOption(saved[0].id);
+  page.once('dialog', (dialog) => dialog.accept());
+  await page
+    .getByRole('button', { name: 'Delete session', exact: true })
+    .click();
+  expect(await archive()).toEqual(originalArchive);
 });
 
 test('recovers unreadable or quota-refused working storage without modifying saved revisions', async ({

@@ -544,11 +544,6 @@ lab-workbench :is(summary, button):focus-visible {
 .workbench-dialog h2 {
   margin: 0;
 }
-.workbench-investigation fieldset {
-  min-width: 0;
-  border: 1px solid var(--lab-line);
-  margin-top: 0.85rem;
-}
 .workbench-investigation > section > .workbench-inline + .workbench-inline {
   margin-top: 0.65rem;
 }

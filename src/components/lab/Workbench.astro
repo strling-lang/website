@@ -703,58 +703,22 @@ const tabs = [
             >Clear local archive</button
           >
         </div>
-        <fieldset>
-          <legend>Include in downloaded session</legend>
-          <div class="workbench-inline">
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-active-source" /> Active source</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-samples" /> Sample data</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-replacement" /> Replacement
-              text</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-tests" /> Tests</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-observations" /> Recorded
-              outputs</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-source" /> Original STRling
-              source of generated patterns</label
-            >
-            <label class="workbench-check"
-              ><input type="checkbox" data-field="share-continuation" /> Saved scan
-              cursor</label
-            >
-          </div>
-          <p class="workbench-note">
-            Use Copy above for a settings-only link. Download uses these
-            selections. Tests and recorded outputs can contain source, sample,
-            or replacement text. A cursor requires the data bound to its saved
-            run.
-          </p>
-          <div class="workbench-inline">
-            <label class="workbench-file"
-              >Import session <input
-                type="file"
-                data-field="import-session"
-                accept=".json,application/json"
-              /></label
-            >
-          </div>
-          <label data-output="share" hidden
-            >Share URL <input
-              type="url"
-              data-field="share-url"
-              readonly
+        <p class="workbench-note">
+          Download includes the current session's source, samples, tests, and
+          available recorded outputs. Use Copy for a settings-only link.
+        </p>
+        <div class="workbench-inline">
+          <label class="workbench-file"
+            >Import session <input
+              type="file"
+              data-field="import-session"
+              accept=".json,application/json"
             /></label
           >
-        </fieldset>
+        </div>
+        <label data-output="share" hidden
+          >Share URL <input type="url" data-field="share-url" readonly /></label
+        >
         <details data-output="recording" hidden>
           <summary>Previously recorded outputs</summary>
           <div class="workbench-disclosure-body">

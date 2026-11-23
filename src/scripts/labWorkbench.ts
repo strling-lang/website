@@ -48,12 +48,14 @@ import {
 } from '../lib/regex-lab/interactive';
 import { coordinateMap, editorRange } from '../lib/regex-lab/offsets';
 import {
-  bundleSession,
+  exportSession,
   importBundle,
   importFragment,
   initialSession,
   maxDatasets,
+  maxSessionFileBytes,
   maxTests,
+  readSession,
   readTests,
   SessionArchive,
   shareFragment,
@@ -112,7 +114,7 @@ const assertFile = async (input: HTMLInputElement) => {
   const file = input.files?.[0];
   input.value = '';
   if (!file) return;
-  if (file.size > 2_000_000)
+  if (file.size > maxSessionFileBytes)
     throw new Error('The import exceeds the 2 MB file limit.');
   return await file.text();
 };
@@ -540,13 +542,9 @@ class LabWorkbench extends HTMLElement {
       ({ id }) => id === this.#workingId,
     );
     if (!item) return;
-    const session = this.#snapshot(false);
+    const { drafts, ...session } = this.#snapshot(false);
     item.session = structuredClone({ ...session, recorded: undefined });
-    item.drafts = {};
-    for (const format of ['semantic', 'simply'] as const) {
-      const value = this.#sourceDrafts.get(format);
-      if (value !== undefined) item.drafts[format] = value;
-    }
+    item.drafts = drafts ?? {};
   }
 
   #queueWorkspaceSave() {
@@ -681,7 +679,7 @@ class LabWorkbench extends HTMLElement {
         : 'New source';
     const label = prompt('Working source name', suggested)?.trim().slice(0, 80);
     if (!label) return;
-    const session = duplicate
+    const { drafts, ...session } = duplicate
       ? structuredClone(this.#snapshot(false))
       : initialSession(this.#mode);
     session.id = crypto.randomUUID();
@@ -693,11 +691,7 @@ class LabWorkbench extends HTMLElement {
       session.datasets = [{ name: 'Sample', text: '' }];
     }
     const next = workingSource(session, label);
-    if (duplicate)
-      for (const format of ['semantic', 'simply'] as const) {
-        const draft = this.#sourceDrafts.get(format);
-        if (draft !== undefined) next.drafts[format] = draft;
-      }
+    next.drafts = drafts ?? {};
     this.#workspace.sources.push(next);
     this.#applySession(session, false, next);
   }
@@ -816,7 +810,7 @@ class LabWorkbench extends HTMLElement {
       case 'sessions':
         return {
           copyLabel: 'Copy settings link',
-          downloadLabel: 'Download session with selected inclusions',
+          downloadLabel: 'Download session',
           copy: () => this.#sessionAction('share'),
           download: () => this.#sessionAction('export-session'),
         };
@@ -2042,7 +2036,11 @@ class LabWorkbench extends HTMLElement {
           if (text === undefined) return;
           const session = importBundle(text);
           this.#validateMode(session);
+          session.id = crypto.randomUUID();
           this.#applySession(session, false);
+          this.#say(
+            'Session imported as a separate copy. Select Run or enable Live to execute it.',
+          );
           return;
         }
         case 'import-tests': {
@@ -2361,17 +2359,7 @@ class LabWorkbench extends HTMLElement {
       incoming.runtime = runnable.runtime;
       Object.assign(incoming.run, runnable.options);
     }
-    sessionStorage.setItem(
-      transferKey,
-      bundleSession(incoming, {
-        source: true,
-        samples: true,
-        tests: false,
-        observations: false,
-        sourceOrigin: true,
-        continuation: withCursor,
-      }),
-    );
+    sessionStorage.setItem(transferKey, exportSession(incoming));
     location.assign('/regex/lab/#lab-transfer');
   }
 
@@ -2380,13 +2368,15 @@ class LabWorkbench extends HTMLElement {
     this.#captureWorking();
     this.#session = session;
     this.#trust = trusted;
-    this.#sourceDrafts.clear();
+    this.#sourceDrafts = new Map(
+      Object.entries(working?.drafts ?? session.drafts ?? {}) as [
+        Session['format'],
+        string,
+      ][],
+    );
     if (working) {
       this.#workspace.active = working.id;
       this.#workingId = working.id;
-      this.#sourceDrafts = new Map(
-        Object.entries(working.drafts) as [Session['format'], string][],
-      );
     } else this.#adoptWorking(session);
     this.#source.reset(session.source, session.format);
     this.#subject.reset(this.#dataset.text);
@@ -2413,28 +2403,41 @@ class LabWorkbench extends HTMLElement {
 
   #snapshot(include = true): Session {
     const name = this.#field('name').value.trim();
+    const previous = this.#session.recorded;
+    const timing =
+      this.#benchmark?.status === 'running' ? undefined : this.#benchmark;
     const recorded =
       include &&
       (this.#result ||
         this.#compilation ||
         this.#trace ||
         this.#comparison ||
-        this.#benchmark)
+        timing)
         ? {
             capturedAt: new Date().toISOString(),
-            result: this.#result,
-            compilation: this.#compilation,
+            result: this.#result ?? previous?.result,
+            compilation: this.#compilation ?? previous?.compilation,
             investigation: {
-              trace: this.#trace as unknown as JsonObject | undefined,
-              comparison: this.#comparison as JsonObject | undefined,
+              trace:
+                (this.#trace as unknown as JsonObject | undefined) ??
+                previous?.investigation?.trace,
+              comparison:
+                (this.#comparison as JsonObject | undefined) ??
+                previous?.investigation?.comparison,
               timing:
-                this.#benchmark?.status === 'running'
-                  ? undefined
-                  : (this.#benchmark as JsonObject | undefined),
+                (timing as JsonObject | undefined) ??
+                previous?.investigation?.timing,
             },
           }
-        : this.#session.recorded;
-    return { ...this.#session, name: name || this.#session.name, recorded };
+        : previous;
+    const alternate = this.#session.format === 'simply' ? 'semantic' : 'simply';
+    const draft = this.#sourceDrafts.get(alternate);
+    return {
+      ...this.#session,
+      name: name || this.#session.name,
+      recorded,
+      drafts: draft === undefined ? undefined : { [alternate]: draft },
+    };
   }
 
   async #sessionAction(action: string) {
@@ -2442,13 +2445,15 @@ class LabWorkbench extends HTMLElement {
     const selected = this.#field('saved-session').value;
     const revision = this.#field('revision').value;
     switch (action) {
-      case 'save':
+      case 'save': {
+        const snapshot = readSession(this.#snapshot());
+        store.save(snapshot);
+        this.#session.name = snapshot.name;
         this.#queueWorkspaceSave();
-        store.save(importBundle(JSON.stringify(this.#snapshot())));
-        this.#session.name = this.#snapshot().name;
         this.#readArchive();
         this.#say('Revision saved in this browser.');
         return;
+      }
       case 'duplicate': {
         const session = this.#snapshot();
         session.id = crypto.randomUUID();
@@ -2501,34 +2506,9 @@ class LabWorkbench extends HTMLElement {
         await this.#copy(share.href);
         return;
       }
-      case 'export-session': {
-        const choices = {
-          source: this.#checked('share-active-source').checked,
-          replacement: this.#checked('share-replacement').checked,
-          samples: this.#checked('share-samples').checked,
-          tests: this.#checked('share-tests').checked,
-          observations: this.#checked('share-observations').checked,
-          sourceOrigin: this.#checked('share-source').checked,
-          continuation: this.#checked('share-continuation').checked,
-        };
-        if (
-          choices.continuation &&
-          this.#session.continuation &&
-          (!choices.source ||
-            !choices.samples ||
-            (this.#session.origin && !choices.sourceOrigin) ||
-            (this.#session.run.replacement && !choices.replacement))
-        )
-          throw new Error(
-            'To include this cursor, select its active source, sample data, original source and existing replacement text where applicable.',
-          );
-        const bundle = bundleSession(
-          importBundle(JSON.stringify(this.#snapshot(choices.observations))),
-          choices,
-        );
-        download('lab-session.json', bundle);
+      case 'export-session':
+        download('lab-session.json', exportSession(this.#snapshot()));
         return;
-      }
       default:
         return;
     }

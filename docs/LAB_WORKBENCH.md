@@ -177,25 +177,28 @@ trigger automatic execution. [Site security policy](../SECURITY.md).
 
 ## Session and observation contracts
 
-| Schema                                               | Contents                                                                                                                                                                                                   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| strling-lab-session-v2                               | Source format, source, chosen runtime and target, flags and operation, current datasets, tests, optional derivation, optional recorded provenance. The v1 single-input form migrates to one named dataset. |
-| strling-lab-archive-v1                               | Origin-local named sessions and timestamped immutable revisions.                                                                                                                                           |
-| strling-lab-bundle-v1                                | One session and explicit redaction choices.                                                                                                                                                                |
-| strling-regex-lab-execution-request-v1 and result-v1 | Exact raw pattern, input and config, identity, status, native spans, captures, timing, and optional interactive observation provenance.                                                                    |
-| strling-lab-tests-v1                                 | Named grouped assertions with independent subjects and operations.                                                                                                                                         |
-| strling-lab-trace-v1                                 | Instrumentation ID, bounded events, termination, and execution provenance.                                                                                                                                 |
-| strling-lab-comparison-v1                            | Runtime or revision comparison, source identity, witness inputs, native results, and normalized differences.                                                                                               |
-| strling-lab-timing-v2                                | Bounded raw measurements, separate warmups, ordered pair references, environment, sample size, and median differences.                                                                                     |
+| Schema                                               | Contents                                                                                                                                                                                                                                                        |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| strling-lab-session-v2                               | Complete session snapshot with active source, alternate STRling draft when present, runtime and target, operation options, datasets and selection, tests, recordings, origin, and optional scan cursor. The v1 single-input form migrates to one named dataset. |
+| strling-lab-archive-v1                               | Origin-local named sessions and timestamped immutable revisions.                                                                                                                                                                                                |
+| strling-lab-bundle-v1                                | Legacy file envelope with inclusion metadata. Still readable and used for the existing settings-only link format.                                                                                                                                               |
+| strling-regex-lab-execution-request-v1 and result-v1 | Exact raw pattern, input and config, identity, status, native spans, captures, timing, and optional interactive observation provenance.                                                                                                                         |
+| strling-lab-tests-v1                                 | Named grouped assertions with independent subjects and operations.                                                                                                                                                                                              |
+| strling-lab-trace-v1                                 | Instrumentation ID, bounded events, termination, and execution provenance.                                                                                                                                                                                      |
+| strling-lab-comparison-v1                            | Runtime or revision comparison, source identity, witness inputs, native results, and normalized differences.                                                                                                                                                    |
+| strling-lab-timing-v2                                | Bounded raw measurements, separate warmups, ordered pair references, environment, sample size, and median differences.                                                                                                                                          |
 
-The explicit revision archive caps total serialized content at 2,000,000 UTF-16 units, with up
-to 12 sessions and 12 revisions per session. Downloaded session files have the
-same text limit. Active source, sample data, replacement text, tests, recordings, original
-compiler source, and the saved cursor require explicit opt-in for each file.
-A bundle includes a saved cursor only with the active source, the sample and
-any original compiler source needed for verification. A cursor with nonempty replacement settings requires including that text as well. A settings URL uses an
-allowlist of source format, runtime,
-target, and operation selections. It excludes authored source, flags,
+The explicit revision archive caps total serialized content at 2,000,000 UTF-16
+units, with up to 12 sessions and 12 revisions per session. Save revision and
+Download session capture the current session's complete available state.
+Download writes a standalone session-v2 JSON file, including its replacement,
+recorded outputs, original compiler source when available, and any saved scan
+cursor. The file limit is 2,000,000 UTF-8 bytes. Import opens a separate working
+copy with a fresh local session ID. Save a revision to keep the imported
+recordings in the local archive.
+
+A settings URL uses an allowlist of source format, runtime, target, and
+operation selections. It excludes authored source, flags,
 replacement text, user-defined labels, subjects, tests, and recordings.
 Legacy fragments are size-limited and scrubbed from the address bar before
 parsing. Imported files and links wait for explicit execution. Cross-Lab

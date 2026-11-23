@@ -1,5 +1,13 @@
 # STRling Lab and RegEx Lab acceptance
 
+## Complete session files
+
+Save revision and Download session now capture the full current session.
+A file import opens a separate paused working copy. Saving it creates a new
+local session even when the file came from the same browser. Settings links
+keep the existing allowlist. Legacy session files are still readable and
+retain whichever data the original export included.
+
 ## Canonical Timing review
 
 Timing uses one unmeasured warmup followed by nine measured runs per candidate.

@@ -22,13 +22,15 @@ import {
 export const sessionSchema = 'strling-lab-session-v2';
 const archiveSchema = 'strling-lab-archive-v1';
 const storageKey = 'strling.labs.archive.v1';
-const maxBundle = 2_000_000;
+export const maxSessionFileBytes = 2_000_000;
+const maxArchiveUnits = 2_000_000;
 const shareLimit = 12_000;
 export const maxDatasets = 16;
 export const maxTests = 32;
 
 export type Authoring = 'regex' | 'semantic' | 'simply';
 export type LabMode = 'regex' | 'strling';
+export type SourceDrafts = Partial<Record<Exclude<Authoring, 'regex'>, string>>;
 
 export interface Dataset {
   name: string;
@@ -96,6 +98,7 @@ export interface Session {
   datasets: Dataset[];
   selected: number;
   tests: LabTest[];
+  drafts?: SourceDrafts;
   origin?: SourceOrigin;
   recorded?: Recording;
   continuation?: ScanContinuation;
@@ -353,6 +356,26 @@ function readRecording(value: unknown): Recording | undefined {
   };
 }
 
+function readDrafts(
+  value: unknown,
+  format: Authoring,
+): SourceDrafts | undefined {
+  if (value === undefined) return;
+  const { semantic, simply } = fields(value);
+  if (
+    format === 'regex' ||
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    (semantic !== undefined && !isString(semantic, limits.pattern)) ||
+    (simply !== undefined && !isString(simply, limits.pattern))
+  )
+    throw new Error('Invalid session source drafts.');
+  if (format === 'semantic')
+    return simply === undefined ? undefined : { simply };
+  return semantic === undefined ? undefined : { semantic };
+}
+
 export function readSession(value: unknown): Session {
   const entry = fields(value);
   if (entry.schema === 'strling-lab-session-v1') {
@@ -407,75 +430,22 @@ export function readSession(value: unknown): Session {
     datasets,
     selected,
     tests: readTests(entry.tests),
+    drafts: readDrafts(entry.drafts, format),
     origin: readOrigin(origin),
     recorded: readRecording(recorded),
     continuation: readContinuation(entry.continuation),
   };
 }
 
-interface Bundle {
-  schema: 'strling-lab-bundle-v1';
-  redaction: {
-    samples: boolean;
-    tests: boolean;
-    observations: boolean;
-    sourceOrigin: boolean;
-    source?: boolean;
-    continuation?: boolean;
-    replacement?: boolean;
-  };
-  session: Session;
-}
-
-export function bundleSession(
-  session: Session,
-  choices: Bundle['redaction'],
-): string {
-  const includeSource = choices.source === true;
-  const redacted: Session = {
-    ...session,
-    source: includeSource ? session.source : '',
-    run: {
-      ...session.run,
-      replacement: choices.replacement === false ? '' : session.run.replacement,
-    },
-    datasets: choices.samples
-      ? session.datasets
-      : [{ name: 'Sample', text: '' }],
-    selected: choices.samples ? session.selected : 0,
-    tests: choices.tests ? session.tests : [],
-    recorded: choices.observations ? session.recorded : undefined,
-    origin:
-      includeSource && session.origin
-        ? {
-            ...session.origin,
-            source: choices.sourceOrigin ? session.origin.source : undefined,
-          }
-        : undefined,
-    continuation:
-      choices.continuation &&
-      choices.samples &&
-      includeSource &&
-      (choices.replacement !== false || !session.run.replacement) &&
-      (!session.origin || choices.sourceOrigin)
-        ? session.continuation
-        : undefined,
-  };
-  const bundle: Bundle = {
-    schema: 'strling-lab-bundle-v1',
-    redaction: choices,
-    session: redacted,
-  };
-  const text = JSON.stringify(bundle);
-  if (text.length > maxBundle)
-    throw new Error(
-      'The bundle exceeds the 2 MB session limit. Exclude observations or some datasets.',
-    );
+export function exportSession(session: Session): string {
+  const text = JSON.stringify(readSession(session));
+  if (new TextEncoder().encode(text).byteLength > maxSessionFileBytes)
+    throw new Error('The complete session exceeds the 2 MB file limit.');
   return text;
 }
 
 export function importBundle(text: string) {
-  if (text.length > maxBundle)
+  if (text.length > maxSessionFileBytes)
     throw new Error('The file exceeds the 2 MB session limit.');
   const parsed = fields(JSON.parse(text));
   const session = readSession(
@@ -513,19 +483,19 @@ function settingsSession(session: Session) {
 }
 
 export function shareFragment(session: Session) {
-  const settings = settingsSession(session);
-  return (
-    '#lab=' +
-    encodeURIComponent(
-      bundleSession(settings, {
-        source: false,
-        samples: false,
-        tests: false,
-        observations: false,
-        sourceOrigin: false,
-      }),
-    )
-  );
+  // Preserve the legacy link envelope. Its session is already allowlisted.
+  const bundle = {
+    schema: 'strling-lab-bundle-v1',
+    redaction: {
+      source: false,
+      samples: false,
+      tests: false,
+      observations: false,
+      sourceOrigin: false,
+    },
+    session: settingsSession(session),
+  };
+  return '#lab=' + encodeURIComponent(JSON.stringify(bundle));
 }
 
 export function importFragment(fragment: string) {
@@ -545,7 +515,7 @@ export class SessionArchive {
   list() {
     const text = this.#storage.getItem(storageKey);
     if (!text) return [];
-    if (text.length > maxBundle)
+    if (text.length > maxArchiveUnits)
       throw new Error('Saved sessions exceed the workbench storage limit.');
     const { schema, sessions } = fields(JSON.parse(text));
     if (
@@ -626,7 +596,7 @@ export class SessionArchive {
 
   #put(sessions: SavedSession[]) {
     const json = JSON.stringify({ schema: archiveSchema, sessions });
-    if (json.length > maxBundle)
+    if (json.length > maxArchiveUnits)
       throw new Error(
         'Local session storage is full. Export and delete older revisions to free space.',
       );

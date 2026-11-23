@@ -47,7 +47,7 @@ import { createPCRE2 } from '../../src/lib/regex-lab/pcre-engine.ts';
 import { validateBrowserReply } from '../../src/lib/regex-lab/result-validation.ts';
 import { sameProfileReference } from '../../src/lib/regex-lab/profile-binding.ts';
 import {
-  bundleSession,
+  exportSession,
   importBundle,
   importFragment,
   initialSession,
@@ -55,14 +55,6 @@ import {
   shareFragment,
 } from '../../src/lib/regex-lab/session.ts';
 import { explainRegex } from '../../src/lib/regex-lab/structure.ts';
-
-const saveAll = {
-  source: true,
-  samples: true,
-  tests: true,
-  observations: true,
-  sourceOrigin: true,
-};
 
 const sealedManifest = { schemaVersion: 1, mode: 'sealed' };
 
@@ -402,13 +394,6 @@ test('certified shipping rejects altered evidence and a closure with the wrong p
   }
 });
 
-const redact = {
-  samples: false,
-  tests: false,
-  observations: false,
-  sourceOrigin: false,
-};
-
 test('PCRE2 resumes a complete scan only after its exact consuming boundary', async () => {
   const bytes = await readFile(
     new URL('../../src/lib/regex-lab/wasm/pcre2-10.43.wasm', import.meta.url),
@@ -524,14 +509,24 @@ test('PCRE2 resumes a complete scan only after its exact consuming boundary', as
     datasets: [{ name: 'Synthetic', text: input }],
     continuation: cursor,
   };
-  const full = bundleSession(session, {
-    ...saveAll,
-    source: true,
-    continuation: true,
-  });
+  const full = exportSession(session);
   assert.deepEqual(importBundle(full).continuation, cursor);
+  const legacy = {
+    schema: 'strling-lab-bundle-v1',
+    redaction: { source: true, samples: true, continuation: true },
+    session,
+  };
+  assert.deepEqual(importBundle(JSON.stringify(legacy)).continuation, cursor);
   const excluded = importBundle(
-    bundleSession(session, { ...redact, source: false, continuation: true }),
+    JSON.stringify({
+      ...legacy,
+      redaction: { ...legacy.redaction, source: false, samples: false },
+      session: {
+        ...session,
+        source: '',
+        datasets: [{ name: 'Sample', text: '' }],
+      },
+    }),
   );
   assert.equal(excluded.continuation, undefined);
   assert.equal(excluded.source, '');
@@ -922,7 +917,7 @@ test('offset conversion and concrete comparison preserve actual ranges across ru
   );
 });
 
-test('archive saves and deletes revisions and bundles validate, migrate, and redact data', () => {
+test('archives, complete session files, and settings-only links retain their own state', () => {
   const data = new Map();
   const archive = new SessionArchive({
     getItem: (key) => data.get(key),
@@ -931,6 +926,17 @@ test('archive saves and deletes revisions and bundles validate, migrate, and red
   });
   const session = initialSession('regex');
   session.datasets[0].text = 'private subject';
+  session.datasets.push({ name: 'Second sample', text: 'more data' });
+  session.selected = 1;
+  session.run = {
+    ...defaultOptions,
+    flags: 'u',
+    replacement: 'private replacement',
+  };
+  session.recorded = {
+    capturedAt: '2026-11-01T00:00:00.000Z',
+    investigation: { comparison: { schema: 'strling-lab-comparison-v1' } },
+  };
   session.tests.push({
     id: 'test-1',
     name: 'test',
@@ -944,12 +950,17 @@ test('archive saves and deletes revisions and bundles validate, migrate, and red
   assert.equal(archive.list()[0].revisions.length, 2);
   archive.deleteRevision(session.id, archive.list()[0].revisions[0].id);
   assert.equal(archive.list()[0].revisions[0].session.source, session.source);
+  const file = JSON.parse(exportSession(session));
+  assert.equal(file.schema, 'strling-lab-session-v2');
+  assert.deepEqual(file, session);
   assert.deepEqual(
-    importBundle(bundleSession(session, saveAll)).datasets,
-    session.datasets,
+    JSON.parse(JSON.stringify(importBundle(JSON.stringify(file)))),
+    session,
   );
-  const redacted = bundleSession(session, redact);
-  assert.doesNotMatch(redacted, /private/);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(archive.list()[0].revisions[0].session)),
+    session,
+  );
   const settings = importFragment(
     shareFragment({
       ...session,
@@ -966,6 +977,7 @@ test('archive saves and deletes revisions and bundles validate, migrate, and red
   assert.equal(settings.source, '');
   assert.equal(settings.datasets[0].text, '');
   assert.equal(settings.run.replacement, '');
+  assert.equal(settings.run.flags, '');
   assert.equal(settings.run.operation, 'replace');
   assert.throws(() => importBundle('{"schema":"wrong"}'), /malformed/);
   assert.throws(
@@ -989,6 +1001,30 @@ test('archive saves and deletes revisions and bundles validate, migrate, and red
   );
   archive.clear();
   assert.deepEqual(archive.list(), []);
+});
+
+test('complete files retain the alternate source draft and obey the UTF-8 file limit', () => {
+  const session = initialSession('strling');
+  session.drafts = { simply: '{"privateDraft":true}' };
+  assert.deepEqual(importBundle(exportSession(session)).drafts, session.drafts);
+  assert.equal(importFragment(shareFragment(session)).drafts, undefined);
+  assert.throws(
+    () => exportSession({ ...session, drafts: { simply: 'x'.repeat(8_193) } }),
+    /source drafts/,
+  );
+  session.recorded = {
+    capturedAt: '2026-11-01T00:00:00.000Z',
+    investigation: {
+      comparison: {
+        schema: 'strling-lab-comparison-v1',
+        sample: '界'.repeat(700_000),
+      },
+    },
+  };
+  assert.throws(
+    () => exportSession(session),
+    /complete session exceeds the 2 MB file limit/,
+  );
 });
 
 test('structural explanations use parsed ECMAScript and generated JavaScript integration executes', () => {

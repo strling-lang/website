@@ -3,9 +3,10 @@
 Both routes use [Workbench.astro](../src/components/lab/Workbench.astro),
 [labWorkbench.ts](../src/scripts/labWorkbench.ts), and the modules under
 [src/lib/regex-lab](../src/lib/regex-lab/). Both Labs place runtime limits and
-license links beside the run controls, and test expectation examples in the
-test editor. The [feature inventory](LAB_FEATURE_INVENTORY.md) describes the
-operations, saving, and sharing workflows.
+license links below the workbench panels, and test expectation examples in the
+test editor. RegEx Lab lists the selected runtime's flags in the Flags input
+placeholder and tooltip. The [feature inventory](LAB_FEATURE_INVENTORY.md)
+describes the operations, saving, and sharing workflows.
 
 ## Ownership
 

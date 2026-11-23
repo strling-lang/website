@@ -111,7 +111,7 @@ const tabs = [
                   maxlength="16"
                   spellcheck="false"
                   autocomplete="off"
-                  aria-describedby="workbench-flag-help"
+                  placeholder={[...runtimes.javascript.flags].join(' ')}
                 />
               </label>
             </>
@@ -171,65 +171,6 @@ const tabs = [
         </button>
       </div>
     </div>
-    <p class="workbench-note workbench-run-help">
-      {
-        isStrling
-          ? 'Source edits compile automatically. Run tests the generated pattern against the sample. Live also runs it after edits.'
-          : 'Enter a raw pattern without quotes or delimiters. Set flags separately. Live reruns the selected operation after edits.'
-      }
-    </p>
-    {
-      !isStrling && (
-        <p
-          id="workbench-flag-help"
-          class="workbench-note"
-          data-output="flags"
-        />
-      )
-    }
-    <details class="workbench-reference">
-      <summary>Runtime limits and licenses</summary>
-      <div class="workbench-disclosure-body">
-        <p>
-          Runs use local browser workers with time and output limits. Python
-          downloads its runtime from this site the first time it is used. Match
-          and capture ranges include the start and exclude the end.
-        </p>
-        <ul>
-          <li>
-            JavaScript uses the browser's RegExp engine and reports UTF-16
-            offsets. Split includes captured delimiters using native <code
-              >String.split</code
-            >.
-          </li>
-          <li>
-            PCRE2 reports UTF-8 byte offsets. The <code>p</code> flag enables Unicode
-            properties. Interpreter stepping is available for PCRE2. Native structure
-            inspection is partial.
-          </li>
-          <li>
-            Python <code>re</code> reports Unicode code-point offsets. Bytes mode
-            encodes text as UTF-8, reports byte offsets and displays values in hex.
-            A byte span that splits a Unicode character has no editor range.
-          </li>
-        </ul>
-        <p>
-          PCRE2 license downloads for <a href={pcre242License} download
-            >PCRE2 10.42</a
-          >,{' '}
-          <a href={pcre243License} download>PCRE2 10.43</a>, and{' '}
-          <a href={pcre249License} download>PCRE2 10.49</a>. Python runtime
-          source and notices are available from{' '}
-          <a href="https://github.com/pyodide/pyodide">Pyodide</a>.
-        </p>
-        <p>
-          For certified engine evidence, see <a href="/regex/compatibility/"
-            >RegEx Compatibility Check</a
-          >. Lab results record local execution for the selected input and
-          runtime.
-        </p>
-      </div>
-    </details>
     <div class="workbench-replacement" data-output="replacement" hidden>
       <label
         >Replacement
@@ -719,6 +660,49 @@ const tabs = [
         </details>
       </section>
     </div>
+    <details class="workbench-reference">
+      <summary>Runtime limits and licenses</summary>
+      <div class="workbench-disclosure-body">
+        <p>
+          Runs use local browser workers with time and output limits. Python
+          downloads its runtime from this site the first time it is used. Match
+          and capture ranges include the start and exclude the end.
+        </p>
+        <ul>
+          <li>
+            JavaScript uses the browser's RegExp engine and reports UTF-16
+            offsets. Split includes captured delimiters using native <code
+              >String.split</code
+            >.
+          </li>
+          <li>
+            PCRE2 reports UTF-8 byte offsets. The <code>p</code> flag enables Unicode
+            properties. Interpreter stepping is available for PCRE2. Native structure
+            inspection is partial.
+          </li>
+          <li>
+            Python <code>re</code> reports Unicode code-point offsets. Bytes mode
+            encodes text as UTF-8, reports byte offsets and displays values in hex.
+            A byte span that splits a Unicode character has no editor range.
+          </li>
+        </ul>
+        <p>
+          PCRE2 license downloads for <a href={pcre242License} download
+            >PCRE2 10.42</a
+          >,{' '}
+          <a href={pcre243License} download>PCRE2 10.43</a>, and{' '}
+          <a href={pcre249License} download>PCRE2 10.49</a>. Python runtime
+          source and notices are available from{' '}
+          <a href="https://github.com/pyodide/pyodide">Pyodide</a>.
+        </p>
+        <p>
+          For certified engine evidence, see <a href="/regex/compatibility/"
+            >RegEx Compatibility Check</a
+          >. Lab results record local execution for the selected input and
+          runtime.
+        </p>
+      </div>
+    </details>
   </section>
   <dialog class="workbench-dialog" data-dialog="test">
     <form data-form="test">

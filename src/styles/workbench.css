@@ -114,10 +114,6 @@ lab-workbench :is(button, summary) svg {
   color: var(--lab-accent);
   border-color: var(--lab-accent);
 }
-.workbench-run-help {
-  margin-inline: 0.3rem;
-}
-
 lab-workbench :is(button, input:not([type='checkbox']), select, textarea) {
   border: 1px solid var(--lab-line);
   border-radius: var(--radius-sm);
@@ -147,7 +143,7 @@ lab-workbench input[type='checkbox'] {
   accent-color: var(--lab-accent);
 }
 lab-workbench [data-field='flags'] {
-  width: 8ch;
+  inline-size: calc(18ch + 1.25rem);
   font-family: var(--font-mono);
 }
 lab-workbench :is([data-field='dataset'], [data-field='working-source']) {
@@ -370,6 +366,9 @@ lab-workbench[data-tall] .workbench-editor {
 }
 .workbench-investigation {
   overflow: hidden;
+}
+.workbench > .workbench-reference {
+  margin-top: 0.8rem;
 }
 .workbench-tab-bar {
   display: grid;
@@ -598,6 +597,9 @@ lab-workbench :is(summary, button):focus-visible {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  lab-workbench[data-mode='regex'] .workbench-config {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   }
   .workbench-editors,
   .workbench-replacement {

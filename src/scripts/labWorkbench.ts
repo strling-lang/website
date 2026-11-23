@@ -442,16 +442,20 @@ class LabWorkbench extends HTMLElement {
     const replacement =
       run.operation === 'replace' || run.operation === 'replace-all';
     this.#output('replacement').hidden = !replacement;
-    const detail = this.#output('flags');
-    if (detail) {
-      const description = isPcreRuntime(runtime)
-        ? ' · UTF-8 mode · p enables Unicode properties' +
-          (run.pcreNewline ? ' · all Unicode newlines' : '')
-        : '';
-      detail.textContent =
-        'Raw pattern source · Flags ' +
-        [...runtimes[runtime].flags].join(' ') +
-        description;
+    if (format === 'regex') {
+      const flags = this.#field<HTMLInputElement>('flags');
+      flags.placeholder = [...runtimes[runtime].flags].join(' ');
+      const description = [
+        `Enter flags without spaces. Available flags are ${flags.placeholder}.`,
+      ];
+      if (isPcreRuntime(runtime)) {
+        description.push(
+          'PCRE2 uses UTF-8. The p flag enables Unicode properties.',
+        );
+        if (run.pcreNewline)
+          description.push('All Unicode newlines are enabled.');
+      }
+      flags.title = description.join(' ');
     }
     this.#output('source-meta').textContent =
       (format === 'regex'

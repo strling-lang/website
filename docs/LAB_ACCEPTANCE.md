@@ -783,11 +783,11 @@ local replay and browser behavior. Public acquisition and final deployment
 remain gated on the protected publication record and byte equality between
 the public build and the reviewed static artifact.
 
-## Accepted interface and RC4 publication gate
+## Accepted interface and RC4 publication
 
 The canonical interface review ended at
-`c0d1e35fe2fd196d95d59cc5cb601a5028d52ba1`. Source integration retains sealed
-mode while the RC4 distribution decision is pending. The reviewed certified
+`c0d1e35fe2fd196d95d59cc5cb601a5028d52ba1`. Initial source integration retained sealed
+mode while the RC4 distribution decision was pending. The reviewed certified
 manifest pins the seven-file release and the signed evidence root
 `95753563a98e1473fc065fa0256f058075ee702bf3706f661b154dccc9583a76`.
 Protected run `45199010559`, attempt 1, recorded both exact Program Owner
@@ -798,3 +798,54 @@ certification file matched the independently verified closure. Certified
 website builds resolve the public coordinate.
 [Protected RC4 publication run](https://github.com/strling-lang/strling/actions/runs/45199010559) ·
 [Immutable RC4 release](https://github.com/strling-lang/strling/releases/tag/lab-wasm-v0.1.0-rc.4).
+
+## Dual Labs production release
+
+**Deployed and verified on November 23, 2026 at 9:32 a.m. Central time.**
+
+| Identity                                     | Verified value                                                                                                                                                               |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Website PR                                   | [strling-lang/website #6](https://github.com/strling-lang/website/pull/6)                                                                                                    |
+| Deployed website commit                      | `a969464b8cfebaad3614753e013e57e49b579d14`                                                                                                                                   |
+| Accepted source tree                         | `4b98cc28a6adaddb478ae0c0f7d00da61f911568`                                                                                                                                   |
+| Netlify deploy                               | [6b045c6cfb1e19ee5226192a](https://app.netlify.com/projects/strling-lang/deploys/6b045c6cfb1e19ee5226192a), ready, production, main                                          |
+| Reproduced build inventory                   | 434 files, SHA-256 `f2ad173658dabca3135680719efdcfda16669b169900d37ac5da751e6ed8884a`                                                                                        |
+| Compiler adapter                             | [Immutable GitHub release 455579593](https://github.com/strling-lang/strling/releases/tag/lab-wasm-v0.1.0-rc.4), `strling-lab-wasm 0.1.0-rc.4`                               |
+| Adapter source and certified compiler source | `a13009516b81d4acebf0cba6acf9a37877b41d58` and `bab5a0aaf8d04a437d5c5f1aac3379a3c0511702`                                                                                    |
+| Adapter Wasm                                 | 2,548,656 bytes, SHA-256 `266f3167537a40722682f436729468795a1672e3d277e5dac9237bd9c04d0181`                                                                                  |
+| Signed certification evidence root           | `95753563a98e1473fc065fa0256f058075ee702bf3706f661b154dccc9583a76`                                                                                                           |
+| Rollback                                     | [6aff4b86748a3243796f055d](https://app.netlify.com/projects/strling-lang/deploys/6aff4b86748a3243796f055d), verified available at `3187d307e1d4707d706b1a7508f0cc5c067cadac` |
+
+Full and independent no-reuse Release 1.34.0 each recorded 125 passed, one authorized
+waiver and zero failures. Verified both signatures, 95 certification files, and all
+seven public release assets and GitHub attestations for [run 45199010559, attempt 1](https://github.com/strling-lang/strling/actions/runs/45199010559).
+
+| Verification                                | Passed | Failed | Applicability skips |
+| ------------------------------------------- | -----: | -----: | ------------------: |
+| Unit                                        |    118 |      0 |                   0 |
+| Desktop and mobile Chromium                 |    271 |      0 |                  11 |
+| Desktop Firefox and WebKit                  |     76 |      0 |                   2 |
+| Narrow Firefox and mobile WebKit            |     76 |      0 |                   2 |
+| Live production Chromium desktop and mobile |     30 |      0 |                   0 |
+
+Static build, Astro type checks, CSS compatibility, lint, changed-file formatting,
+RegEx reference coverage and internal links passed. The shipping build used Node
+22.23.5, the lockfile and the public immutable compiler release. Two independent
+builds and a fresh checkout with LF source reproduced the same file inventory.
+Initial assertions used the retired dataset label. The corrected assertions check
+the accepted Sample 1 label. Concurrent Firefox/WebKit diagnostic runs exhibited
+timeouts. The full Firefox/WebKit matrix passed with two workers in isolation.
+
+Live verification exercised formatting, semantic conversion, bounded explanation,
+JavaScript, PCRE2 and Python, native inspection, source navigation, handoff,
+recording, session restore, timing and keyboard accessibility. The homepage and
+both Lab routes returned 200. The retired guide returned 404. Verified 24 exact
+public assets including all eight Wasm files and four worker bundles, along with
+the security headers, immutable cache directives, Wasm MIME type and two
+redirects. Netlify inserts a single matched 326-byte inert hosting annotation
+to each checked HTML response. Removing exactly that annotation gives the
+accepted HTML bytes. No application script or binary normalization was needed.
+The interactive observations apply to the tested browser and inputs.
+
+[STRling Lab](https://strling-lang.netlify.app/lab/) ·
+[RegEx Lab](https://strling-lang.netlify.app/regex/lab/)

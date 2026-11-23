@@ -379,3 +379,5 @@ cannot use a private override. The stable 4.0.3 compiler continues to serve its
 released interoperability operations.
 
 The published [immutable RC4 release](https://github.com/strling-lang/strling/releases/tag/lab-wasm-v0.1.0-rc.4) supplies canonical compiler tools to the certified website build.
+
+Production serves the certified consumer at website commit `a969464b8cfebaad3614753e013e57e49b579d14`. The [production release record](LAB_ACCEPTANCE.md#dual-labs-production-release) identifies the live verification and rollback deploy.

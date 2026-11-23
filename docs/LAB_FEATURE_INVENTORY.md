@@ -559,3 +559,5 @@ The baseline reconciled every static action and field. The refinement consolidat
 - Compiler/Structure, concrete native Results, and canonical Semantic tools each have separate authority. A parser error, emitted-profile refusal, runtime failure, and canonical `unavailable` are observable but different states. The label match does not establish parity between them.
 - The raw UI lacks a peer STRling conversion action, and STRling lacks same-source multiple-engine comparison and raw engine flag selection. These are absent controls; they do not become enabled by loading an artifact or revision.
 - This inventory reflects the refined UI. The preview exercises the original compiler behavior and frozen adapter bytes under the existing release policy. Public RC4 acquisition is outside the local evidence.
+
+The [production release record](LAB_ACCEPTANCE.md#dual-labs-production-release) identifies the exact published website revision, public compiler adapter, and browser validation. The inventory baseline above preserves the original interface review evidence.

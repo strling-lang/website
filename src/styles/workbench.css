@@ -6,6 +6,7 @@ lab-workbench {
   --lab-editor: #0b1117;
   --lab-line: #34414b;
   --lab-capture: #d7c4ff;
+  --lab-control-height: 2.25rem;
 }
 
 .workbench-intro {
@@ -59,12 +60,15 @@ lab-workbench {
   display: flex;
   min-width: 0;
   flex-wrap: wrap;
-  align-items: center;
+  /* Align fields and actions on the control row below any visible labels. */
+  align-items: flex-end;
   gap: 0.55rem;
 }
 
 lab-workbench label {
   display: grid;
+  min-inline-size: 0;
+  max-inline-size: 100%;
   color: var(--text-secondary);
   font-size: 0.85rem;
   gap: 0.14rem;
@@ -73,6 +77,11 @@ lab-workbench .workbench-check {
   display: inline-flex;
   align-items: center;
   gap: 0.36rem;
+}
+lab-workbench
+  :is(.workbench-config, .workbench-actions, .workbench-inline)
+  :is(button, input:not([type='checkbox']), select, .workbench-check) {
+  min-block-size: var(--lab-control-height);
 }
 .workbench-actions {
   align-self: end;
@@ -99,7 +108,7 @@ lab-workbench :is(button, summary) svg {
   justify-content: center;
   gap: 0.4rem;
   inline-size: 5.25rem;
-  block-size: 2.25rem;
+  block-size: var(--lab-control-height);
 }
 [data-execution-state='idle'] [data-execution-icon='stop'],
 [data-execution-state='busy'] [data-execution-icon='run'] {
@@ -113,8 +122,7 @@ lab-workbench :is(button, summary) svg {
   margin-inline: 0.3rem;
 }
 
-lab-workbench
-  :is(button, input:not([type='checkbox']), select, textarea, .workbench-file) {
+lab-workbench :is(button, input:not([type='checkbox']), select, textarea) {
   border: 1px solid var(--lab-line);
   border-radius: var(--radius-sm);
   background: var(--surface-elevated);
@@ -307,7 +315,7 @@ lab-workbench[data-tall] .workbench-editor {
 .workbench-tab-bar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
+  align-items: center;
   background: var(--surface-elevated);
   border-bottom: 1px solid var(--lab-line);
 }
@@ -318,12 +326,12 @@ lab-workbench[data-tall] .workbench-editor {
 .workbench-tab-actions {
   align-self: stretch;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.3rem;
   padding: 0.35rem;
   border-inline-start: 1px solid var(--lab-line);
 }
-.workbench-tab-actions button {
+lab-workbench .workbench-tab-actions button {
   display: grid;
   place-items: center;
   inline-size: 2.15rem;
@@ -404,17 +412,33 @@ lab-workbench[data-tall] .workbench-editor {
 .workbench-investigation details[open] > summary::before {
   transform: rotate(45deg);
 }
-.workbench-investigation details > :not(summary) {
-  margin-inline: 0.65rem;
+.workbench-disclosure-body {
+  display: grid;
+  gap: 0.5rem;
+  min-inline-size: 0;
+  padding: 0.65rem clamp(0.45rem, 1.6vw, 0.7rem);
+}
+.workbench-disclosure-body,
+.workbench-disclosure-body > * {
   -webkit-user-select: text;
   user-select: text;
 }
-.workbench-investigation details > pre {
+.workbench-investigation .workbench-disclosure-body > * {
+  min-inline-size: 0;
+  margin-block: 0;
+}
+.workbench-disclosure-body > button {
+  justify-self: start;
+}
+.workbench-disclosure-body > pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .workbench-investigation details details {
   border-inline-start: 2px solid var(--lab-line);
+}
+.workbench-investigation details details > .workbench-disclosure-body {
+  padding: 0.45rem clamp(0.35rem, 1.2vw, 0.55rem);
 }
 .workbench-tree {
   padding-inline-start: 0.6rem;
@@ -461,8 +485,7 @@ lab-workbench :is(summary, button):focus-visible {
   background: var(--lab-accent-bg);
 }
 .workbench-file input {
-  padding: 0;
-  width: 13rem;
+  inline-size: 13rem;
 }
 .workbench-dialog {
   background: var(--lab-bg);
@@ -505,9 +528,6 @@ lab-workbench :is(summary, button):focus-visible {
   }
   lab-workbench[data-tall] .workbench-editor {
     height: min(18rem, 44vh);
-  }
-  .workbench-investigation details > :not(summary) {
-    margin-inline: 0.32rem;
   }
   .workbench-bar {
     align-items: start;

@@ -31,7 +31,10 @@ export function raw(value: unknown) {
 
 export function details(label: string, ...contents: Node[]) {
   const element = node('details');
-  element.append(node('summary', label), ...contents);
+  const body = node('div');
+  body.className = 'workbench-disclosure-body';
+  body.append(...contents);
+  element.append(node('summary', label), body);
   return element;
 }
 
@@ -47,18 +50,17 @@ export function objectTree(value: unknown) {
             : JSON.stringify(value)),
       );
     const entries = Object.entries(value);
-    const branch = details(key + ' · ' + entries.length + ' entries');
+    const list = node('div');
+    list.className = 'workbench-tree';
+    const branch = details(key + ' · ' + entries.length + ' entries', list);
     let expanded = false;
     branch.addEventListener('toggle', () => {
       if (!branch.open || expanded) return;
       expanded = true;
-      const list = node('div');
-      list.className = 'workbench-tree';
       for (const [key, child] of entries.slice(0, 128))
         list.append(group(key, child, depth + 1));
       if (entries.length > 128)
         list.append(node('p', 'Additional entries are available in raw JSON.'));
-      branch.append(list);
     });
     return branch;
   };

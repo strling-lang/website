@@ -340,54 +340,62 @@ const tabs = [
         </div>
         <details data-output="continuation-tools" hidden>
           <summary>Scan continuation</summary>
-          <div
-            class="workbench-inline"
-            data-output="checkpoint-controls"
-            hidden
-          >
-            <label
-              >Continue after match <select data-field="checkpoint-match"
-              ></select></label
+          <div class="workbench-disclosure-body">
+            <div
+              class="workbench-inline"
+              data-output="checkpoint-controls"
+              hidden
             >
-            <button type="button" data-action="record-cursor"
-              >Keep this boundary</button
+              <label
+                >Continue after match <select data-field="checkpoint-match"
+                ></select></label
+              >
+              <button type="button" data-action="record-cursor"
+                >Keep this boundary</button
+              >
+            </div>
+            <p class="workbench-note" data-output="continuation-status"></p>
+            <button type="button" data-action="resume-scan" hidden
+              >Resume saved scan</button
             >
           </div>
-          <p class="workbench-note" data-output="continuation-status"></p>
-          <button type="button" data-action="resume-scan" hidden
-            >Resume saved scan</button
-          >
         </details>
         <details data-output="extraction" hidden>
           <summary>Extract matches or captures</summary>
-          <div class="workbench-inline">
-            <label>
-              Value to extract
-              <select data-field="extraction-value"></select>
-            </label>
-            <button data-action="export-extraction" type="button">
-              Download extracted JSON
-            </button>
+          <div class="workbench-disclosure-body">
+            <div class="workbench-inline">
+              <label>
+                Value to extract
+                <select data-field="extraction-value"></select>
+              </label>
+              <button data-action="export-extraction" type="button">
+                Download extracted JSON
+              </button>
+            </div>
+            <p class="workbench-note">
+              Values follow match order. Null marks a group that did not
+              participate and an empty string marks a participating empty group.
+            </p>
+            <pre tabindex="0" data-output="extracted-values"></pre>
           </div>
-          <p class="workbench-note">
-            Values follow match order. Null marks a group that did not
-            participate and an empty string marks a participating empty group.
-          </p>
-          <pre tabindex="0" data-output="extracted-values"></pre>
         </details>
         <details data-output="result-details" hidden>
           <summary>Structured result</summary>
-          <div data-output="result-tree"></div>
-          <details>
-            <summary>Raw JSON</summary><pre
-              data-output="result-json"
-              tabindex="0">
-            </pre>
-          </details>
+          <div class="workbench-disclosure-body">
+            <div data-output="result-tree"></div>
+            <details>
+              <summary>Raw JSON</summary>
+              <div class="workbench-disclosure-body">
+                <pre data-output="result-json" tabindex="0"></pre>
+              </div>
+            </details>
+          </div>
         </details>
         <details data-output="origin-details" hidden>
           <summary>Generated pattern origin</summary>
-          <pre data-output="origin-json" tabindex="0"></pre>
+          <div class="workbench-disclosure-body">
+            <pre data-output="origin-json" tabindex="0"></pre>
+          </div>
         </details>
       </section>
       <section
@@ -689,11 +697,13 @@ const tabs = [
         </fieldset>
         <details data-output="recording" hidden>
           <summary>Previously recorded outputs</summary>
-          <p class="workbench-note">
-            Restoring a revision makes these outputs available for inspection.
-            Run starts a new observation with the current runtime and inputs.
-          </p>
-          <pre data-output="recording-json" tabindex="0"></pre>
+          <div class="workbench-disclosure-body">
+            <p class="workbench-note">
+              Restoring a revision makes these outputs available for inspection.
+              Run starts a new observation with the current runtime and inputs.
+            </p>
+            <pre data-output="recording-json" tabindex="0"></pre>
+          </div>
         </details>
       </section>
     </div>

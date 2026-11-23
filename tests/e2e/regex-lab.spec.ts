@@ -55,6 +55,57 @@ async function edit(page: Page, editor: Locator, value: string) {
   }
 }
 
+async function expectPaddedDisclosure(summary: Locator) {
+  await expect(summary).toBeVisible();
+  const disclosure = summary.locator('..');
+  if ((await disclosure.getAttribute('open')) === null)
+    await summary.press('Enter');
+  const body = disclosure.locator(':scope > .workbench-disclosure-body');
+  await expect(body).toBeVisible();
+  const spacing = await body.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const visible = [...element.children]
+      .map((child) => child.getBoundingClientRect())
+      .filter(({ height }) => height > 0);
+    return [
+      visible[0]!.top - bounds.top,
+      bounds.bottom - visible.at(-1)!.bottom,
+      ...visible.flatMap((child) => [
+        child.left - bounds.left,
+        bounds.right - child.right,
+      ]),
+    ];
+  });
+  expect(Math.min(...spacing)).toBeGreaterThanOrEqual(5);
+}
+
+async function expectAlignedControls(row: Locator) {
+  const controls = await row
+    .locator(
+      ':scope > button, :scope > label > :is(input:not([type="checkbox"]), select), :scope > label.workbench-check',
+    )
+    .evaluateAll((elements) =>
+      elements
+        .map((element) => {
+          const { top, bottom, height } = element.getBoundingClientRect();
+          return { top, bottom, height };
+        })
+        .filter(({ height }) => height > 0),
+    );
+  expect(controls.length).toBeGreaterThan(1);
+  for (const [index, control] of controls.entries()) {
+    for (const peer of controls.slice(index + 1)) {
+      if (
+        Math.min(control.bottom, peer.bottom) > Math.max(control.top, peer.top)
+      )
+        expect(Math.abs(control.bottom - peer.bottom)).toBeLessThanOrEqual(1);
+    }
+  }
+  expect(
+    await row.evaluate((element) => element.scrollWidth - element.clientWidth),
+  ).toBeLessThanOrEqual(1);
+}
+
 test('serves PCRE2 notices as same-origin downloads from the Lab guide', async ({
   page,
 }) => {
@@ -327,6 +378,9 @@ test('runs native providers, inspects captures, creates tests and records PCRE2 
   await expect(page.getByRole('heading', { name: /^Step 1 of/ })).toBeVisible();
   await page.getByRole('button', { name: 'Next step' }).click();
   await expect(page.getByRole('heading', { name: /^Step 2 of/ })).toBeVisible();
+  await expectPaddedDisclosure(
+    page.getByText('Capture state', { exact: true }),
+  );
 });
 
 test('compiles released Semantic STRling and Simply, maps diagnostics and transfers an artifact', async ({
@@ -338,6 +392,16 @@ test('compiles released Semantic STRling and Simply, maps diagnostics and transf
   await expect(
     page.getByRole('heading', { name: 'Canonical Semantic IR' }),
   ).toBeVisible();
+  for (const name of [
+    'Semantic analysis',
+    'Semantic IR JSON',
+    'Portability decisions',
+    'Exact compiler response',
+  ]) {
+    const summary = page.getByText(name, { exact: true });
+    await expectPaddedDisclosure(summary);
+    await summary.press('Enter');
+  }
   await edit(
     page,
     source(page),
@@ -356,6 +420,11 @@ test('compiles released Semantic STRling and Simply, maps diagnostics and transf
   await expect(
     page.getByText('ECMAScript 2024 · emitted flags u'),
   ).toBeVisible();
+  await expectPaddedDisclosure(
+    page.getByText('Artifact metadata, options and requirements', {
+      exact: true,
+    }),
+  );
   await page.getByRole('button', { name: 'Run artifact' }).click();
   await expect(status(page)).toHaveText('2 matches');
   await tab(page, 'Artifact');
@@ -367,7 +436,9 @@ test('compiles released Semantic STRling and Simply, maps diagnostics and transf
   await expect(source(page)).toHaveText('hello');
   await run(page);
   await expect(status(page)).toHaveText('2 matches');
-  await expect(page.getByText('Generated pattern origin')).toBeVisible();
+  await expectPaddedDisclosure(
+    page.getByText('Generated pattern origin', { exact: true }),
+  );
 });
 
 test('executes and traces a STRling artifact in its exact PCRE2 target', async ({
@@ -433,6 +504,9 @@ test('compares revisions, measures time and confines authored material to opt-in
   await page.goto('/regex/lab/');
   await expect(status(page)).toHaveText('3 matches');
   await tab(page, 'Sessions');
+  await expectAlignedControls(
+    page.locator('[data-panel="sessions"] > .workbench-inline').first(),
+  );
   await page.getByRole('button', { name: 'Save revision' }).click();
   await expect(status(page)).toHaveText('Revision saved in this browser.');
   await edit(page, source(page), 'alpha');
@@ -444,8 +518,15 @@ test('compares revisions, measures time and confines authored material to opt-in
   await page.getByRole('button', { name: 'Compare revision' }).click();
   await expect(status(page)).toHaveText('Comparison complete.');
   await expect(page.getByText(/Sample · [1-9] differences/)).toBeVisible();
+  await expectAlignedControls(
+    page.locator('[data-panel="compare"] > .workbench-inline'),
+  );
+  await expectPaddedDisclosure(page.getByText(/Sample · [1-9] differences/));
 
   await tab(page, 'Timing');
+  await expectAlignedControls(
+    page.locator('[data-panel="performance"] > .workbench-inline'),
+  );
   await page
     .getByRole('checkbox', { name: 'Include baseline revision' })
     .check();
@@ -453,6 +534,11 @@ test('compares revisions, measures time and confines authored material to opt-in
   await expect(
     page.getByText('8 of 8 measured runs completed', { exact: true }),
   ).toHaveCount(2);
+  await expectPaddedDisclosure(
+    page
+      .getByText('Measurements and runtime provenance', { exact: true })
+      .first(),
+  );
   const timings = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download timings' }).click();
   const experiment = JSON.parse(
@@ -544,9 +630,9 @@ for (const [pattern, text] of [
     await expect(status(page)).toHaveText(
       'Select Run or enable Live to execute this session.',
     );
-    await page
-      .getByText('Previously recorded outputs', { exact: true })
-      .click();
+    await expectPaddedDisclosure(
+      page.getByText('Previously recorded outputs', { exact: true }),
+    );
     await expect(page.locator('[data-output="recording-json"]')).toContainText(
       '"start": 0',
     );
@@ -1351,9 +1437,19 @@ test('keeps run controls stable, resizes both editors and exposes native selecta
     .toBe(0);
   await tall.click();
   expect(await heights()).toEqual(before);
-  await page.getByText('Structured result', { exact: true }).press('Enter');
-  await page.getByText('Raw JSON', { exact: true }).press('Enter');
+  await expectAlignedControls(page.locator('.workbench-config'));
+  await expectAlignedControls(page.locator('.workbench-actions'));
+  await expectPaddedDisclosure(
+    page.getByText('Extract matches or captures', { exact: true }),
+  );
+  await expectAlignedControls(
+    page.locator('[data-output="extraction"] .workbench-inline'),
+  );
+  await expectPaddedDisclosure(
+    page.getByText('Structured result', { exact: true }),
+  );
   const summary = page.getByText('Raw JSON', { exact: true });
+  await expectPaddedDisclosure(summary);
   const json = page.locator('[data-output="result-json"]');
   await expect(json).toBeVisible();
   const selectionProperty =
@@ -1369,6 +1465,17 @@ test('keeps run controls stable, resizes both editors and exposes native selecta
   await summary.press('Enter');
   await expect(json).toBeHidden();
   const bar = page.getByRole('group', { name: 'Selected tab actions' });
+  await expectAlignedControls(bar);
+  const actionOffset = await bar.evaluate((group) => {
+    const tabs = group.parentElement!.querySelector('[role="tablist"]')!;
+    const copy = group.querySelector('button')!;
+    const center = (element: Element) => {
+      const { top, height } = element.getBoundingClientRect();
+      return top + height / 2;
+    };
+    return Math.abs(center(tabs) - center(copy));
+  });
+  expect(actionOffset).toBeLessThanOrEqual(1);
   await expect(bar.getByRole('button').nth(0)).toHaveAccessibleName(
     'Copy result JSON',
   );

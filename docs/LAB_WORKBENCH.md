@@ -246,6 +246,13 @@ height for both editors without replacing either editor state. The tab strip
 scrolls independently from its Copy and Download buttons. Specialized extraction,
 integration-example, and conversion controls remain in their own panels.
 
+The toolbar and panel rows align actions with the controls beneath any visible
+label. They wrap without adding labels or changing focus order. The tab actions
+stay centered at the edge of the scrolling tab list. Static and generated
+technical disclosures share a padded body. Nested levels use a smaller inset,
+including those that contain a single preformatted block. Native summaries
+retain keyboard behavior and evidence text remains selectable.
+
 Timing requests eight measured samples after an unmeasured warmup per series.
 Its exported schema retains raw values and adds completion state and the sampled
 clock-resolution estimate. A stopped or failed series keeps completed samples and

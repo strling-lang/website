@@ -264,8 +264,8 @@ retain keyboard behavior and evidence text remains selectable.
 Each editor header puts its saved-item selector first and Copy last. Manage
 offers New, Rename, Duplicate, Delete, and Find / replace in editor. STRling
 places its format action immediately before Copy. Copy writes the current
-editor text to the clipboard. Sample text also offers **Use dataset from another
-working copy** to bring in an independent copy of a dataset from the same Lab.
+editor text to the clipboard. In Sample text, **Choose a saved dataset** brings
+in an independent copy from another working copy in the same Lab.
 
 All editors share a compact Find and Replace panel. Search and replacement
 treat regex syntax, backslashes, and dollar signs as literal text. Match Case

@@ -237,10 +237,9 @@ const tabs = [
             <select data-field="dataset" aria-label="Dataset"></select>
             <div class="workbench-editor-actions">
               <EditorManagement resource="dataset">
-                <label>
-                  Use dataset from another working copy
-                  <select data-field="reuse-dataset"></select>
-                </label>
+                <select
+                  data-field="reuse-dataset"
+                  aria-label="Reuse saved dataset"></select>
               </EditorManagement>
               <button type="button" data-action="copy-dataset">Copy</button>
             </div>

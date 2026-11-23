@@ -1775,7 +1775,7 @@ test('autosaves working patterns and independent dataset copies without automati
   await expect(source(page)).toHaveText('original');
   await manage(page, 'Sample text').click();
   await page
-    .getByRole('combobox', { name: 'Use dataset from another working copy' })
+    .getByRole('combobox', { name: 'Reuse saved dataset' })
     .selectOption({ label: 'Copy for review · Sample copy' });
   await expect(subject(page)).toHaveText('independent');
   await expect(save).toHaveText('Saved in this browser');

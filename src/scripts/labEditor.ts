@@ -7,12 +7,14 @@ import {
   syntaxHighlighting,
 } from '@codemirror/language';
 import { setDiagnostics, type Diagnostic } from '@codemirror/lint';
+import { search, setSearchQuery } from '@codemirror/search';
 import {
   Compartment,
   EditorState,
   RangeSetBuilder,
   StateEffect,
   StateField,
+  Transaction,
   type Extension,
 } from '@codemirror/state';
 import {
@@ -113,15 +115,85 @@ function decorations(marks: Mark[]): DecorationSet {
 }
 
 const setSourceHighlight = StateEffect.define<DecorationSet>();
-const sourceHighlight = StateField.define<DecorationSet>({
-  create: () => Decoration.none,
+const dismissSourceHighlights = StateEffect.define<void>();
+const dismissedSourceHighlights = {
+  linked: Decoration.none,
+  searchDismissed: true,
+  diagnosticDismissed: true,
+};
+const sourceHighlight = StateField.define<{
+  linked: DecorationSet;
+  searchDismissed: boolean;
+  diagnosticDismissed: boolean;
+}>({
+  create: () => ({
+    linked: Decoration.none,
+    searchDismissed: false,
+    diagnosticDismissed: false,
+  }),
   update(value, transaction) {
-    if (transaction.docChanged) return Decoration.none;
+    const searchSelection = transaction.isUserEvent('select.search');
+    const manualSelection =
+      transaction.isUserEvent('select') && !searchSelection;
+    if (
+      manualSelection ||
+      transaction.effects.some((effect) => effect.is(dismissSourceHighlights))
+    )
+      return dismissedSourceHighlights;
+
+    let linked = transaction.docChanged ? Decoration.none : value.linked;
     for (const effect of transaction.effects)
-      if (effect.is(setSourceHighlight)) return effect.value;
-    return value;
+      if (effect.is(setSourceHighlight) && !transaction.docChanged)
+        linked = effect.value;
+    const searchDismissed =
+      value.searchDismissed &&
+      !searchSelection &&
+      !transaction.isUserEvent('input.replace') &&
+      !transaction.effects.some((effect) => effect.is(setSearchQuery));
+    // The native lint panel and F8 set a selection and reveal it without
+    // the user-event annotation used by caret motion and mouse selection.
+    const diagnosticDismissed =
+      value.diagnosticDismissed &&
+      !(
+        transaction.selection &&
+        !transaction.docChanged &&
+        transaction.scrollIntoView &&
+        !transaction.annotation(Transaction.userEvent)
+      );
+    if (
+      linked === value.linked &&
+      searchDismissed === value.searchDismissed &&
+      diagnosticDismissed === value.diagnosticDismissed
+    )
+      return value;
+    return { linked, searchDismissed, diagnosticDismissed };
   },
-  provide: (field) => EditorView.decorations.from(field),
+  provide: (field) => [
+    EditorView.decorations.from(field, ({ linked }) => linked),
+    EditorView.editorAttributes.from(field, (value) => ({
+      'data-search-highlight-dismissed': String(value.searchDismissed),
+      'data-diagnostic-highlight-dismissed': String(value.diagnosticDismissed),
+    })),
+  ],
+});
+
+const sourceHighlightPointer = EditorView.domEventObservers({
+  mousedown(event, view) {
+    if (event.button !== 0) return;
+    // A click at the existing caret may not emit a selection transaction.
+    // Let CodeMirror resolve the clicked DOM position before removing marks.
+    queueMicrotask(() => {
+      const current = view.state.field(sourceHighlight, false);
+      if (
+        view.dom.isConnected &&
+        current &&
+        (current.linked !== Decoration.none ||
+          !current.searchDismissed ||
+          !current.diagnosticDismissed)
+      )
+        view.dispatch({ effects: dismissSourceHighlights.of(undefined) });
+    });
+  },
 });
 
 function sourceExtensions(format: Authoring) {
@@ -164,7 +236,7 @@ export class LabEditor {
     const { format, limit, onChange, onLimit, onSelection, onHover } = options;
     this.#extensions = [
       format
-        ? [basicSetup, sourceHighlight]
+        ? [basicSetup, search(), sourceHighlight, sourceHighlightPointer]
         : [minimalSetup, bracketMatching()],
       sourceColors,
       EditorView.theme({}, { dark: true }),
@@ -273,7 +345,7 @@ export class LabEditor {
       !boundary(range.start) ||
       !boundary(range.end)
     ) {
-      if (current !== Decoration.none)
+      if (current.linked !== Decoration.none)
         this.view.dispatch({ effects: setSourceHighlight.of(Decoration.none) });
       return;
     }

@@ -276,6 +276,16 @@ lab-workbench[data-tall] .workbench-editor {
 .workbench-editor .cm-searchMatch {
   color: #121418;
 }
+.workbench-editor [data-search-highlight-dismissed='true'] .cm-searchMatch {
+  background-color: transparent;
+  color: inherit;
+}
+.workbench-editor [data-search-highlight-dismissed='true'] .cm-selectionMatch,
+.workbench-editor
+  [data-diagnostic-highlight-dismissed='true']
+  .cm-lintRange-active {
+  background-color: transparent;
+}
 .workbench-editor .cm-matchingBracket {
   color: #121418;
 }

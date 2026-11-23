@@ -261,9 +261,12 @@ Source links in Compiler, Structure, Artifact, Results, Semantic tools, and
 Debugger use a dedicated CodeMirror decoration and a reveal effect. Validated
 source spans produce one active range or point highlight without moving the
 editing caret, changing a deliberate selection, or focusing the editor.
-Document edits clear the highlight synchronously. Unmapped steps and invalidated
-results clear it as well. Syntax coloring and lint annotations use independent
-decorations. The Subject editor keeps its existing match and capture behavior.
+Clicking in the source or moving or extending its selection clears the linked
+highlight and dismisses active search and diagnostic emphasis. The editor
+keeps the native selection, search query, and diagnostic underlines. Explicit
+navigation can reveal a new highlight. Document edits, unmapped steps, and
+invalidated results clear the linked highlight as well. The Subject editor keeps
+its match and capture behavior.
 
 Compiler and RegEx structure lists share a wrapping row for the construct and
 description. Nested lists stay inside their parent item. The first five levels

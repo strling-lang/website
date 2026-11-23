@@ -559,6 +559,7 @@ test('compares revisions, measures time and confines authored material to opt-in
   await expectPaddedDisclosure(page.getByText(/Sample · [1-9] differences/));
 
   await tab(page, 'Timing');
+  await expect(page.getByLabel('Repetitions', { exact: true })).toHaveCount(0);
   await expectAlignedControls(
     page.locator('[data-panel="performance"] > .workbench-inline'),
   );
@@ -1611,6 +1612,11 @@ test('preserves successful timing samples when a later real worker request is ca
   expect(evidence.repetitions).toBe(9);
   expect(evidence.series[0].warmup).toBeDefined();
   expect(evidence.series[0].samples).toHaveLength(2);
+  await page.getByRole('button', { name: 'Measure', exact: true }).click();
+  await expect(status(page)).toHaveText('Timing experiment finished.');
+  const retry = await downloadTimings(page);
+  expect(retry.status).toBe('complete');
+  expect(retry.series[0].samples).toHaveLength(9);
 });
 
 for (const [target, runtime, version] of [

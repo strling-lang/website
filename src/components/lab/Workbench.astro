@@ -216,10 +216,10 @@ const tabs = [
         <p>
           PCRE2 license downloads for <a href={pcre242License} download
             >PCRE2 10.42</a
-          >,
-          <a href={pcre243License} download>PCRE2 10.43</a>, and
+          >,{' '}
+          <a href={pcre243License} download>PCRE2 10.43</a>, and{' '}
           <a href={pcre249License} download>PCRE2 10.49</a>. Python runtime
-          source and notices are available from
+          source and notices are available from{' '}
           <a href="https://github.com/pyodide/pyodide">Pyodide</a>.
         </p>
         <p>
@@ -248,7 +248,7 @@ const tabs = [
       </label>
       <p class="workbench-note">
         Literal text is inserted verbatim. Runtime templates use the engine's
-        syntax, such as JavaScript <code>$&lt;name&gt;</code>, PCRE2
+        syntax, such as JavaScript <code>$&lt;name&gt;</code>, PCRE2{' '}
         <code>$&#123;name&#125;</code>, or Python <code>\g&lt;name&gt;</code>.
       </p>
     </div>
@@ -773,8 +773,8 @@ const tabs = [
             expects a defined group that did not participate.
           </p>
           <p>
-            Error categories include <code>compile-rejection</code>,
-            <code>runtime-error</code>, <code>resource-terminated</code>,
+            Error categories include <code>compile-rejection</code>,{' '}
+            <code>runtime-error</code>, <code>resource-terminated</code>,{' '}
             <code>unsupported-operation</code>, and <code
               >infrastructure-failure</code
             >.

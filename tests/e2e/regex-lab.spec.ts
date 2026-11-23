@@ -205,9 +205,14 @@ for (const route of ['/lab/', '/regex/lab/']) {
     await expect(notices).toContainText('UTF-16 offsets');
     await expect(notices).toContainText('UTF-8 byte offsets');
     await expect(notices).toContainText('Unicode code-point offsets');
-    await expect(
-      notices.getByRole('link', { name: 'Pyodide' }),
-    ).toHaveAttribute('href', 'https://github.com/pyodide/pyodide');
+    const pyodide = notices.getByRole('link', { name: 'Pyodide' });
+    await expect(pyodide).toHaveAttribute(
+      'href',
+      'https://github.com/pyodide/pyodide',
+    );
+    await expect(pyodide.locator('..')).toHaveText(
+      'PCRE2 license downloads for PCRE2 10.42, PCRE2 10.43, and PCRE2 10.49. Python runtime source and notices are available from Pyodide.',
+    );
 
     for (const version of ['10.42', '10.43', '10.49']) {
       const notice = notices.getByRole('link', {
@@ -227,6 +232,13 @@ for (const route of ['/lab/', '/regex/lab/']) {
     }
     await runtimeHelp.press('Enter');
 
+    await page.getByLabel('Operation', { exact: true }).selectOption('replace');
+    const replacementHelp = page.locator('[data-output="replacement"] p');
+    await expect(replacementHelp).toBeVisible();
+    await expect(replacementHelp).toContainText(
+      'JavaScript $<name>, PCRE2 ${name}, or Python \\g<name>.',
+    );
+
     await tab(page, 'Tests');
     await page.getByRole('button', { name: 'Add test', exact: true }).click();
     const dialog = page.locator('dialog[open]');
@@ -234,6 +246,11 @@ for (const route of ['/lab/', '/regex/lab/']) {
       exact: true,
     });
     await expectPaddedDisclosure(examples);
+    await expect(
+      dialog.getByText('Error categories include', { exact: false }),
+    ).toHaveText(
+      'Error categories include compile-rejection, runtime-error, resource-terminated, unsupported-operation, and infrastructure-failure.',
+    );
     const lines = (await dialog.locator('pre').innerText()).trim().split('\n');
     expect(lines.map((line) => JSON.parse(line).kind)).toEqual([
       'boolean',

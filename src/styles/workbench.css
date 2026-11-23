@@ -273,6 +273,51 @@ lab-workbench[data-tall] .workbench-editor {
   background: var(--surface-elevated);
   color: var(--text-primary);
 }
+.lab-find-panel {
+  --lab-find-control-height: 2rem;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem;
+}
+.lab-find-row,
+.lab-find-actions,
+.lab-find-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-inline-size: 0;
+}
+.workbench-editor .lab-find-panel :is(textarea, button) {
+  block-size: var(--lab-find-control-height);
+  padding: 0.2rem 0.45rem;
+  font-size: 0.8125rem;
+}
+.lab-find-row > textarea {
+  flex: 1 0 6rem;
+  inline-size: 0;
+  min-block-size: var(--lab-find-control-height);
+  max-block-size: var(--lab-find-control-height);
+  overflow: auto;
+}
+.lab-find-actions {
+  justify-content: flex-end;
+  margin-inline-start: auto;
+}
+.lab-find-options {
+  gap: 0.25rem 0.85rem;
+}
+.lab-find-options .workbench-check {
+  min-block-size: 1.5rem;
+  font-size: 0.8125rem;
+}
+.lab-find-options input {
+  margin: 0;
+}
+.lab-find-panel :is(textarea, input):focus-visible {
+  outline: 2px solid var(--lab-accent);
+  outline-offset: -1px;
+}
 .workbench-editor .cm-searchMatch {
   color: #121418;
 }

@@ -29,6 +29,7 @@ import { tags } from '@lezer/highlight';
 import language from '../lib/regex-lab/semantic-language.json';
 import type { TextRange } from '../lib/regex-lab/offsets';
 import type { Authoring } from '../lib/regex-lab/session';
+import { createLabSearchPanel } from './labSearchPanel';
 
 const keywords = new Set(language.keyword_terminals);
 const sourceColors = syntaxHighlighting(
@@ -236,7 +237,12 @@ export class LabEditor {
     const { format, limit, onChange, onLimit, onSelection, onHover } = options;
     this.#extensions = [
       format
-        ? [basicSetup, search(), sourceHighlight, sourceHighlightPointer]
+        ? [
+            basicSetup,
+            search({ createPanel: createLabSearchPanel, literal: true }),
+            sourceHighlight,
+            sourceHighlightPointer,
+          ]
         : [minimalSetup, bracketMatching()],
       sourceColors,
       EditorView.theme({}, { dark: true }),

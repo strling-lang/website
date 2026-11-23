@@ -171,29 +171,69 @@ async function expectAlignedControls(row: Locator) {
   ).toBeLessThanOrEqual(1);
 }
 
-test('serves PCRE2 notices as same-origin downloads from the Lab guide', async ({
-  page,
-}) => {
-  await page.goto('/lab/guide/');
-
-  for (const version of ['10.42', '10.43', '10.49']) {
-    const notice = page.getByRole('link', {
-      name: `PCRE2 ${version}`,
+for (const route of ['/lab/', '/regex/lab/']) {
+  test(`offers runtime notices and test expectation examples inline at ${route}`, async ({
+    page,
+  }) => {
+    await page.goto(route);
+    const runtimeHelp = page.getByText('Runtime limits and licenses', {
       exact: true,
     });
-    await expect(notice).toHaveAttribute('download', '');
-    const href = await notice.getAttribute('href');
-    expect(href).toMatch(/^\/_astro\/[^/]+\.txt$/);
+    const notices = runtimeHelp.locator('..');
+    await expect(notices).not.toHaveAttribute('open', '');
+    await expectPaddedDisclosure(runtimeHelp);
+    await expect(notices).toContainText('UTF-16 offsets');
+    await expect(notices).toContainText('UTF-8 byte offsets');
+    await expect(notices).toContainText('Unicode code-point offsets');
+    await expect(
+      notices.getByRole('link', { name: 'Pyodide' }),
+    ).toHaveAttribute('href', 'https://github.com/pyodide/pyodide');
 
-    const response = await page.request.get(href!);
-    expect(response.ok()).toBe(true);
-    const source = new URL(
-      `../../src/lib/regex-lab/wasm/PCRE2-${version}-LICENCE.txt`,
-      import.meta.url,
-    );
-    expect(await response.body()).toEqual(await readFile(source));
-  }
-});
+    for (const version of ['10.42', '10.43', '10.49']) {
+      const notice = notices.getByRole('link', {
+        name: `PCRE2 ${version}`,
+        exact: true,
+      });
+      await expect(notice).toHaveAttribute('download', '');
+      const href = await notice.getAttribute('href');
+      expect(href).toMatch(/^\/_astro\/[^/]+\.txt$/);
+      const response = await page.request.get(href!);
+      expect(response.ok()).toBe(true);
+      const license = new URL(
+        `../../src/lib/regex-lab/wasm/PCRE2-${version}-LICENCE.txt`,
+        import.meta.url,
+      );
+      expect(await response.body()).toEqual(await readFile(license));
+    }
+    await runtimeHelp.press('Enter');
+
+    await tab(page, 'Tests');
+    await page.getByRole('button', { name: 'Add test', exact: true }).click();
+    const dialog = page.locator('dialog[open]');
+    const examples = dialog.getByText('Test expectation formats', {
+      exact: true,
+    });
+    await expectPaddedDisclosure(examples);
+    const lines = (await dialog.locator('pre').innerText()).trim().split('\n');
+    expect(lines.map((line) => JSON.parse(line).kind)).toEqual([
+      'boolean',
+      'matches',
+      'matches',
+      'replacement',
+      'split',
+      'error',
+    ]);
+    await dialog.getByLabel('Name', { exact: true }).fill('Missing match');
+    await dialog.getByLabel('Subject', { exact: true }).fill('');
+    await dialog
+      .getByRole('combobox', { name: 'Operation', exact: true })
+      .selectOption('search');
+    await dialog.getByLabel('Expected result JSON').fill(lines[0]!);
+    await dialog.getByRole('button', { name: 'Save test' }).click();
+    await page.getByRole('button', { name: 'Run all' }).click();
+    await expect(status(page)).toHaveText('1 of 1 tests passed.');
+  });
+}
 
 test('inspects PCRE2 compiled ranges and Python parser instructions under hosting CSP', async ({
   context,

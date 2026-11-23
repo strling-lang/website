@@ -616,12 +616,25 @@ test.describe('metadata and discoverability', () => {
     expect(sitemap).toContain('/regex/');
     expect(sitemap).toContain(sampleRegexCategory);
     expect(sitemap).toContain(sampleRegexFeature);
-    for (const route of ['/lab/', '/regex/lab/', '/lab/guide/']) {
+    for (const route of ['/lab/', '/regex/lab/']) {
       expect(sitemap).toContain(
         '<loc>https://strling-lang.netlify.app' + route + '</loc>',
       );
     }
+    expect(sitemap).not.toContain('/lab/guide/');
     expect(sitemap).not.toContain('/regex/compatibility/');
+  });
+
+  test('the removed Lab Guide returns 404 and neither Lab links to it', async ({
+    page,
+    request,
+  }) => {
+    const removed = await request.get('/lab/guide/', { maxRedirects: 0 });
+    expect(removed.status()).toBe(404);
+    for (const route of ['/lab/', '/regex/lab/']) {
+      await page.goto(route);
+      await expect(page.locator('a[href*="/lab/guide"]')).toHaveCount(0);
+    }
   });
 
   test('favicon assets are emitted with image content types', async ({

@@ -2,8 +2,10 @@
 
 Both routes use [Workbench.astro](../src/components/lab/Workbench.astro),
 [labWorkbench.ts](../src/scripts/labWorkbench.ts), and the modules under
-[src/lib/regex-lab](../src/lib/regex-lab/). The [user guide](../src/pages/lab/guide.astro)
-describes operations, test expectations, saving, and sharing.
+[src/lib/regex-lab](../src/lib/regex-lab/). Both Labs place runtime limits and
+license links beside the run controls, and test expectation examples in the
+test editor. The [feature inventory](LAB_FEATURE_INVENTORY.md) describes the
+operations, saving, and sharing workflows.
 
 ## Ownership
 
@@ -74,9 +76,9 @@ the compilation provider and retains its own Wasm and protocol.
 The [release and rollback checklist](LAB_ACCEPTANCE.md#production-preparation-and-rollback)
 records the deployment boundary and required public verification.
 
-The Lab guide serves the PCRE2 license texts as same-origin static
-downloads. Git pins these files to LF and each import disables inlining,
-so the downloads and guide HTML are reproducible across checkout settings.
+Both Labs serve the PCRE2 license texts as same-origin static downloads.
+Git pins these files to LF and each import disables inlining, keeping the
+downloads reproducible across checkout settings.
 The embedded Python engine source and downloadable example sources also use
 LF so their bytes and the generated worker and page identities stay stable.
 

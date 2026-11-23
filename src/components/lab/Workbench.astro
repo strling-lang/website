@@ -3,7 +3,10 @@ import Breadcrumbs from '@/components/Breadcrumbs.astro';
 import type { Crumb } from '@/components/Breadcrumbs.astro';
 import { operations, runtimes, limits } from '@/lib/regex-lab/interactive';
 import { targets } from '@/lib/regex-lab/compiler';
-import type { LabMode } from '@/lib/regex-lab/session';
+import type { Expected, LabMode } from '@/lib/regex-lab/session';
+import pcre242License from '@/lib/regex-lab/wasm/PCRE2-10.42-LICENCE.txt?url&no-inline';
+import pcre243License from '@/lib/regex-lab/wasm/PCRE2-10.43-LICENCE.txt?url&no-inline';
+import pcre249License from '@/lib/regex-lab/wasm/PCRE2-10.49-LICENCE.txt?url&no-inline';
 import '@/styles/workbench.css';
 
 interface Props {
@@ -14,6 +17,22 @@ interface Props {
 
 const { mode, crumbs, title } = Astro.props;
 const isStrling = mode === 'strling';
+const expectationExamples = (
+  [
+    { kind: 'boolean', value: false },
+    {
+      kind: 'matches',
+      count: 2,
+      captures: [{ match: 1, key: 'name', value: 'alpha' }],
+    },
+    { kind: 'matches', count: 0 },
+    { kind: 'replacement', value: 'result' },
+    { kind: 'split', value: ['first', null, 'last'] },
+    { kind: 'error', value: 'compile-rejection' },
+  ] satisfies Expected[]
+)
+  .map((example) => JSON.stringify(example))
+  .join('\n');
 const tabs = [
   ['results', 'Results'],
   ['structure', isStrling ? 'Compiler' : 'Structure'],
@@ -34,21 +53,14 @@ const tabs = [
 <lab-workbench data-mode={mode}>
   <header class="container workbench-intro">
     <Breadcrumbs items={crumbs} />
-    <div class="workbench-heading">
-      <div>
-        <h1>{title}</h1>
-        <p>
-          {
-            isStrling
-              ? 'Compile semantic source and test the emitted pattern against your data.'
-              : 'Run regular expressions, inspect captures, and compare results across engines.'
-          }
-        </p>
-      </div>
-      <a class="workbench-link" href="/lab/guide/"
-        >Lab guide <span aria-hidden="true">↗</span></a
-      >
-    </div>
+    <h1>{title}</h1>
+    <p>
+      {
+        isStrling
+          ? 'Compile semantic source and test the emitted pattern against your data.'
+          : 'Run regular expressions, inspect captures, and compare results across engines.'
+      }
+    </p>
   </header>
   <noscript
     ><p class="container">
@@ -163,7 +175,7 @@ const tabs = [
       {
         isStrling
           ? 'Source edits compile automatically. Run tests the generated pattern against the sample. Live also runs it after edits.'
-          : 'Run checks the pattern against the selected sample. Live reruns it after edits.'
+          : 'Enter a raw pattern without quotes or delimiters. Set flags separately. Live reruns the selected operation after edits.'
       }
     </p>
     {
@@ -175,6 +187,49 @@ const tabs = [
         />
       )
     }
+    <details class="workbench-reference">
+      <summary>Runtime limits and licenses</summary>
+      <div class="workbench-disclosure-body">
+        <p>
+          Runs use local browser workers with time and output limits. Python
+          downloads its runtime from this site the first time it is used. Match
+          and capture ranges include the start and exclude the end.
+        </p>
+        <ul>
+          <li>
+            JavaScript uses the browser's RegExp engine and reports UTF-16
+            offsets. Split includes captured delimiters using native <code
+              >String.split</code
+            >.
+          </li>
+          <li>
+            PCRE2 reports UTF-8 byte offsets. The <code>p</code> flag enables Unicode
+            properties. Interpreter stepping is available for PCRE2. Native structure
+            inspection is partial.
+          </li>
+          <li>
+            Python <code>re</code> reports Unicode code-point offsets. Bytes mode
+            encodes text as UTF-8, reports byte offsets and displays values in hex.
+            A byte span that splits a Unicode character has no editor range.
+          </li>
+        </ul>
+        <p>
+          PCRE2 license downloads for <a href={pcre242License} download
+            >PCRE2 10.42</a
+          >,
+          <a href={pcre243License} download>PCRE2 10.43</a>, and
+          <a href={pcre249License} download>PCRE2 10.49</a>. Python runtime
+          source and notices are available from
+          <a href="https://github.com/pyodide/pyodide">Pyodide</a>.
+        </p>
+        <p>
+          For certified engine evidence, see <a href="/regex/compatibility/"
+            >RegEx Compatibility Check</a
+          >. Lab results record local execution for the selected input and
+          runtime.
+        </p>
+      </div>
+    </details>
     <div class="workbench-replacement" data-output="replacement" hidden>
       <label
         >Replacement
@@ -191,6 +246,11 @@ const tabs = [
           <option value="native">Runtime template</option>
         </select>
       </label>
+      <p class="workbench-note">
+        Literal text is inserted verbatim. Runtime templates use the engine's
+        syntax, such as JavaScript <code>$&lt;name&gt;</code>, PCRE2
+        <code>$&#123;name&#125;</code>, or Python <code>\g&lt;name&gt;</code>.
+      </p>
     </div>
     <div class="workbench-editors">
       <section aria-labelledby="lab-source-heading" class="workbench-card">
@@ -748,9 +808,27 @@ const tabs = [
           rows="5"
           spellcheck="false"></textarea></label
       >
-      <p class="workbench-note">
-        <a href="/lab/guide/#test-expectations">Test expectation formats</a>
-      </p>
+      <details class="workbench-reference">
+        <summary>Test expectation formats</summary>
+        <div class="workbench-disclosure-body">
+          <p>
+            Enter one JSON object per test. Choose the example for your
+            operation.
+          </p>
+          <pre><code>{expectationExamples}</code></pre>
+          <p>
+            Use a numbered or named capture key. A <code>null</code> capture value
+            expects a defined group that did not participate.
+          </p>
+          <p>
+            Error categories include <code>compile-rejection</code>,
+            <code>runtime-error</code>, <code>resource-terminated</code>,
+            <code>unsupported-operation</code>, and <code
+              >infrastructure-failure</code
+            >.
+          </p>
+        </div>
+      </details>
       <p role="alert" data-output="test-error"></p>
       <div class="workbench-inline">
         <button type="submit" class="workbench-primary">Save test</button>

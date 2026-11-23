@@ -13,7 +13,6 @@ lab-workbench {
   padding-block: 1.6rem 1.35rem;
 }
 
-.workbench-heading,
 .workbench-bar,
 .workbench-card header,
 .workbench-status {
@@ -24,18 +23,15 @@ lab-workbench {
   flex-wrap: wrap;
 }
 
-.workbench-heading h1 {
+.workbench-intro h1 {
   margin: 0;
   margin-top: 0.45rem;
   font-size: clamp(2rem, 4vw, 3.4rem);
   line-height: 1.13;
 }
-.workbench-heading p {
+.workbench-intro > p {
   color: var(--text-secondary);
   margin: 0.4rem 0 0;
-}
-.workbench-link {
-  color: var(--lab-accent);
 }
 .workbench {
   padding-bottom: 4.5rem;
@@ -172,6 +168,10 @@ lab-workbench [hidden] {
   gap: 0.7rem;
   padding: 0.85rem;
   margin-block: 0.7rem;
+}
+.workbench-replacement > p {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 .workbench-editors {
   display: grid;
@@ -375,13 +375,13 @@ lab-workbench .workbench-tab-actions button {
   border-radius: var(--radius-sm);
   font: 0.84rem / 1.55 var(--font-mono);
 }
-.workbench-investigation details {
+:is(.workbench-investigation details, .workbench-reference) {
   margin-block: 0.55rem;
   border: 1px solid var(--lab-line);
   border-radius: var(--radius-sm);
   background: var(--lab-editor);
 }
-.workbench-investigation summary {
+:is(.workbench-investigation, .workbench-reference) summary {
   display: flex;
   align-items: baseline;
   gap: 0.6rem;
@@ -395,10 +395,11 @@ lab-workbench .workbench-tab-actions button {
   border-radius: var(--radius-sm);
   font-weight: 600;
 }
-.workbench-investigation summary::-webkit-details-marker {
+:is(.workbench-investigation, .workbench-reference)
+  summary::-webkit-details-marker {
   display: none;
 }
-.workbench-investigation summary::before {
+:is(.workbench-investigation, .workbench-reference) summary::before {
   content: '';
   width: 0.43rem;
   height: 0.43rem;
@@ -408,12 +409,13 @@ lab-workbench .workbench-tab-actions button {
   border-bottom: 2px solid var(--lab-accent);
   transform: rotate(-45deg);
 }
-.workbench-investigation details[open] > summary {
+:is(.workbench-investigation details, .workbench-reference)[open] > summary {
   border-bottom: 1px solid var(--lab-line);
   border-end-start-radius: 0;
   border-end-end-radius: 0;
 }
-.workbench-investigation details[open] > summary::before {
+:is(.workbench-investigation details, .workbench-reference)[open]
+  > summary::before {
   transform: rotate(45deg);
 }
 .workbench-disclosure-body {
@@ -427,7 +429,9 @@ lab-workbench .workbench-tab-actions button {
   -webkit-user-select: text;
   user-select: text;
 }
-.workbench-investigation .workbench-disclosure-body > * {
+:is(.workbench-investigation, .workbench-reference)
+  .workbench-disclosure-body
+  > * {
   min-inline-size: 0;
   margin-block: 0;
 }
@@ -563,7 +567,7 @@ lab-workbench :is(summary, button):focus-visible {
   }
 }
 @media (forced-colors: active) {
-  .workbench-investigation summary::before {
+  :is(.workbench-investigation, .workbench-reference) summary::before {
     border-color: ButtonText;
   }
   lab-workbench :is(summary, button):focus-visible {

@@ -822,11 +822,11 @@ test('compares revisions, measures time and exports recordings without adding th
     .selectOption({ index: 1 });
   await page.getByRole('button', { name: 'Compare revision' }).click();
   await expect(status(page)).toHaveText('Comparison complete.');
-  await expect(page.getByText(/Sample · [1-9] differences/)).toBeVisible();
+  await expect(page.getByText(/Sample 1 · [1-9] differences/)).toBeVisible();
   await expectAlignedControls(
     page.locator('[data-panel="compare"] > .workbench-inline'),
   );
-  await expectPaddedDisclosure(page.getByText(/Sample · [1-9] differences/));
+  await expectPaddedDisclosure(page.getByText(/Sample 1 · [1-9] differences/));
 
   await tab(page, 'Timing');
   const timing = page.getByRole('tabpanel', { name: 'Timing' });

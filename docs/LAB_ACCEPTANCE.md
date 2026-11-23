@@ -790,7 +790,11 @@ The canonical interface review ended at
 mode while the RC4 distribution decision is pending. The reviewed certified
 manifest pins the seven-file release and the signed evidence root
 `95753563a98e1473fc065fa0256f058075ee702bf3706f661b154dccc9583a76`.
-The protected publication run is awaiting the Program Owner decision for
-attempt 1. Shipping acceptance begins after independent verification of the
-public immutable release and its attestation.
-[Protected RC4 publication run](https://github.com/strling-lang/strling/actions/runs/44992199464).
+Protected run `45199010559`, attempt 1, recorded both exact Program Owner
+decisions and published immutable release `455579593`. Independent public
+verification matched the tag source, all seven asset sizes and SHA-256
+digests, and the GitHub release and asset attestations. The published signed
+certification file matched the independently verified closure. Certified
+website builds resolve the public coordinate.
+[Protected RC4 publication run](https://github.com/strling-lang/strling/actions/runs/45199010559) ·
+[Immutable RC4 release](https://github.com/strling-lang/strling/releases/tag/lab-wasm-v0.1.0-rc.4).

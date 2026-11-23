@@ -377,3 +377,5 @@ test transport. That review only qualifies the artifacts it actually used.
 The existing private development pin stays separate. The certified manifest
 cannot use a private override. The stable 4.0.3 compiler continues to serve its
 released interoperability operations.
+
+The published [immutable RC4 release](https://github.com/strling-lang/strling/releases/tag/lab-wasm-v0.1.0-rc.4) supplies canonical compiler tools to the certified website build.

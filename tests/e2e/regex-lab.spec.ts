@@ -96,18 +96,11 @@ async function clickInView(control: Locator) {
 
 function editorSelection(editor: Locator) {
   return editor.evaluate((element) => {
-    const selection = getSelection()!;
-    const offset = (container: Node | null, index: number) => {
-      if (!container || !element.contains(container)) return null;
-      const range = document.createRange();
-      range.setStart(element, 0);
-      range.setEnd(container, index);
-      return range.toString().length;
-    };
-    return [
-      offset(selection.anchorNode, selection.anchorOffset),
-      offset(selection.focusNode, selection.focusOffset),
-    ];
+    // Read the pinned CodeMirror view used by EditorView.findFromDOM so the
+    // assertion also works while the native DOM selection is outside the editor.
+    const tile = Reflect.get(element, 'cmTile');
+    const { anchor, head } = tile.root.view.state.selection.main;
+    return [anchor, head];
   });
 }
 
@@ -560,6 +553,7 @@ test('Compiler source navigation preserves the editing caret when Delete is pres
   const capture = page.getByRole('button', { name: 'capture', exact: true });
   await clickInView(capture);
   await expectSourceHighlight(page, 'capture word');
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 0]);
   const highlightedLines = editor
     .locator('.cm-line')
     .filter({ has: page.locator('.lab-mark--source-navigation') });
@@ -603,9 +597,10 @@ test('Artifact mappings preserve a deliberate source selection for normal editin
   await clickInView(mapping);
   await expect(sourceHighlight(page).first()).toBeVisible();
   await expect(editor).not.toBeFocused();
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 1]);
   await editor.focus();
   await expect.poll(() => editorSelection(editor)).toEqual([0, 1]);
-  await editor.press('Backspace');
+  await page.keyboard.press('Delete');
   await expect(editor.locator('.cm-line')).toHaveText([
     lines[0]!.slice(1),
     ...lines.slice(1),
@@ -633,6 +628,7 @@ test('RegEx Structure highlights without selecting and keeps deep trees inside a
   });
   await clickInView(capture);
   await expectSourceHighlight(page, '(?<word>');
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 0]);
   const row = capture.locator('..');
   await expect(row).toHaveCSS('flex-wrap', 'wrap');
   expect(

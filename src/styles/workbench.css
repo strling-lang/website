@@ -297,6 +297,10 @@ lab-workbench[data-tall] .workbench-editor {
   background: #53447d;
   color: #fff;
 }
+.lab-mark--source-navigation {
+  background: var(--lab-accent-bg);
+  box-shadow: inset 0 1px var(--lab-accent);
+}
 .lab-mark--zero {
   display: inline-flex;
   height: 1em;
@@ -450,11 +454,33 @@ lab-workbench :is(summary, button):focus-visible {
   outline: 2px solid var(--lab-accent);
   outline-offset: -2px;
 }
-.workbench-tree button {
-  text-align: left;
+.workbench-structure-tree {
+  display: grid;
+  gap: 0.35rem;
+  min-inline-size: 0;
+  margin-block: 0.35rem 0;
+  padding-inline-start: 0;
+  list-style: none;
 }
-.workbench-tree .workbench-note {
-  margin-inline-start: 0.45rem;
+.workbench-structure-indent {
+  border-inline-start: 1px solid var(--lab-line);
+  padding-inline-start: 0.6rem;
+}
+.workbench-structure-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+}
+.workbench-structure-row > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+.workbench-structure-row > code {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
 }
 .workbench-results {
   list-style: none;
@@ -548,6 +574,10 @@ lab-workbench :is(summary, button):focus-visible {
   }
   .lab-mark--selected {
     outline: 2px solid Highlight;
+  }
+  .lab-mark--source-navigation {
+    outline: 1px dashed Highlight;
+    outline-offset: -1px;
   }
   .lab-mark--zero {
     border-color: Highlight;

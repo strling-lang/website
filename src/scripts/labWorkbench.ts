@@ -1003,6 +1003,7 @@ class LabWorkbench extends HTMLElement {
     this.#renderResult();
     this.#renderTrace();
     this.#renderTests();
+    this.#source.highlightSource();
     this.#source.report([]);
     this.#artifact();
     if (this.#tab === 'structure') this.#renderStructure();
@@ -1110,7 +1111,7 @@ class LabWorkbench extends HTMLElement {
           const message = String(diagnostic?.message);
           panel.append(
             span
-              ? button(message, () => this.#selectSource(span))
+              ? button(message, () => this.#highlightSource(span))
               : node('p', message),
           );
         }
@@ -1323,15 +1324,23 @@ class LabWorkbench extends HTMLElement {
       : coordinateMap(this.#session.source, unit);
   }
 
-  #selectSource(span: NonNullable<StructureNode['range']>, focus = true) {
-    const range = editorRange(
-      span,
-      this.#session.source.length,
-      span.unit === 'utf16-code-units'
-        ? undefined
-        : this.#sourceCoordinates(span.unit),
+  #highlightSource(span?: StructureNode['range']) {
+    const valid =
+      span &&
+      (span.unit === 'utf16-code-units' ||
+        span.unit === 'utf8-bytes' ||
+        span.unit === 'unicode-code-points');
+    this.#source.highlightSource(
+      valid
+        ? editorRange(
+            span,
+            this.#session.source.length,
+            span.unit === 'utf16-code-units'
+              ? undefined
+              : this.#sourceCoordinates(span.unit),
+          )
+        : undefined,
     );
-    if (range) this.#source.select(range.start, range.end, focus);
   }
 
   async #pattern(session: Session, signal: AbortSignal, publish: boolean) {
@@ -1542,7 +1551,7 @@ class LabWorkbench extends HTMLElement {
       (id) => this.#highlight(id),
       (name) => {
         const range = captures.get(name);
-        return range ? () => this.#selectSource(range) : undefined;
+        return range ? () => this.#highlightSource(range) : undefined;
       },
     );
     this.#output('matches').replaceChildren(this.#matches.content);
@@ -1756,7 +1765,9 @@ class LabWorkbench extends HTMLElement {
     }
     if (inspected.tree)
       panel.append(
-        renderStructure(inspected.tree, (range) => this.#selectSource(range)),
+        renderStructure(inspected.tree, (range) =>
+          this.#highlightSource(range),
+        ),
       );
     if (inspected.diagnostics && 'error' in inspected.diagnostics) {
       const { message, offset, offsetUnit } = inspected.diagnostics.error;
@@ -1767,7 +1778,7 @@ class LabWorkbench extends HTMLElement {
         const span = { start: offset, end: offset, unit: offsetUnit };
         panel.append(
           editorRange(span, source.length, coordinateMap(source, offsetUnit))
-            ? button(label, () => this.#selectSource(span))
+            ? button(label, () => this.#highlightSource(span))
             : node('p', label),
         );
       }
@@ -1805,7 +1816,9 @@ class LabWorkbench extends HTMLElement {
           session.runtime,
         );
         this.#structureOutput = { authority: 'ecmascript-static-parser', tree };
-        panel.append(renderStructure(tree, (span) => this.#selectSource(span)));
+        panel.append(
+          renderStructure(tree, (span) => this.#highlightSource(span)),
+        );
         const flags = node('ul');
         for (const flag of session.run.flags)
           flags.append(
@@ -1858,7 +1871,7 @@ class LabWorkbench extends HTMLElement {
         const item = node('li');
         item.append(
           span
-            ? button(message, () => this.#selectSource(span))
+            ? button(message, () => this.#highlightSource(span))
             : node('span', message),
         );
         list.append(item);
@@ -1870,7 +1883,7 @@ class LabWorkbench extends HTMLElement {
     if (tree)
       panel.append(
         node('h3', 'Canonical Semantic IR'),
-        renderStructure(tree, (span) => this.#selectSource(span)),
+        renderStructure(tree, (span) => this.#highlightSource(span)),
       );
     for (const [key, label] of [
       ['analysis', 'Semantic analysis'],
@@ -1974,7 +1987,7 @@ class LabWorkbench extends HTMLElement {
         if (span)
           links.append(
             button('Source [' + span.start + ', ' + span.end + ')', () =>
-              this.#selectSource(span),
+              this.#highlightSource(span),
             ),
           );
       }
@@ -2709,14 +2722,15 @@ class LabWorkbench extends HTMLElement {
           resultSummary(trace.execution),
       ),
     );
-    if (!event) return;
+    if (!event) {
+      if (select) this.#highlightSource();
+      return;
+    }
     panel.append(
       node('h3', 'Step ' + (this.#step + 1) + ' of ' + trace.events.length),
     );
     const source = this.#mappedTraceSource(event.pattern);
-    const selectPattern = () => {
-      if (source) this.#selectSource(source);
-    };
+    const highlightPattern = () => this.#highlightSource(source);
     const selectInput = () => {
       const map = coordinateMap(this.#dataset.text, 'utf8-bytes');
       const offset = map.get(event.subjectPosition);
@@ -2729,7 +2743,7 @@ class LabWorkbench extends HTMLElement {
     const positionName =
       'Pattern bytes ' + event.pattern.start + '–' + event.pattern.end;
     const position = source
-      ? button(positionName, selectPattern)
+      ? button(positionName, highlightPattern)
       : node('span', positionName);
     const input = button('Input byte ' + event.subjectPosition, selectInput);
     panel.append(
@@ -2749,7 +2763,7 @@ class LabWorkbench extends HTMLElement {
       details('Capture state', raw(event.captures)),
     );
     if (select) {
-      if (source) this.#selectSource(source, false);
+      highlightPattern();
       selectInput();
     }
   }

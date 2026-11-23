@@ -11,6 +11,8 @@ import {
   Compartment,
   EditorState,
   RangeSetBuilder,
+  StateEffect,
+  StateField,
   type Extension,
 } from '@codemirror/state';
 import {
@@ -23,6 +25,7 @@ import {
 import { basicSetup, minimalSetup } from 'codemirror';
 import { tags } from '@lezer/highlight';
 import language from '../lib/regex-lab/semantic-language.json';
+import type { TextRange } from '../lib/regex-lab/offsets';
 import type { Authoring } from '../lib/regex-lab/session';
 
 const keywords = new Set(language.keyword_terminals);
@@ -68,7 +71,7 @@ export interface Mark {
   start: number;
   end: number;
   id: string;
-  kind: 'match' | 'capture' | 'selected';
+  kind: 'match' | 'capture' | 'selected' | 'source-navigation';
 }
 
 class ZeroMarker extends WidgetType {
@@ -109,6 +112,18 @@ function decorations(marks: Mark[]): DecorationSet {
   return builder.finish();
 }
 
+const setSourceHighlight = StateEffect.define<DecorationSet>();
+const sourceHighlight = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(value, transaction) {
+    if (transaction.docChanged) return Decoration.none;
+    for (const effect of transaction.effects)
+      if (effect.is(setSourceHighlight)) return effect.value;
+    return value;
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
 function sourceExtensions(format: Authoring) {
   if (format === 'simply') return json();
   if (format === 'semantic') {
@@ -148,7 +163,9 @@ export class LabEditor {
   ) {
     const { format, limit, onChange, onLimit, onSelection, onHover } = options;
     this.#extensions = [
-      format ? basicSetup : [minimalSetup, bracketMatching()],
+      format
+        ? [basicSetup, sourceHighlight]
+        : [minimalSetup, bracketMatching()],
       sourceColors,
       EditorView.theme({}, { dark: true }),
       EditorView.lineWrapping,
@@ -232,6 +249,43 @@ export class LabEditor {
       effects: this.#marks.reconfigure(
         EditorView.decorations.of(decorations(marks)),
       ),
+    });
+  }
+
+  highlightSource(range?: TextRange) {
+    const { state } = this.view;
+    const current = state.field(sourceHighlight, false);
+    if (!current) return;
+    const boundary = (offset: number) =>
+      Number.isInteger(offset) &&
+      offset >= 0 &&
+      offset <= state.doc.length &&
+      !/[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(
+        state.sliceDoc(
+          Math.max(0, offset - 1),
+          Math.min(state.doc.length, offset + 1),
+        ),
+      );
+
+    if (
+      !range ||
+      range.start > range.end ||
+      !boundary(range.start) ||
+      !boundary(range.end)
+    ) {
+      if (current !== Decoration.none)
+        this.view.dispatch({ effects: setSourceHighlight.of(Decoration.none) });
+      return;
+    }
+    this.view.dispatch({
+      effects: [
+        setSourceHighlight.of(
+          decorations([
+            { ...range, id: 'source-navigation', kind: 'source-navigation' },
+          ]),
+        ),
+        EditorView.scrollIntoView(range.start),
+      ],
     });
   }
 

@@ -71,32 +71,35 @@ export function objectTree(value: unknown) {
 
 export function renderStructure(
   root: StructureNode,
-  select: (range: NonNullable<StructureNode['range']>) => void,
+  navigate: (range: NonNullable<StructureNode['range']>) => void,
 ) {
-  function branch(item: StructureNode): HTMLElement {
-    const itemLabel = item.range
-      ? button(item.label, () => select(item.range!))
+  function branch(item: StructureNode, depth: number): HTMLElement {
+    const { range } = item;
+    const itemLabel = range
+      ? button(item.label, () => navigate(range))
       : node('span', item.label);
     if (item.text) itemLabel.title = item.text;
     const row = node('li');
-    row.append(itemLabel);
+    const content = node('div');
+    content.className = 'workbench-structure-row';
+    content.append(itemLabel);
     if (item.text && item.text.length <= 90) {
-      const snippet = node('code', item.text);
-      snippet.className = 'workbench-note';
-      row.append(snippet);
+      content.append(node('code', item.text));
     }
-    if (item.children.length) {
-      const nested = node('ul');
-      nested.className = 'workbench-tree';
-      nested.append(...item.children.map(branch));
-      row.append(nested);
-    }
+    row.append(content);
+    if (item.children.length) row.append(level(item.children, depth + 1));
     return row;
   }
-  const container = node('ul');
-  container.className = 'workbench-tree';
-  container.append(branch(root));
-  return container;
+  function level(items: StructureNode[], depth: number) {
+    const list = node('ul');
+    list.className = 'workbench-structure-tree';
+    list.setAttribute('role', 'list');
+    if (depth > 0 && depth <= 5)
+      list.classList.add('workbench-structure-indent');
+    list.append(...items.map((item) => branch(item, depth)));
+    return list;
+  }
+  return level([root], 0);
 }
 
 export function resultSummary(result: LabExecutionResult): string {

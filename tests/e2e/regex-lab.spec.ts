@@ -13,6 +13,8 @@ const source = (page: Page) =>
   page.getByRole('textbox', { name: 'Pattern or STRling source' });
 const subject = (page: Page) =>
   page.getByRole('textbox', { name: 'Subject text' });
+const sourceHighlight = (page: Page) =>
+  source(page).locator('.lab-mark--source-navigation');
 const tab = (page: Page, name: string) =>
   page.getByRole('tab', { name, exact: true }).click();
 // Explicit Run remains available via the keyboard even if automatic STRling
@@ -83,6 +85,46 @@ async function edit(page: Page, editor: Locator, value: string) {
   } else {
     await expect(editor).toHaveText(value);
   }
+}
+
+async function clickInView(control: Locator) {
+  await control.evaluate((element) =>
+    element.scrollIntoView({ block: 'center', behavior: 'instant' }),
+  );
+  await control.click();
+}
+
+function editorSelection(editor: Locator) {
+  return editor.evaluate((element) => {
+    const selection = getSelection()!;
+    const offset = (container: Node | null, index: number) => {
+      if (!container || !element.contains(container)) return null;
+      const range = document.createRange();
+      range.setStart(element, 0);
+      range.setEnd(container, index);
+      return range.toString().length;
+    };
+    return [
+      offset(selection.anchorNode, selection.anchorOffset),
+      offset(selection.focusNode, selection.focusOffset),
+    ];
+  });
+}
+
+async function placeSourceCaret(editor: Locator) {
+  await clickInView(editor.locator('.cm-line').first());
+  // Home alone starts a visual line on wrapped content. CodeMirror uses Meta
+  // for its document-start binding in the emulated iPhone profile.
+  await editor.press('Control+Home');
+  if ((await editorSelection(editor))[0] !== 0) await editor.press('Meta+Home');
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 0]);
+}
+
+async function expectSourceHighlight(page: Page, text: string) {
+  await expect
+    .poll(async () => (await sourceHighlight(page).allTextContents()).join(''))
+    .toContain(text);
+  await expect(source(page)).not.toBeFocused();
 }
 
 async function expectPaddedDisclosure(summary: Locator) {
@@ -186,8 +228,12 @@ test('inspects PCRE2 compiled ranges and Python parser instructions under hostin
   const literal = panel
     .getByRole('button', { name: /Native pattern item · "é"/ })
     .first();
-  await literal.click();
-  expect(await page.evaluate(() => getSelection()?.toString())).toBe('é');
+  await placeSourceCaret(source(page));
+  await page.getByRole('tab', { name: 'Structure' }).focus();
+  await clickInView(literal);
+  await expectSourceHighlight(page, 'é');
+  await source(page).focus();
+  await expect.poll(() => editorSelection(source(page))).toEqual([0, 0]);
 
   for (const [engine, version] of [
     ['python', '3.14'],
@@ -413,6 +459,8 @@ test('runs native providers, inspects captures, creates tests and records PCRE2 
   );
   await nextStep.click();
   await expect(page.getByRole('heading', { name: /^Step 2 of/ })).toBeVisible();
+  await expect(sourceHighlight(page).first()).toBeVisible();
+  await expect(source(page)).not.toBeFocused();
   await expectPaddedDisclosure(
     page.getByText('Capture state', { exact: true }),
   );
@@ -474,6 +522,141 @@ test('compiles released Semantic STRling and Simply, maps diagnostics and transf
   await expectPaddedDisclosure(
     page.getByText('Generated pattern origin', { exact: true }),
   );
+});
+
+test('Compiler source navigation preserves the editing caret when Delete is pressed', async ({
+  page,
+  browserName,
+}) => {
+  await page.goto('/lab/');
+  await expect(status(page)).toContainText('Compiler succeeded');
+  const editor = source(page);
+  const lines = await editor.locator('.cm-line').allTextContents();
+  const context = Array.from(
+    { length: 18 },
+    (_, index) => '# Source context ' + index,
+  );
+  // Keep the starter's existing balanced braces. Typing them again would
+  // invoke the editor's automatic delimiter pairing in the Firefox fixture.
+  await placeSourceCaret(editor);
+  await editor.press('End');
+  for (const line of context) {
+    await editor.press('Enter');
+    await editor.pressSequentially(line);
+  }
+  const input = [lines[0]!, ...context, ...lines.slice(1)];
+  await expect(editor.locator('.cm-line')).toHaveText(input);
+  await expect(status(page)).toContainText('Compiler succeeded');
+  await tab(page, 'Compiler');
+  await placeSourceCaret(editor);
+  const compiler = page.getByRole('tab', { name: 'Compiler', exact: true });
+  await compiler.focus();
+  const scroller = page.locator('[data-editor="source"] .cm-scroller');
+  const scrollBefore = await scroller.evaluate((element) => element.scrollTop);
+  const capture = page.getByRole('button', { name: 'capture', exact: true });
+  await clickInView(capture);
+  await expectSourceHighlight(page, 'capture word');
+  const highlightedLines = editor
+    .locator('.cm-line')
+    .filter({ has: page.locator('.lab-mark--source-navigation') });
+  await expect.poll(() => highlightedLines.count()).toBeGreaterThan(1);
+  await expect
+    .poll(() => scroller.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(scrollBefore);
+  await expect(capture.locator('..')).toHaveCSS('column-gap', '8px');
+  if (browserName === 'chromium') {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await expect(sourceHighlight(page).first()).toHaveCSS(
+      'outline-style',
+      'dashed',
+    );
+    await page.emulateMedia({ forcedColors: 'none' });
+  }
+  await editor.focus();
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 0]);
+  await editor.press('Delete');
+  await expect(editor.locator('.cm-line')).toHaveText([
+    input[0]!.slice(1),
+    ...input.slice(1),
+  ]);
+  await expect(sourceHighlight(page)).toHaveCount(0);
+});
+
+test('Artifact mappings preserve a deliberate source selection for normal editing', async ({
+  page,
+}) => {
+  await page.goto('/lab/');
+  await expect(status(page)).toContainText('Compiler succeeded');
+  await tab(page, 'Artifact');
+  await page.getByText('Source mappings', { exact: true }).press('Enter');
+  const editor = source(page);
+  const lines = await editor.locator('.cm-line').allTextContents();
+  await placeSourceCaret(editor);
+  await editor.press('Shift+ArrowRight');
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 1]);
+  await page.getByRole('tab', { name: 'Artifact' }).focus();
+  const mapping = page.getByRole('button', { name: /^Source \[/ }).first();
+  await clickInView(mapping);
+  await expect(sourceHighlight(page).first()).toBeVisible();
+  await expect(editor).not.toBeFocused();
+  await editor.focus();
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 1]);
+  await editor.press('Backspace');
+  await expect(editor.locator('.cm-line')).toHaveText([
+    lines[0]!.slice(1),
+    ...lines.slice(1),
+  ]);
+  await expect(sourceHighlight(page)).toHaveCount(0);
+});
+
+test('RegEx Structure highlights without selecting and keeps deep trees inside a narrow viewport', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 760 });
+  await page.goto('/regex/lab/');
+  await page.getByLabel('Live', { exact: true }).uncheck();
+  const editor = source(page);
+  const pattern =
+    'x' + '(?:'.repeat(14) + '(?<word>' + 'a'.repeat(80) + ')' + ')'.repeat(14);
+  await edit(page, editor, pattern);
+  await tab(page, 'Structure');
+  await placeSourceCaret(editor);
+  const structure = page.getByRole('tab', { name: 'Structure', exact: true });
+  await structure.focus();
+  const capture = page.getByRole('button', {
+    name: 'Named capture word',
+    exact: true,
+  });
+  await clickInView(capture);
+  await expectSourceHighlight(page, '(?<word>');
+  const row = capture.locator('..');
+  await expect(row).toHaveCSS('flex-wrap', 'wrap');
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - innerWidth,
+    ),
+  ).toBe(0);
+  expect(
+    await row.evaluate((element) => element.scrollWidth - element.clientWidth),
+  ).toBeLessThanOrEqual(1);
+  await editor.focus();
+  await expect.poll(() => editorSelection(editor)).toEqual([0, 0]);
+  await editor.press('Delete');
+  await expect(editor).toHaveText(pattern.slice(1));
+  await expect(sourceHighlight(page)).toHaveCount(0);
+
+  await page.locator('[data-field="flags"]').fill('');
+  await edit(page, editor, '😀');
+  await clickInView(
+    page.getByRole('button', { name: 'ECMAScript pattern', exact: true }),
+  );
+  await expectSourceHighlight(page, '😀');
+  await clickInView(
+    page.getByRole('button', { name: 'Character U+D83D', exact: true }),
+  );
+  await expect(sourceHighlight(page)).toHaveCount(0);
+  await expect(editor).not.toBeFocused();
+  await expect(editor).toHaveText('😀');
 });
 
 test('executes and traces a STRling artifact in its exact PCRE2 target', async ({
@@ -949,7 +1132,8 @@ test('requires an approved adapter and exercises the configured canonical tools 
     end: byteOffset + 1,
   });
   await diagnosticButton.click();
-  expect(await page.evaluate(() => getSelection()?.toString())).toBe('o');
+  await expectSourceHighlight(page, 'o');
+  await expect(source(page).locator('.cm-lintRange').first()).toBeVisible();
   const axe = await new AxeBuilder({ page })
     .include('[data-panel="compiler-tools"]')
     .analyze();

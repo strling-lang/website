@@ -253,6 +253,19 @@ technical disclosures share a padded body. Nested levels use a smaller inset,
 including those that contain a single preformatted block. Native summaries
 retain keyboard behavior and evidence text remains selectable.
 
+Source links in Compiler, Structure, Artifact, Results, Semantic tools, and
+Debugger use a dedicated CodeMirror decoration and a reveal effect. Validated
+source spans produce one active range or point highlight without moving the
+editing caret, changing a deliberate selection, or focusing the editor.
+Document edits clear the highlight synchronously. Unmapped steps and invalidated
+results clear it as well. Syntax coloring and lint annotations use independent
+decorations. The Subject editor keeps its existing match and capture behavior.
+
+Compiler and RegEx structure lists share a wrapping row for the construct and
+description. Nested lists stay inside their parent item. The first five levels
+receive a visual inset so deeply nested patterns can still fit at narrow widths.
+Descriptions longer than 90 characters remain available on the node tooltip.
+
 Timing resolves both runnable candidates before sampling and gives each a dedicated browser worker. After one unmeasured warmup per candidate, each round runs the baseline followed by the current pattern. A single-candidate experiment uses the current pattern only. Both paths request nine measured executions per candidate. The complete-series median is the fifth value sorted numerically. A stopped or failed run keeps completed samples and any returned error. The existing overall deadline and worker limits still apply.
 
 The v2 export records dispatch order and zero-based series sample references for each attempted round, along with statuses, runtime and compiler identity, raw timings, ranges, and absolute and relative median differences. An interrupted dispatch can appear in the order without a returned sample reference. Historical v1 session recordings stay readable. End-to-end timing excludes compiler preparation and runtime initialization, with worker compile and execution time reported separately. Display precision accounts for timer resolution, observed variability, and sample count.
